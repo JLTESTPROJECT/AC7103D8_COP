@@ -471,6 +471,8 @@ const int voicechanger_effect_v_config = (0
 
 /*mb limiter 3带使能(1.2k) */
 const int mb_limiter_3band_run_en       = 1;
+const int config_audio_limiter_xfade_enable = 0;
+const int config_audio_mblimiter_xfade_enable = 0;
 
 /*Vocal Remover Configs*/
 const int audio_vocal_remover_low_cut_enable = 1;
