@@ -1164,7 +1164,6 @@ objs += \
 
 
 objs += \
-	  $(ROOT)/cpu/components/gpadc_battery.o \
 	  $(ROOT)/cpu/components/iic_soft.o \
 	  $(ROOT)/cpu/components/iic_api.o \
 	  $(ROOT)/cpu/components/ir_encoder.o \

@@ -233,6 +233,7 @@
                 "${workspaceFolder}/apps/earphone/include/le_audio",
                 "${workspaceFolder}/apps/earphone/include/le_audio/big",
                 "${workspaceFolder}/apps/earphone/include/le_audio/cig",
+                "${workspaceFolder}/apps/common/device/sensor/hr_sensor",
                 "${workspaceFolder}/interface/system/math/cpu/br56",
                 "C:/JL/pi32/pi32v2-include"
             ],

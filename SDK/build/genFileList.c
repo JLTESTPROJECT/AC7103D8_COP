@@ -1600,7 +1600,6 @@ c_SRC_FILES += \
 // *INDENT-OFF*
 
 c_SRC_FILES += \
-	  cpu/components/gpadc_battery.c \
 	  cpu/components/iic_soft.c \
 	  cpu/components/iic_api.c \
 	  cpu/components/ir_encoder.c \
