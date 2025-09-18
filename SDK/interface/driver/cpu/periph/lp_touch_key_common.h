@@ -56,6 +56,30 @@ enum {
     EARTCH_MAY_BE_IN_EAR,
 };
 
+enum {
+    EARTCH_NULL,
+    EARTCH_MASTER,
+    EARTCH_REFERENCE,
+};
+
+enum {
+    EARTCH_REF_IO_HIGHZ,
+    EARTCH_REF_IO_OUTPUT_L,
+    EARTCH_REF_IO_OUTPUT_H,
+    EARTCH_REF_IO_PU_10K,
+    EARTCH_REF_IO_PD_10K,
+    EARTCH_REF_IO_PU_100K,
+    EARTCH_REF_IO_PD_100K,
+};
+
+enum {
+    EARTCH_MSYS_IO_CTL_BY_NULL,
+    EARTCH_MSYS_IO_CTL_BY_RES0,
+    EARTCH_MSYS_IO_CTL_BY_RES1,
+    EARTCH_MSYS_IO_CTL_BY_DIODE0,
+    EARTCH_MSYS_IO_CTL_BY_DIODE1,
+};
+
 enum TOUCH_KEY_EVENT {
     TOUCH_KEY_LONG_EVENT,
     TOUCH_KEY_HOLD_EVENT,
@@ -115,6 +139,9 @@ struct lp_touch_key_platform_data {
 
     u8 key_num;
 
+    u8 eartch_msys_io_ctl;
+    u8 eartch_ref_io_mode[2];
+
     u16 long_press_reset_time;
     u16 softoff_wakeup_time;
 
@@ -122,11 +149,8 @@ struct lp_touch_key_platform_data {
     u16 long_click_check_time;
     u16 hold_click_check_time;
 
-    u16 eartch_touch_filter_time;
-    u16 eartch_touch_valid_time;
-    u16 eartch_check_touch_valid_time;
-    u16 eartch_audio_det_valid_time;
-    u16 eartch_audio_det_filter_param;
+    u16 eartch_inear_filter_time;
+    u16 eartch_outear_filter_time;
 
     const struct touch_key_cfg *key_cfg;
 
@@ -147,11 +171,10 @@ struct lp_touch_key_platform_data {
     .short_click_check_time = 500, \
     .long_click_check_time = 2000, \
     .hold_click_check_time = 200, \
-    .eartch_touch_filter_time = 500, \
-    .eartch_touch_valid_time = 1300, \
-    .eartch_check_touch_valid_time = 50, \
-    .eartch_audio_det_valid_time = 2000, \
-    .eartch_audio_det_filter_param = 6, \
+    .eartch_inear_filter_time = 200, \
+    .eartch_outear_filter_time = 200, \
+    .eartch_msys_io_ctl = 0, \
+    .eartch_ref_io_mode = {0, 0}, \
 }
 
 
@@ -183,23 +206,29 @@ struct touch_key_arg {
 struct eartch_inear_info {
     u8 valid;
     u8 p2m_each_ch_state;
-    u8 p2m_ch_l_up_th;
-    u8 p2m_ch_h_up_th;
     u8 ctmu_ch_l_isel_level;
     u8 ctmu_ch_h_isel_level;
+    u8 ctmu_ref_ch_l_isel_level;
+    u8 ctmu_ref_ch_h_isel_level;
+    u8 ctmu_trim_valid;
+    u8 ctmu_kvld_valid;
+    u16 ctmu_diff_trim[LPCTMU_CHANNEL_SIZE];
+    u16 ctmu_kvld_trim[LPCTMU_CHANNEL_SIZE];
 };
 
 struct touch_key_eartch {
     u8  ch_num;
     u8  ch_list[2];
+    u8  ref_ch_num;
+    u8  ref_ch_list[2];
+    u8  ref_io_mode[2];
+    u8  eartch_enbale;
     u8  ear_state;
-    u8  algo_state;
     u8  user_ear_state;
     u8  touch_invalid;
-    u8  audio_det_valid;
-    u16 touch_invalid_timeout;
-    u16 check_touch_valid_timer;
-    u16 audio_det_invalid_timeout;
+    u8  trim_start_flag;
+    u16 inear_valid_timeout;
+    u16 outear_valid_timeout;
 };
 
 struct lp_touch_key_config_data {
@@ -208,10 +237,11 @@ struct lp_touch_key_config_data {
     u16 last_touch_state;
     u16 identify_algo_invalid;
 #endif
+    u16 last_key_action;
 
     struct touch_key_eartch eartch;
 
-    struct touch_key_arg arg[3];
+    struct touch_key_arg arg[LPCTMU_CHANNEL_SIZE];
 
     struct lpctmu_config_data lpctmu_cfg;
 
@@ -238,9 +268,29 @@ void lp_touch_key_charge_mode_enter(void);
 
 void lp_touch_key_charge_mode_exit(void);
 
-void lp_touch_key_eartch_parm_init(void);
 
+u32 lp_touch_key_eartch_get_state(void);
+void lp_touch_key_eartch_set_state(u32 state);
+u32 lp_touch_key_eartch_state_is_out_ear(void);
+u32 lp_touch_key_eartch_get_each_ch_state(void);
+void lp_touch_key_eartch_set_each_ch_state(u32 state);
+u32 lp_touch_key_eartch_touch_trigger_together(void);
+void lp_touch_key_eartch_notify_event(u32 state);
+u32 lp_touch_key_eartch_get_user_ear_state(void);
+void lp_touch_key_eartch_event_deal(u32 state);
+void lp_touch_key_eartch_init(void);
+void lp_touch_key_eartch_state_reset(void);
+void lp_touch_key_eartch_save_inear_info(struct eartch_inear_info *inear_info);
 void lp_touch_key_testbox_inear_trim(u32 flag);
 
+u32 lp_touch_key_get_wear_ch(u32 group);
+u32 lp_touch_key_get_wear_ref_ch(u32 group);
+int lp_touch_key_eartch_trim_get_all_chs_dc(u16 *trim_dc);
+u32 lp_touch_key_eartch_trim_get_valid(void);
+u32 lp_touch_key_eartch_get_trim_dc_flag(void);
+void lp_touch_eartch_trim_dc_start(u32 is_out);
+void lp_touch_eartch_set_trim_valid(u32 valid);
+void lp_touch_eartch_trim_dc_clear(void);
+u32 lp_touch_key_get_last_key_action(void);
 #endif
 

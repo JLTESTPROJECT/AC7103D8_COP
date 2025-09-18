@@ -101,6 +101,7 @@ struct bt_mode_var {
     u8 ignore_discon_tone;  // 1-退出蓝牙模式， 不响应discon提示音
     u8 bt_dual_conn_config;
     background_var background;  //蓝牙后台相关变量
+    u16 get_music_player_timer;
 };
 
 typedef struct _BT_USER_COMM_VAR {

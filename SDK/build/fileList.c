@@ -13,6 +13,7 @@ objs += \
       $(ROOT)/audio/framework/nodes/plc_node.o \
       $(ROOT)/audio/framework/nodes/volume_node.o \
 
+
 objs += \
       $(ROOT)/audio/framework/nodes/ns_node.o
 
@@ -74,6 +75,12 @@ objs += \
 
 objs += \
       $(ROOT)/audio/framework/nodes/uart_node.o
+
+objs += \
+      $(ROOT)/audio/framework/nodes/cvp_v3_node.o
+
+objs += \
+      $(ROOT)/audio/framework/nodes/cvp_sms_vf_node.o
 
 objs += \
       $(ROOT)/audio/framework/nodes/dns_node.o
@@ -153,14 +160,20 @@ objs += \
 	  $(ROOT)/audio/common/demo/codec_demo/audio_enc_file_demo.o \
 	  $(ROOT)/audio/common/demo/codec_demo/audio_file_dec_demo.o \
 	  $(ROOT)/audio/common/demo/codec_demo/audio_frame_codec_demo.o \
-	  $(ROOT)/audio/common/demo/audio_eq_demo.o \
 	  $(ROOT)/audio/common/demo/codec_demo/audio_msbc_hw_codec_demo.o \
 	  $(ROOT)/audio/common/demo/codec_demo/audio_msbc_sw_codec_demo.o \
 	  $(ROOT)/audio/common/demo/codec_demo/audio_sbc_codec_demo.o \
-	  $(ROOT)/audio/common/demo/audio_alink_demo.o \
 	  $(ROOT)/audio/common/demo/codec_demo/audio_speex_codec_demo.o \
 	  $(ROOT)/audio/common/demo/codec_demo/audio_opus_codec_demo.o \
+	  $(ROOT)/audio/common/demo/audio_alink_demo.o \
+	  $(ROOT)/audio/common/demo/audio_eq_demo.o \
 
+
+#if EXPORT_PLATFORM_AUDIO_HW_VAD_ENABLE
+objs += \
+	  $(ROOT)/audio/common/demo/audio_vad_demo.o
+
+#endif
 
 #if EXPORT_PLATFORM_HW_MATH_VERSION == 2
 objs += \
@@ -190,6 +203,9 @@ objs += \
 	  $(ROOT)/audio/interface/recoder/esco_recoder.o \
 	  $(ROOT)/audio/interface/recoder/ai_voice_recoder.o \
 	  $(ROOT)/audio/interface/recoder/dev_flow_recoder.o \
+
+objs += \
+	  $(ROOT)/audio/interface/user_defined/audio_dsp_low_latency_player.o
 
 #if EXPORT_LE_AUDIO_SUPPORT
 objs += \
@@ -327,8 +343,10 @@ objs += \
 objs += \
 	  $(ROOT)/audio/CVP/audio_aec.o \
 	  $(ROOT)/audio/CVP/audio_cvp.o \
+	  $(ROOT)/audio/CVP/audio_cvp_sms_vf.o \
 	  $(ROOT)/audio/CVP/audio_cvp_dms.o \
 	  $(ROOT)/audio/CVP/audio_cvp_3mic.o \
+	  $(ROOT)/audio/CVP/audio_cvp_v3.o \
 	  $(ROOT)/audio/CVP/audio_cvp_online.o \
 	  $(ROOT)/audio/CVP/audio_cvp_demo.o \
 	  $(ROOT)/audio/CVP/audio_cvp_develop.o \
@@ -1336,4 +1354,30 @@ objs += \
 	$(ROOT)/apps/earphone/mode/bt/le_audio/big/le_broadcast.o \
 	$(ROOT)/apps/earphone/mode/bt/le_audio/big/le_broadcast_config.o \
 
+
+objs += \
+	$(ROOT)/apps/common/device/sensor/gSensor/gSensor_manage.o \
+
+objs += \
+	$(ROOT)/apps/common/device/sensor/gSensor/stk832x.o \
+
+objs += \
+	$(ROOT)/apps/common/device/sensor/gSensor/bma580.o \
+
+
+objs += \
+	$(ROOT)/apps/common/device/sensor/hr_sensor/hrSensor_manage.o \
+
+objs += \
+	$(ROOT)/apps/common/device/sensor/hr_sensor/hx3918/hx3918.o \
+	$(ROOT)/apps/common/device/sensor/hr_sensor/hx3918/hx3918_check_touch.o \
+	$(ROOT)/apps/common/device/sensor/hr_sensor/hx3918/hx3918_hrs_agc.o \
+	$(ROOT)/apps/common/device/sensor/hr_sensor/hx3918/hx3918_hrv_agc.o \
+	$(ROOT)/apps/common/device/sensor/hr_sensor/hx3918/hx3918_spo2_agc.o \
+	$(ROOT)/apps/common/device/sensor/hr_sensor/hx3918/hx3918_factory_test.o \
+
+MASK_LIBS+= \
+   $(ROOT)/apps/common/device/sensor/hr_sensor/hx3918/CodeBlocks_3605_spo2_20241021_v2.2.a \
+   $(ROOT)/apps/common/device/sensor/hr_sensor/hx3918/CodeBlocks_3918_hrs_bp_20250324_v2.2.a \
+   $(ROOT)/apps/common/device/sensor/hr_sensor/hx3918/CodeBlocks_3918_hrv_20241026_v2.2.a \
 

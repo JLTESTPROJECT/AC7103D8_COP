@@ -190,3 +190,11 @@ const char log_tag_const_i_NET_IFLY AT(.LOG_TAG_CONST) = TRUE;
 const char log_tag_const_d_NET_IFLY AT(.LOG_TAG_CONST) = FALSE;
 const char log_tag_const_w_NET_IFLY AT(.LOG_TAG_CONST) = TRUE;
 const char log_tag_const_e_NET_IFLY AT(.LOG_TAG_CONST) = TRUE;
+
+const char log_tag_const_v_GSENSOR  = FALSE;
+const char log_tag_const_i_GSENSOR  = TRUE;
+const char log_tag_const_d_GSENSOR  = FALSE;
+const char log_tag_const_w_GSENSOR  = TRUE;
+const char log_tag_const_e_GSENSOR  = TRUE;
+
+

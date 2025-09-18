@@ -56,6 +56,13 @@ void pcm_single_to_qual_32bit(void *out, void *in, u16 len);
  * */
 void pcm_dual_to_qual(void *out, void *in, u16 len);
 
+/* note: 32bit位位宽的双声道转四声道
+ * *out:32bit位宽输出地址
+ * *in:32bit位宽输入地址
+ * len:总的输入长度(byte)
+ * */
+void pcm_dual_to_qual_32bit(void *out, void *in, u16 len);
+
 /* note: 16bit位位宽的双声道转四声道(新增的声道可选择是复制输入声道数据或者清零0处理)
  * *out:16bit位宽输出地址
  * *in:16bit位宽输入地址
@@ -207,5 +214,12 @@ void pcm_fill_rlrr_2_qual(void *out, void *in_rlrr, u16 in_len);
 void pcm_single_to_double_diff(u32 points, void *inbuf, void *outbuf);
 
 void pcm_single_to_double_diff_32bit(u32 points, void *inbuf, void *outbuf);
+
+/*
+ *立体声左右声道数据互换
+ *len:总的输入长度，单位byte
+ *bit_width: 0:16bit 1:32bit
+ * */
+void channel_swap_run(void *ptr, int len, int bit_width);
 
 #endif/*_AUDIO_SPLICING_H_*/

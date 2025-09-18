@@ -44,6 +44,7 @@
 #include "rcsp_user_api.h"
 #include "pwm_led/led_ui_api.h"
 #include "dual_bank_updata_api.h"
+#include "effect/effects_dev.h"
 #if TCFG_AUDIO_WIDE_AREA_TAP_ENABLE
 #include "icsd_adt_app.h"
 #endif
@@ -92,6 +93,9 @@ const struct task_info task_info_table[] = {
 #endif
 
     {"aec",					2,	   1,   768,   128 },
+#if (defined(EFFECT_DEV_MULTI_TASK_ENABLE) && EFFECT_DEV_MULTI_TASK_ENABLE)
+    {"eff_mtask",					6,	   1,   768,   0 },
+#endif
     /*
      *file dec任务不打断jlstream任务运行,故优先级低于jlstream
      */
@@ -205,6 +209,10 @@ const struct task_info task_info_table[] = {
 #endif
     {"aud_adc_demo",        1,     0,  512,   128 },
     {"aud_dac_demo",        1,     0,  512,   128 },
+    {"vad_demo",        	1,     0,  512,   128 },
+#if (TCFG_HRSENSOR_ENABLE || TCFG_GSENSOR_ENABLE)
+    {"app_sensor",         1,     0,  512,   128 },
+#endif
     {0, 0},
 };
 

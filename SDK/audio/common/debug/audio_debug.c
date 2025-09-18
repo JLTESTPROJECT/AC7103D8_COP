@@ -5,22 +5,18 @@
 #include "jlstream.h"
 #include "classic/hci_lmp.h"
 #include "media_memory.h"
+#include "audio_dac.h"
 
-
-#define AUD_CFG_DUMP_ENABLE				1	//音频配置跟踪使能
-#define AUD_REG_DUMP_ENABLE				0	//音频寄存器跟踪使能
-#define AUD_CACHE_INFO_DUMP_ENABLE		0 	//cache信息跟踪使能
-#define AUD_TASK_INFO_DUMP_ENABLE		0	//任务运行信息跟踪使能
-#define AUD_JLSTREAM_MEM_DUMP_ENABLE	0	//jlstream内存跟踪
-#define AUD_BT_INFO_DUMP_ENABLE			0	//蓝牙音频流跟踪
-#define SYS_MEM_INFO_DUMP_ENABLE		0	//系统内存信息跟踪
-#define AUD_MEM_INFO_DUMP_ENABLE		0	//音频模块内存申请信息跟踪
 
 const int CONFIG_MEDIA_MEM_DEBUG = AUD_MEM_INFO_DUMP_ENABLE;
 
 static void audio_config_trace(void *priv)
 {
     printf(">>Audio_Config_Trace:\n");
+#if AUD_BT_DELAY_INFO_DUMP_ENABLE
+    a2dp_delay_dump();
+#endif
+
 #if AUD_CFG_DUMP_ENABLE
     audio_config_dump();
 #endif
@@ -66,12 +62,21 @@ void audio_config_trace_setup(int interval)
 #define DAC_POP_UP_NOISE_DEBUG_CFG		DAC_POP_UP_NOISE_DEBUG_DISABLE
 static void dac_power_on_pop_debug(void *priv)
 {
-
+    static u8 dac_en;
+    dac_en ^= 1;
+    if (dac_en) {
+        audio_dac_try_power_on(&dac_hdl);
+    } else {
+        audio_dac_stop(&dac_hdl);
+        audio_dac_close(&dac_hdl);
+    }
 }
 
 static void dac_mute_pop_debug(void *priv)
 {
-
+    static u8 mute_en = 0;
+    mute_en ^= 1;
+    audio_dac_ch_mute(&dac_hdl, 0b11, mute_en);
 }
 
 void audio_dac_pop_up_noise_debug(void)

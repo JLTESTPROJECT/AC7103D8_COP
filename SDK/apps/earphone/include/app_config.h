@@ -48,6 +48,12 @@
 #define TCFG_BT_BACKGROUND_ENABLE   						0
 #endif
 
+#define TCFG_BT_SUPPORT_BIP         0X0
+#if TCFG_BT_SUPPORT_BIP
+#undef TCFG_BT_MUSIC_INFO_ENABLE
+#define TCFG_BT_MUSIC_INFO_ENABLE 1 // 歌曲信息显示
+#endif
+
 
 //*********************************************************************************//
 //                                  AI配置                                         //
@@ -311,6 +317,9 @@
 #endif
 
 #define CONFIG_MEDIA_LIB_USE_MALLOC    1
+#ifndef TCFG_JLSTREAM_EFFICIENT_MODE
+#define TCFG_JLSTREAM_EFFICIENT_MODE	0 		// 音频流高效模式
+#endif
 
 ///USB 配置重定义
 // #undef USB_DEVICE_CLASS_CONFIG
@@ -767,20 +776,22 @@
 #undef TCFG_IMUSENSOR_ENABLE
 #undef TCFG_MPU6887P_ENABLE
 #undef TCFG_ICM42670P_ENABLE
-#undef TCFG_QMI8658_ENABLE
 #undef TCFG_LSM6DSL_ENABLE
-#undef TCFG_TP_MPU9250_ENABLE
-#undef TCFG_SH3001_ENABLE
-#undef TCFG_MPU6050_EN
 #define TCFG_IMUSENSOR_ENABLE              		0
 #define TCFG_MPU6887P_ENABLE                  	0
 #define TCFG_ICM42670P_ENABLE                  	0
-#define TCFG_QMI8658_ENABLE                     0
 #define TCFG_LSM6DSL_ENABLE                     0
+#endif/*TCFG_AUDIO_SPATIAL_EFFECT_ENABLE*/
+
+/*  device NOT supported */
+#undef TCFG_QMI8658_ENABLE
+#undef TCFG_TP_MPU9250_ENABLE
+#undef TCFG_SH3001_ENABLE
+#undef TCFG_MPU6050_EN
+#define TCFG_QMI8658_ENABLE                     0
 #define TCFG_TP_MPU9250_ENABLE                	0
 #define TCFG_SH3001_ENABLE                    	0
 #define TCFG_MPU6050_EN                     	0
-#endif/*TCFG_AUDIO_SPATIAL_EFFECT_ENABLE*/
 
 /*Audio Smart Voice*/
 #ifndef TCFG_SMART_VOICE_ENABLE

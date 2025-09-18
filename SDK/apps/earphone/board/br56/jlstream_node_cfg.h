@@ -146,6 +146,8 @@
 #define TCFG_WDRC_NODE_ENABLE 0 // DRC
 #define EQ_SECTION_MAX 0xc // EQ_SECTION_MAX
 #define TCFG_STREAM_BIN_ENC_ENABLE 0 // stream.bin加密使能
+#define TCFG_CVP_ALGO_TYPE 1 // pipeline-CVP-CVP_V3-通话算法
+#define TCFG_VIRTUAL_SURROUND_HP_NODE_ENABLE 0 // Virtual Surround Headphone 2t4
 // ------------流程图宏定义------------
 
 // ------------流程图节点位宽定义------------

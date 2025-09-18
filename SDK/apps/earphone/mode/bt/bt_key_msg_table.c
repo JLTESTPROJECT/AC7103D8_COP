@@ -40,7 +40,7 @@ const int adkey_msg_table[10][KEY_ACTION_MAX] = {
         APP_MSG_MUSIC_PP,   APP_MSG_CALL_HANGUP,   APP_MSG_NULL,   APP_MSG_NULL,
         APP_MSG_LOW_LANTECY,       APP_MSG_NULL,   APP_MSG_NULL,   APP_MSG_NULL,
         APP_MSG_NULL,       APP_MSG_NULL,   APP_MSG_NULL,   APP_MSG_NULL,
-        APP_MSG_POWER_OFF,
+        APP_MSG_KEY_POWER_OFF,
     },
     [1] = {
         APP_MSG_MUSIC_NEXT, APP_MSG_VOL_UP,   APP_MSG_VOL_UP,   APP_MSG_NULL,
@@ -264,6 +264,11 @@ int bt_key_power_msg_remap(int *msg)
             app_msg = APP_MSG_TWS_START_PAIR;
             break;
         }
+#endif
+#if 0
+    case KEY_ACTION_FIRTH_CLICK:
+        app_msg = APP_MSG_DEL_ALL_REMOTE_DEV;
+        break;
 #endif
     default:
         break;

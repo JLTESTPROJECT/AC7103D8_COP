@@ -195,7 +195,7 @@ enum {
     APP_MSG_EARTCH_OUT_EAR,                     //耳机摘下
 
     APP_MSG_KEY_TONE,                           //播放按键音
-    APP_MSG_KEY_POWER_OFF,
+    APP_MSG_KEY_POWER_OFF,                      //按键关机
     APP_MSG_KEY_POWER_OFF_HOLD,
     APP_MSG_KEY_POWER_OFF_RELEASE,
     APP_MSG_KEY_POWER_OFF_INSTANTLY,
@@ -258,6 +258,7 @@ enum {
     //IR_NUM中间不允许插入msg
 
     APP_MSG_INPUT_FILE_NUM,
+    APP_MSG_DEL_ALL_REMOTE_DEV, //清除远程配对记录
 };
 
 

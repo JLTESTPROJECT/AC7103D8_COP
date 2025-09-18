@@ -561,17 +561,15 @@ static void anc_write_file_start(u8 *cmd, u32 id, u32 data_len)
 
 static void anc_write_file_data(u8 *cmd, u32 offset, u8 *data, u32 data_len)
 {
-    if (__this->file_id) {
-        if (__this->file_hdl == NULL || ((offset + data_len) > __this->file_len)) {
-            cmd[0] = CMD_ANC_MODULE;
-            cmd[1] = CMD_ANC_FAIL;
-            chargestore_api_write(cmd, 2);
-        } else {
-            memcpy(__this->file_hdl + offset, data, data_len);
-            cmd[0] = CMD_ANC_MODULE;
-            cmd[1] = CMD_ANC_WRITE_FILE_DATA;
-            chargestore_api_write(cmd, 2);
-        }
+    if (__this->file_hdl == NULL || ((offset + data_len) > __this->file_len)) {
+        cmd[0] = CMD_ANC_MODULE;
+        cmd[1] = CMD_ANC_FAIL;
+        chargestore_api_write(cmd, 2);
+    } else {
+        memcpy(__this->file_hdl + offset, data, data_len);
+        cmd[0] = CMD_ANC_MODULE;
+        cmd[1] = CMD_ANC_WRITE_FILE_DATA;
+        chargestore_api_write(cmd, 2);
     }
 }
 

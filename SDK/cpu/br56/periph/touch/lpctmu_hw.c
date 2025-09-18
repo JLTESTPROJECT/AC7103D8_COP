@@ -42,6 +42,7 @@ struct lpctmu_dma_kfifo *dma_kfifo = NULL;
 static struct lpctmu_config_data *__this = NULL;
 static u32 lpctmu_scan_prd;
 static u16 lpctmu_res_oft_min[LPCTMU_CHANNEL_SIZE];
+static u8 lpctmu_ch_order_list[LPCTMU_CHANNEL_SIZE];
 
 extern u32 __get_lrc_hz();
 
@@ -243,7 +244,7 @@ void lpctmu_vsel_isel_trim(void)
     }
 }
 
-u32 lpctmu_addr_to_ch_idx(u32 addr)
+u32 lpctmu_addr_to_ch_order(u32 addr)
 {
     u32 idx_max = __this->ch_num;
     u32 offset = 1;
@@ -267,7 +268,9 @@ u32 lpctmu_get_ch_idx_by_res_kfifo_out(void)
     if (!__this) {
         return 0;
     }
-    return lpctmu_addr_to_ch_idx(res_kfifo.buf_out);
+    u32 order = lpctmu_addr_to_ch_order(res_kfifo.buf_out);
+    u32 cur_ch = lpctmu_ch_order_list[order];
+    return lpctmu_get_idx_by_cur_ch(cur_ch);
 }
 
 u32 lpctmu_check_dma_kfifo_loop_mark(void)
@@ -300,10 +303,10 @@ void lpctmu_dma_kfifo_loop_mark(void)
 void lpctmu_save_one_res_to_kfifo(u32 buf_out, u32 ch_res)
 {
     u32 buf_in = res_kfifo.buf_in % res_kfifo.buf_size;
-    u32 out_idx = lpctmu_addr_to_ch_idx(buf_out);
-    u32 in_idx  = lpctmu_addr_to_ch_idx(buf_in);
-    if (out_idx != in_idx) {
-        /* log_debug("in:%d %d out:%d %d\n", res_kfifo.buf_in, in_idx, buf_out, out_idx); */
+    u32 out_order = lpctmu_addr_to_ch_order(buf_out);
+    u32 in_order  = lpctmu_addr_to_ch_order(buf_in);
+    if (out_order != in_order) {
+        /* log_debug("in:%d %d out:%d %d\n", res_kfifo.buf_in, in_order, buf_out, out_order); */
         return;
     }
     res_kfifo.buffer[buf_in] = ch_res;
@@ -621,6 +624,14 @@ void lpctmu_init(struct lpctmu_config_data *cfg_data)
         lpctmu_port_init(__this->ch_list[ch_idx]);
     }
 
+    for (u32 idx = 0, ch = 0; ch < LPCTMU_CHANNEL_SIZE; ch ++) {
+        lpctmu_ch_order_list[ch] = 0;
+        if (__this->ch_en & BIT(ch)) {
+            lpctmu_ch_order_list[idx] = ch;
+            idx ++;
+        }
+    }
+
     u16 *ch_res_buf = (u16 *)malloc(CH_RES_BUF_SIZE * 2);
     res_kfifo.buffer = ch_res_buf;
     res_kfifo.buf_size = CH_RES_BUF_SIZE;
@@ -636,7 +647,7 @@ void lpctmu_init(struct lpctmu_config_data *cfg_data)
         if (__this->ch_num > 1) {
             u32 dma_base_offset = __this->ch_num * 4;
             u32 cur_buf_in = (P11_LPCTM0->DMA_WADR / 2) - (dma_base_offset / 2);
-            if (lpctmu_addr_to_ch_idx(cur_buf_in)) {
+            if (lpctmu_addr_to_ch_order(cur_buf_in)) {
                 hw_init = 1;
             }
         }
@@ -736,7 +747,7 @@ void lpctmu_disable(void)
             u32 cnt = 0;
             u32 dma_base_offset = __this->ch_num * 4;
             u32 cur_buf_in = (P11_LPCTM0->DMA_WADR / 2) - (dma_base_offset / 2);
-            while (lpctmu_addr_to_ch_idx(cur_buf_in)) {
+            while (lpctmu_addr_to_ch_order(cur_buf_in)) {
                 log_debug("wadr:%d, buf_in:%d, cnt:%d", P11_LPCTM0->DMA_WADR, cur_buf_in, cnt);
                 mdelay(3);
                 cur_buf_in = (P11_LPCTM0->DMA_WADR / 2) - (dma_base_offset / 2);

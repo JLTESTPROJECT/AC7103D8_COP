@@ -59,6 +59,7 @@ enum RESET_FLAG {
     BT_FLAG,
     LP_OSC_UP_TO,
     CHARGE_FLAG,
+    LP_BRANCH_PREDICTION_ERR,
 };
 
 /**

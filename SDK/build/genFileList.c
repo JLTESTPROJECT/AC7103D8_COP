@@ -14,6 +14,7 @@ c_SRC_FILES += \
       audio/framework/nodes/plc_node.c \
       audio/framework/nodes/volume_node.c \
 
+
 #if TCFG_NS_NODE_ENABLE || TCFG_NS_NODE_LITE_ENABLE
 c_SRC_FILES += \
       audio/framework/nodes/ns_node.c
@@ -122,6 +123,16 @@ c_SRC_FILES += \
 #if TCFG_UART_NODE_ENABLE
 c_SRC_FILES += \
       audio/framework/nodes/uart_node.c
+#endif
+
+#if TCFG_AUDIO_CVP_V3_MODE
+c_SRC_FILES += \
+      audio/framework/nodes/cvp_v3_node.c
+#endif
+
+#if TCFG_AUDIO_CVP_SMS_VF_MODE
+c_SRC_FILES += \
+      audio/framework/nodes/cvp_sms_vf_node.c
 #endif
 
 #if TCFG_DNS_NODE_ENABLE
@@ -233,14 +244,22 @@ c_SRC_FILES += \
 	  audio/common/demo/codec_demo/audio_enc_file_demo.c \
 	  audio/common/demo/codec_demo/audio_file_dec_demo.c \
 	  audio/common/demo/codec_demo/audio_frame_codec_demo.c \
-	  audio/common/demo/audio_eq_demo.c \
 	  audio/common/demo/codec_demo/audio_msbc_hw_codec_demo.c \
 	  audio/common/demo/codec_demo/audio_msbc_sw_codec_demo.c \
 	  audio/common/demo/codec_demo/audio_sbc_codec_demo.c \
-	  audio/common/demo/audio_alink_demo.c \
 	  audio/common/demo/codec_demo/audio_speex_codec_demo.c \
 	  audio/common/demo/codec_demo/audio_opus_codec_demo.c \
+	  audio/common/demo/audio_alink_demo.c \
+	  audio/common/demo/audio_eq_demo.c \
 
+#endif
+
+#if EXPORT_PLATFORM_AUDIO_HW_VAD_ENABLE
+#if 0
+c_SRC_FILES += \
+	  audio/common/demo/audio_vad_demo.c
+
+#endif
 #endif
 
 #if EXPORT_PLATFORM_HW_MATH_VERSION == 2
@@ -275,6 +294,9 @@ c_SRC_FILES += \
 	  audio/interface/recoder/esco_recoder.c \
 	  audio/interface/recoder/ai_voice_recoder.c \
 	  audio/interface/recoder/dev_flow_recoder.c \
+
+c_SRC_FILES += \
+	  audio/interface/user_defined/audio_dsp_low_latency_player.c
 
 #if EXPORT_LE_AUDIO_SUPPORT
 #if LE_AUDIO_STREAM_ENABLE
@@ -436,8 +458,10 @@ c_SRC_FILES += \
 c_SRC_FILES += \
 	  audio/CVP/audio_aec.c \
 	  audio/CVP/audio_cvp.c \
+	  audio/CVP/audio_cvp_sms_vf.c \
 	  audio/CVP/audio_cvp_dms.c \
 	  audio/CVP/audio_cvp_3mic.c \
+	  audio/CVP/audio_cvp_v3.c \
 	  audio/CVP/audio_cvp_online.c \
 	  audio/CVP/audio_cvp_demo.c \
 	  audio/CVP/audio_cvp_develop.c \
@@ -1828,3 +1852,39 @@ c_SRC_FILES += \
 
 #endif
 
+#if TCFG_GSENSOR_ENABLE
+c_SRC_FILES += \
+	apps/common/device/sensor/gSensor/gSensor_manage.c \
+
+#if TCFG_STK832x_EN
+c_SRC_FILES += \
+	apps/common/device/sensor/gSensor/stk832x.c \
+
+#endif
+#if TCFG_BMA580_EN
+c_SRC_FILES += \
+	apps/common/device/sensor/gSensor/bma580.c \
+
+#endif
+#endif
+
+#if TCFG_HRSENSOR_ENABLE
+c_SRC_FILES += \
+	apps/common/device/sensor/hr_sensor/hrSensor_manage.c \
+
+#if TCFG_HX3918_ENABLE
+c_SRC_FILES += \
+	apps/common/device/sensor/hr_sensor/hx3918/hx3918.c \
+	apps/common/device/sensor/hr_sensor/hx3918/hx3918_check_touch.c \
+	apps/common/device/sensor/hr_sensor/hx3918/hx3918_hrs_agc.c \
+	apps/common/device/sensor/hr_sensor/hx3918/hx3918_hrv_agc.c \
+	apps/common/device/sensor/hr_sensor/hx3918/hx3918_spo2_agc.c \
+	apps/common/device/sensor/hr_sensor/hx3918/hx3918_factory_test.c \
+
+MASK_LIBS+= \
+   $(ROOT)/apps/common/device/sensor/hr_sensor/hx3918/CodeBlocks_3605_spo2_20241021_v2.2.a \
+   $(ROOT)/apps/common/device/sensor/hr_sensor/hx3918/CodeBlocks_3918_hrs_bp_20250324_v2.2.a \
+   $(ROOT)/apps/common/device/sensor/hr_sensor/hx3918/CodeBlocks_3918_hrv_20241026_v2.2.a \
+
+#endif
+#endif

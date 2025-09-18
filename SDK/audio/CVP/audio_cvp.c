@@ -928,13 +928,14 @@ void aec_input_clear_enable(u8 enable)
 
 struct cvp_context_setup {
     u16 active_node_uuid;
+    u8(*aec_status)(void);
     int (*read_ref_data)(void);
 };
 struct cvp_context_setup g_cvp_context = {0};
 
 int audio_cvp_phase_align(void)
 {
-    if ((audio_aec_status() == 0) || (g_cvp_context.read_ref_data == NULL)) {
+    if ((g_cvp_context.aec_status() == 0)  || (g_cvp_context.read_ref_data == NULL)) {
         return 0;
     }
     return g_cvp_context.read_ref_data();
@@ -951,9 +952,16 @@ void cvp_node_context_setup(u16 uuid)
 
 #if defined(TCFG_CVP_DEVELOP_ENABLE) && (TCFG_CVP_DEVELOP_ENABLE)
     g_cvp_context.read_ref_data = cvp_develop_read_ref_data;
+    g_cvp_context.aec_status = audio_aec_status;
 #endif
 
     switch (g_cvp_context.active_node_uuid) {
+    case NODE_UUID_CVP_SMS_VF:
+#if TCFG_AUDIO_CVP_SMS_VF_MODE
+        g_cvp_context.read_ref_data = cvp_sms_vf_tde_read_ref_data;
+        g_cvp_context.aec_status = audio_sms_vf_status;
+#endif
+        break;
     case NODE_UUID_CVP_SMS_ANS:
     case NODE_UUID_CVP_SMS_DNS:
 #if (TCFG_AUDIO_CVP_SMS_ANS_MODE || TCFG_AUDIO_CVP_SMS_DNS_MODE)
@@ -963,35 +971,49 @@ void cvp_node_context_setup(u16 uuid)
 #else
         g_cvp_context.read_ref_data = cvp_sms_read_ref_data;
 #endif
+        g_cvp_context.aec_status = audio_aec_status;
 #endif
         break;
 #if (TCFG_AUDIO_CVP_DMS_ANS_MODE || TCFG_AUDIO_CVP_DMS_DNS_MODE)
     case NODE_UUID_CVP_DMS_ANS:
     case NODE_UUID_CVP_DMS_DNS:
         g_cvp_context.read_ref_data = cvp_dms_read_ref_data;
+        g_cvp_context.aec_status = audio_aec_status;
         break;
 #endif
 #if (TCFG_AUDIO_CVP_DMS_FLEXIBLE_ANS_MODE || TCFG_AUDIO_CVP_DMS_FLEXIBLE_DNS_MODE)
     case NODE_UUID_CVP_DMS_FLEXIBLE_DNS:
     case NODE_UUID_CVP_DMS_FLEXIBLE_ANS:
         g_cvp_context.read_ref_data = cvp_dms_flexible_read_ref_data;
+        g_cvp_context.aec_status = audio_aec_status;
+        break;
         break;
 #endif
 #if TCFG_AUDIO_CVP_DMS_HYBRID_DNS_MODE
     case NODE_UUID_CVP_DMS_HYBRID_DNS:
         g_cvp_context.read_ref_data = cvp_dms_hybrid_read_ref_data;
+        g_cvp_context.aec_status = audio_aec_status;
         break;
 #endif
 #if TCFG_AUDIO_CVP_DMS_AWN_DNS_MODE
     case NODE_UUID_CVP_DMS_AWN_DNS:
         g_cvp_context.read_ref_data = cvp_dms_awn_read_ref_data;
+        g_cvp_context.aec_status = audio_aec_status;
         break;
 #endif
 #if TCFG_AUDIO_CVP_3MIC_MODE
     case NODE_UUID_CVP_3MIC:
         g_cvp_context.read_ref_data =  cvp_tms_read_ref_data;
+        g_cvp_context.aec_status = audio_aec_status;
         break;
 #endif
+#if (TCFG_AUDIO_CVP_V3_MODE)
+    case NODE_UUID_CVP_V3:
+        g_cvp_context.read_ref_data = cvp_read_ref_data;
+        g_cvp_context.aec_status = audio_cvp_v3_status;
+        break;
+#endif
+
     default:
         printf("cvp node uuid process error:%x", g_cvp_context.active_node_uuid);
         break;
@@ -1004,8 +1026,10 @@ int cvp_param_cfg_read(void)
     return cvp_dms_param_cfg_read();
 #elif TCFG_AUDIO_TRIPLE_MIC_ENABLE
     return cvp_tms_param_cfg_read();
-#else
+#elif TCFG_AUDIO_SINGLE_MIC_ENABLE
     return cvp_sms_param_cfg_read();
+#else
+    return cvp_v3_param_cfg_read();
 #endif
 }
 
@@ -1014,3 +1038,13 @@ u16 get_cvp_node_uuid()
     y_printf("get cvp node uuid:%x\n", g_cvp_context.active_node_uuid);
     return g_cvp_context.active_node_uuid;
 }
+
+u8 get_cvp_context_status(void)
+{
+    if (g_cvp_context.aec_status != NULL) {
+        return g_cvp_context.aec_status();
+    }
+    return 0;
+}
+
+

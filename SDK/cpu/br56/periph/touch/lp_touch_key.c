@@ -47,6 +47,8 @@ static u8 touch_abandon_short_click_once = 0;
 static struct lp_touch_key_config_data lp_touch_key_cfg_data;
 #define __this (&lp_touch_key_cfg_data)
 
+static u16 touch_ch_res_buf[LPCTMU_CHANNEL_SIZE];
+
 
 void lp_touch_key_reset_algo(void);
 
@@ -107,7 +109,7 @@ void lp_touch_key_state_event_deal(u32 ch_idx, u32 event)
             log_debug("touch key%d FALLING !\n", ch_idx);
 
 #if TCFG_LP_EARTCH_KEY_ENABLE
-            if (key_cfg->eartch_en) {
+            if (key_cfg->eartch_en == EARTCH_MASTER) {
                 touch_abandon_short_click_once = 0;
                 lp_touch_key_eartch_event_deal(1);
                 return;
@@ -126,7 +128,7 @@ void lp_touch_key_state_event_deal(u32 ch_idx, u32 event)
             log_debug("touch key%d RAISING !\n", ch_idx);
 
 #if TCFG_LP_EARTCH_KEY_ENABLE
-            if (key_cfg->eartch_en) {
+            if (key_cfg->eartch_en == EARTCH_MASTER) {
                 touch_abandon_short_click_once = 0;
                 lp_touch_key_eartch_event_deal(0);
                 return;
@@ -188,16 +190,18 @@ void lp_touch_key_ctmu_res_deal(u32 pnd_type)
 
     for (u32 i = 0; i < data_len; i ++) {
         ch_idx = lpctmu_get_ch_idx_by_res_kfifo_out();
-        ch = lpctmu_get_cur_ch_by_idx(ch_idx);
+        ch = lp_touch_key_get_cur_ch_by_idx(ch_idx);
         len = lpctmu_get_res_kfifo_data((u16 *)&ch_res, 1);
         if (len == 0) {
             return;
         }
         key_cfg = &(__this->pdata->key_cfg[ch_idx]);
 
+        touch_ch_res_buf[ch] = ch_res;
+
 #if TCFG_LP_TOUCH_KEY_BT_TOOL_ENABLE
         if ((touch_bt_tool_enable) && (touch_bt_online_debug_send)) {
-            touch_bt_online_debug_send(ch, ch_res);
+            touch_bt_online_debug_send(ch, touch_ch_res_buf);
         } else
 #endif
         {
@@ -227,10 +231,41 @@ void lp_touch_key_ctmu_res_deal(u32 pnd_type)
             }
         }
 
-        touch_state = lp_touch_key_identify_algorithm_analyze(ch_idx, ch_res);
-
 #if TCFG_LP_EARTCH_KEY_ENABLE
         if (key_cfg->eartch_en) {
+
+            if (__this->eartch.ref_ch_num) {
+                u32 ref_ch, idx = 0;
+                if (key_cfg->eartch_en == EARTCH_MASTER) {
+                    if (ch == __this->eartch.ch_list[0]) {
+                        idx = 0;
+                    } else if (__this->eartch.ref_ch_num == 2) {
+                        idx = 1;
+                    }
+                    ref_ch = __this->eartch.ref_ch_list[idx];
+                    if (ch > ref_ch) {
+                        ch_res = 5000 + ch_res - touch_ch_res_buf[ref_ch];
+                    } else {
+                        continue;
+                    }
+                } else {
+                    ref_ch = ch;
+                    if (ref_ch == __this->eartch.ref_ch_list[0]) {
+                        idx = 0;
+                    } else if (__this->eartch.ref_ch_num == 2) {
+                        idx = 1;
+                    }
+                    ch = __this->eartch.ch_list[idx];
+                    if (ref_ch > ch) {
+                        ch_res = 5000 + touch_ch_res_buf[ch] - ch_res;
+                        ch_idx = lp_touch_key_get_idx_by_cur_ch(ch);
+                    } else {
+                        continue;
+                    }
+                }
+            }
+
+            touch_state = lp_touch_key_identify_algorithm_analyze(ch_idx, ch_res);
             eartch_algo_state = lp_touch_key_eartch_algorithm_analyze(ch_idx, ch_res);
             if (__this->eartch.ear_state == 0) {
                 if ((touch_state) && (eartch_algo_state)) {
@@ -250,8 +285,11 @@ void lp_touch_key_ctmu_res_deal(u32 pnd_type)
                     lp_touch_key_identify_algorithm_reinit(ch_idx, res_avg);
                 }
             }
-        }
+        } else
 #endif
+        {
+            touch_state = lp_touch_key_identify_algorithm_analyze(ch_idx, ch_res);
+        }
         /* log_debug("idx:%d ch:%d, res:%d, L:%d H:%d key:%d", ch_idx, ch, ch_res, ref_lim_l, ref_lim_h, touch_state); */
         /* log_debug("idx:%d ch:%d, res:%d, key:%d", ch_idx, ch, ch_res, touch_state); */
         if (touch_state != (!!(__this->last_touch_state & BIT(ch_idx)))) {
@@ -344,7 +382,7 @@ void lp_touch_key_task(void *p)
         if (__this->lpctmu_cfg.lim_span_max[ch] < algo_cfg->algo_cfg2) {
             __this->lpctmu_cfg.lim_span_max[ch] = algo_cfg->algo_cfg2;
         }
-        if (key_cfg->wakeup_enable) {
+        if ((key_cfg->wakeup_enable) && (key_cfg->eartch_en == 0)) {
             __this->lpctmu_cfg.ch_wkp_en |= BIT(ch);
         }
 
@@ -377,10 +415,13 @@ void lp_touch_key_task(void *p)
             }
         }
 #if TCFG_LP_EARTCH_KEY_ENABLE
-        if (key_cfg->eartch_en) {
+        if (key_cfg->eartch_en == EARTCH_MASTER) {
             __this->eartch.ch_list[__this->eartch.ch_num] = ch;
             __this->eartch.ch_num ++;
             lp_touch_key_eartch_algorithm_init(ch_idx, algo_cfg->algo_cfg0, algo_cfg->algo_cfg2, 6);
+        } else if (key_cfg->eartch_en == EARTCH_REFERENCE) {
+            __this->eartch.ref_ch_list[__this->eartch.ref_ch_num] = ch;
+            __this->eartch.ref_ch_num ++;
         } else
 #endif
         {
@@ -451,7 +492,6 @@ void lp_touch_key_task(void *p)
     }
 }
 
-__INITCALL_BANK_CODE
 void lp_touch_key_init(const struct lp_touch_key_platform_data *pdata)
 {
     log_info("%s >>>>", __func__);

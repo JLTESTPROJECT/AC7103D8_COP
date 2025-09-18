@@ -33,7 +33,7 @@
 #include "rcsp_translator.h"
 #endif
 
-#if TCFG_USER_TWS_ENABLE
+#if !TCFG_JLSTREAM_EFFICIENT_MODE
 extern const int CONFIG_EXTWS_NACK_LIMIT_INT_CNT;
 #endif
 
@@ -48,7 +48,7 @@ extern const int CONFIG_EXTWS_NACK_LIMIT_INT_CNT;
 #define PIPELINE_UUID_PC_AUDIO		0xDC8D
 #define PIPELINE_UUID_LE_AUDIO      0x99AA
 #define PIPELINE_UUID_RECODER       0x49EC
-
+#define PIPELINE_UUID_USER_DEFINED  0x9795
 
 
 static const struct stream_coexist_policy coexist_policy_table_rewrite[] = {
@@ -178,6 +178,10 @@ static int get_pipeline_uuid(const char *name)
     }
 #endif
 
+    if (!strcmp(name, "user_defined")) {
+        return PIPELINE_UUID_USER_DEFINED;
+    }
+
     if (!strcmp(name, "ai_voice")) {
         /* clock_alloc("a2dp", 24 * 1000000UL); */
         return PIPELINE_UUID_AI_VOICE;
@@ -260,7 +264,9 @@ static int load_decoder_handler(struct stream_decoder_info *info)
     }
 #endif
     if (info->scene == STREAM_SCENE_A2DP) {
+#if TCFG_JLSTREAM_EFFICIENT_MODE
         info->task_name = "a2dp_dec";
+#endif
 
 #if TCFG_VIRTUAL_SURROUND_PRO_MODULE_NODE_ENABLE
         info->frame_time = 16;
@@ -438,7 +444,7 @@ static int get_spatial_adv_node_callback(const char *arg)
 
 static int get_output_node_delay(int arg)
 {
-#if TCFG_USER_TWS_ENABLE
+#if !TCFG_JLSTREAM_EFFICIENT_MODE
     if (arg == STREAM_SCENE_A2DP && CONFIG_EXTWS_NACK_LIMIT_INT_CNT < 63) {
         /*A2DP模式下，DAC或输出设备在监听+转发的机制下最大延时约束为30ms，其他延时补偿到蓝牙缓冲预留转发时间*/
         return 30/*ms*/;
@@ -513,7 +519,7 @@ int jlstream_event_notify(enum stream_event event, int arg)
         ret = get_noisegate_node_callback((const char *)arg);
         break;
 #endif
-#if TCFG_USER_TWS_ENABLE
+#if !TCFG_JLSTREAM_EFFICIENT_MODE
     case STREAM_EVENT_GET_OUTPUT_NODE_DELAY:
         ret = get_output_node_delay(arg);
         break;

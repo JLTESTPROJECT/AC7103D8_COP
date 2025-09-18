@@ -60,6 +60,10 @@ enum audio_module {
     AUD_MODULE_SPECTRUM_ADV,
     AUD_MODULE_INDICATOR,
     AUD_MODULE_MUSIC_PLC,
+    AUD_MODULE_STEREO_TO_LCR,
+    AUD_MODULE_STEREO_TO_LCR_TMPBUF,
+    AUD_MODULE_SPATIAL_BRIR,
+    AUD_MODULE_SPATIAL_BRIR_TMPBUF,
     //Codec Modules
     AUD_MODULE_AAC,
     AUD_MODULE_AAC_ENERGY,
@@ -127,6 +131,10 @@ static const char *mm_module[] = {
     "SpectrumAdv",
     "Indicator",
     "MusicPLC",
+    "StereoToLCR",
+    "StereoToLCRTmp",
+    "SpatialBRIR",
+    "SpatialBRIRTmp",
     //Codec Modules
     "AAC_Dec",
     "AACEnergy",

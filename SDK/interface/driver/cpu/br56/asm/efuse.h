@@ -40,6 +40,7 @@ u16 efuse_get_vbat_trim_4p45(void);
 u8 efuse_get_btvbg_sysldo11a_level();
 u32 efuse_get_chip_id();
 u16 get_chip_id();
+u32 efuse_get_vbat_3700();
 
 
 void efuse_init();

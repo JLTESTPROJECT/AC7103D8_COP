@@ -446,6 +446,8 @@ REGISTER_STREAM_NODE_ADAPTER(volume_node_adapter) = {
     .ioctl      = volume_ioctl,
     .release    = volume_release,
     .hdl_size   = sizeof(struct volume_hdl),
+    .ability_channel_in = 1 | 2 | 4,
+    .ability_channel_out = 1 | 2 | 4,
 };
 
 REGISTER_ONLINE_ADJUST_TARGET(volume) = {

@@ -769,6 +769,7 @@ static void connected_perip_event_callback(const CIG_EVENT event, void *priv)
     case CIG_EVENT_ACL_CONNECT:
         log_info("%s, CIG_EVENT_ACL_CONNECT\n", __FUNCTION__);
         cig_event_to_user(event, priv, sizeof(cis_acl_info_t));
+        rcsp_update_flag = 1;
         break;
 
     case CIG_EVENT_ACL_DISCONNECT:
@@ -801,7 +802,7 @@ int connected_iso_recv_handle_register(void *priv, void (*recv_handle)(u16 conn_
         list_add_tail(&item->entry, &acl_data_recv_list_head);
     }
 
-    rcsp_update_flag = 1;
+    /* rcsp_update_flag = 1; */
     return 0;
 }
 

@@ -439,6 +439,7 @@ int tws_ota_open(void *priv)
         ret = -1;
         goto _ERR_RET;
     }
+
     if (os_sem_pend(&tws_ota_sem, 500) == OS_TIMEOUT) {
         log_info("tws_ota_open pend timeout\n");
         ret = -1;
@@ -737,10 +738,13 @@ int tws_ota_sync_cmd(int reason)
         g_printf("SYNC_CMD_UPDATE_ERR\n");
         if (tws_api_get_role() == TWS_ROLE_SLAVE) {
             update_result_set(UPDATA_DEV_ERR);
-        } else {
             /* // 如果这里cpu_reset被注释掉，就打开这个，fw验证码校验不通过，从机就会触发擦除 */
             /* if (support_dual_bank_update_no_erase) { */
-            /* 	if ((u8)-1 == g_tws_ota_addr_recore) { */
+            /* 	if (support_dual_bank_update_breakpoint) { */
+            /* 		if ((u32)-1 == g_tws_ota_addr_recore) { */
+            /* 			dual_bank_check_flash_update_area(1); */
+            /* 		} */
+            /* 	} else { */
             /* 		dual_bank_check_flash_update_area(1); */
             /* 	} */
             /* } */

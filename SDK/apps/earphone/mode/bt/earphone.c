@@ -493,6 +493,10 @@ void bt_function_select_init()
     bt_tws_share_function_select_init();
 #endif
 
+#if TCFG_BT_MUSIC_INFO_ENABLE
+    bt_music_info_handle_register(user_get_bt_music_info);
+#endif
+
 }
 
 
@@ -1312,6 +1316,14 @@ int bt_app_msg_handler(int *msg)
             }
         }
 #endif
+        break;
+    case APP_MSG_DEL_ALL_REMOTE_DEV:
+        puts("APP_MSG_DEL_ALL_REMOTE_DEV\n");
+        if (bt_get_total_connect_dev()) {
+            bt_cmd_prepare(USER_CTRL_DISCONNECTION_HCI, 0, NULL);
+        }
+        bt_cmd_prepare(USER_CTRL_DEL_ALL_REMOTE_INFO, 0, NULL);
+        sys_enter_soft_poweroff(POWEROFF_NORMAL);
         break;
     default:
         break;

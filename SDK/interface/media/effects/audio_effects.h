@@ -11,6 +11,7 @@
 #include "effects/convert_data.h"
 #include "effects/audio_spatial_adv.h"
 #include "effects/audio_virtual_bass_pro.h"
+#include "effects/audio_virtual_surround_hp.h"
 
 
 
@@ -37,6 +38,7 @@ struct effects_param {
 
 struct audio_effects {
     void *workbuf;                 //effects 运行句柄及buf
+    u32 workbuf_size;              //当前申请的算法buf大小
     void *tmp_buf;                 //部分算法可能需要堆的临时buf
     void *cross_fade_buf;
     void *cross_fade_param;
@@ -49,6 +51,7 @@ struct audio_effects {
 };
 
 
+int audio_effect_update_need_buf_check(struct audio_effects *hdl, void *param);
 struct audio_effects *audio_effects_open(struct effects_param *parm);
 int audio_effects_close(struct audio_effects *hdl);
 int audio_effects_run(struct audio_effects *hdl, void *datain, void *dataout, u32 len);
@@ -67,6 +70,7 @@ int audio_effects_iport_handle_frame(struct audio_effects *hdl, struct stream_ip
 #define EFFECTS_RUN_UPDATE           BIT(2)
 #define EFFECTS_RUN_CROSS_FADE_EN    BIT(3)
 #define EFFECTS_RUN_CROSS_FADE_IN_EN BIT(4)  //由bypass ->run
+#define EFFECTS_RUN_WORKBUF_REINIT_ERR BIT(5)//由于内存不足无法重新申请buf
 
 //tembuf使用的位置
 #define EFFECTS_SET_TMPBUF_BEF_INIT           BIT(0)

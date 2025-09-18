@@ -31,6 +31,7 @@ typedef struct _pcm_delay_hdl {
     void *workbuf;
     delay_parm_context parm;
     u32 sample_rate;
+    u32 work_buf_size;
     float ch_delay[4];
     u8 ch_num;
     u8 update;
@@ -44,7 +45,7 @@ pcm_delay_hdl *audio_pcm_delay_open(struct pcm_delay_open_parm *param);
 void audio_pcm_delay_close(pcm_delay_hdl *hdl);
 
 //参数更新
-void audio_pcm_delay_update_parm(pcm_delay_hdl *hdl, struct pcm_delay_update_parm *parm);
+int audio_pcm_delay_update_parm(pcm_delay_hdl *hdl, struct pcm_delay_update_parm *parm);
 
 //数据处理
 int audio_pcm_delay_run(pcm_delay_hdl *hdl, s16 *indata, s16 *outdata, int len);

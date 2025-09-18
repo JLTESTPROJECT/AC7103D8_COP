@@ -164,6 +164,7 @@ enum stream_scene : u8 {
     STREAM_SCENE_WIRELESS_MIC,  //16 wireless mic
     STREAM_SCENE_LOCAL_TWS,
 
+    STREAM_SCENE_USER_DEFINED, //自定义流程
 
     //最大32个场景，如果大于32个场景，需把tone、ring, key_tone场景号往后挪
     STREAM_SCENE_TONE = 0x20,

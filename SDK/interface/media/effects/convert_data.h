@@ -4,18 +4,41 @@
 #include "system/includes.h"
 #include "effects/effects_adj.h"
 
-struct convert_data {
-    u16 dat_len;
-    u16 dat_total;
-    u16 buf_len;
-    u16 *buf;
-    u8 type;
+struct convert_data_param {
+    u8 in_bit_width;
+    u8 out_bit_width;
+    u8 qval;
     u8 channel;
 };
 
-struct convert_data *convet_data_open(int type, u32 buf_len);
-void convet_data_close(struct convert_data *hdl);
-void audio_convert_data_run(struct convert_data *hdl, void *in, void *out, u16 len);
+struct convert_data_out {
+    s16 *buf;
+    u16 len;
+    u16 offset;
+};
+
+struct convert_data {
+    struct convert_data_param parm;
+    struct convert_data_out out;
+};
+
+
+/*
+ *输出设备内置的位宽转换处理 open
+ * */
+struct convert_data *audio_convert_data_open(struct convert_data_param *param);
+/*
+ *输出设备内置的位宽转换处理 close
+ * */
+void audio_convert_data_close(struct convert_data *hdl);
+/*
+ *输出设备内置的位宽转换处理 run
+ * */
+struct convert_data_out *audio_convert_data_run(struct convert_data *hdl, void *in, u16 inlen);
+/*
+ * 将输出的偏移转换成输入的偏移
+ * */
+u32 audio_convert_data_offset(struct convert_data *hdl, u32 offset);
 
 void user_sat16(s32 *in, s16 *out, u32 npoint);
 
@@ -97,6 +120,13 @@ void audio_convert_data_4byte24bit_to_3byte24bit(int *in, int *out, unsigned int
  *  total_point:总的输入点数
  * */
 void audio_convert_data_16bit_to_3byte24bit(short *in, int *out, unsigned int total_point);
+
+/* note: 32bit(16bit qval)转32bit(24bit qval)位宽处理
+ * *in:32bit位宽输入地址
+ * *out:32bit位宽输出地址
+ *  total_point:总的输入点数
+ * */
+void audio_convert_data_32bit_to_32bit_round(s32 *in, s32 *out, u32 npoint);
 
 extern int data_sat_s24(int ind);
 extern void audio_data_sat_s24(s32 *data, u32 len);

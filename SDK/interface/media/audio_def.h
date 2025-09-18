@@ -126,8 +126,8 @@
  *******************************************************************
  */
 //PDM Version definitions
-#define AUDIO_PDM_V1						(1UL << 0)
-#define AUDIO_PDM_V2						(1UL << 1)
+#define AUDIO_PDM_V1						(1UL << 0)//Version-1：独立PDM模块版本(700N/701N/703N)
+#define AUDIO_PDM_V2						(1UL << 1)//Version-2：复用ADC模块版本(706N/708N/709N/710N)
 
 #define AUDIO_PDM_MIC_0						(1UL << 0)
 #define AUDIO_PDM_MIC_1                     (1UL << 1)
