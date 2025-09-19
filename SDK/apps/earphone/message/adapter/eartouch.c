@@ -53,7 +53,7 @@ static void tws_eartouch_msg_sync_callback(int msg, int ret)
         event[1] = 0;
     }
     r_printf("CURRENT HEADSET %s REMOTE HEADSET %s", (__this->local_st) ? "OUT" : "IN", (__this->remote_st) ? "OUT" : "IN");
-    os_taskq_post_type("app_core", MSG_FROM_EARTCH, 2, event);
+    os_taskq_post_type("app_core", MSG_FROM_APP, 2, event);
 }
 
 TWS_SYNC_CALL_REGISTER(tws_eartouch_msg_sync_entry) = {

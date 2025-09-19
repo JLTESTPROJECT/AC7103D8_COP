@@ -1166,9 +1166,15 @@ int bt_mode_exit()
 int bt_app_msg_handler(int *msg)
 {
     u8 data[1];
+    u8 a2dp_addr[6];
+    u8 *bt_addr = NULL;
     if (!app_in_mode(APP_MODE_BT)) {
         return 0;
     }
+    if (a2dp_player_get_btaddr(a2dp_addr)) {
+        bt_addr = a2dp_addr;
+    }
+    int state = bt_get_call_status();
     switch (msg[0]) {
     case APP_MSG_VOL_UP:
         log_info("APP_MSG_VOL_UP\n");
@@ -1325,6 +1331,28 @@ int bt_app_msg_handler(int *msg)
         bt_cmd_prepare(USER_CTRL_DEL_ALL_REMOTE_INFO, 0, NULL);
         sys_enter_soft_poweroff(POWEROFF_NORMAL);
         break;
+#if TCFG_LP_EARTCH_KEY_ENABLE
+    case APP_MSG_EARTCH_IN_EAR:
+        puts("APP_MSG_EARTCH_IN_EAR\n");
+        if (state != BT_CALL_HANGUP) {
+            break;
+        }
+        if (bt_share_call_a2dp(DATA_ID_SHARE_TO_SHARE_PP)) {
+            break;
+        }
+        bt_cmd_prepare_for_addr(bt_addr, USER_CTRL_AVCTP_OPID_PLAY, 0, NULL);   // 入耳播歌
+        break;
+    case APP_MSG_EARTCH_OUT_EAR:
+        puts("APP_MSG_EARTCH_OUT_EAR\n");
+        if (state != BT_CALL_HANGUP) {
+            break;
+        }
+        if (bt_share_call_a2dp(DATA_ID_SHARE_TO_SHARE_PP)) {
+            break;
+        }
+        bt_cmd_prepare_for_addr(bt_addr, USER_CTRL_AVCTP_OPID_STOP, 0, NULL);   // 出耳暂停
+        break;
+#endif
     default:
         break;
     }
