@@ -2,6 +2,7 @@
 #define EARPHONE_H
 
 #include "system/includes.h"
+#include "system/event.h"
 ///搜索完整结束的事件
 #define HCI_EVENT_INQUIRY_COMPLETE                            0x01
 ///连接完成的事件

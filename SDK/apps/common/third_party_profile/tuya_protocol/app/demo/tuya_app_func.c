@@ -15,7 +15,7 @@
 #include "bt_tws.h"
 #include "btstack/avctp_user.h"
 
-#if (BT_AI_SEL_PROTOCOL & TUYA_DEMO_EN)
+#if (THIRD_PARTY_PROTOCOLS_SEL & TUYA_DEMO_EN)
 
 static struct VM_INFO_MODIFY {
     char eq_info[11];

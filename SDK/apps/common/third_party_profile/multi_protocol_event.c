@@ -18,7 +18,7 @@
 #include "gfps_platform_api.h"
 #endif
 
-#if (BT_AI_SEL_PROTOCOL & REALME_EN)
+#if (THIRD_PARTY_PROTOCOLS_SEL & REALME_EN)
 #include "realme_platform_api.h"
 #endif
 
@@ -40,7 +40,7 @@ void multi_protocol_state_update_callback(void *_hdl, uint8_t state, uint8_t *pa
     case APP_SPP_DISCONNECTION_COMPLETE:
 #if TCFG_USER_TWS_ENABLE
         multi_protocol_tws_sync_send();
-#if (BT_AI_SEL_PROTOCOL & REALME_EN)
+#if (THIRD_PARTY_PROTOCOLS_SEL & REALME_EN)
         realme_tws_sync_state_send();
 #endif
 
@@ -64,11 +64,11 @@ void multi_protocol_bt_tws_poweroff_handler(void)
     gfps_sync_info_to_new_master();
 #endif
 
-#if (BT_AI_SEL_PROTOCOL & REALME_EN)
+#if (THIRD_PARTY_PROTOCOLS_SEL & REALME_EN)
     realme_tws_sync_state_send();
 #endif
 
-#if (BT_AI_SEL_PROTOCOL & XIMALAYA_EN)
+#if (THIRD_PARTY_PROTOCOLS_SEL & XIMALAYA_EN)
     xmly_tws_sync_send_hdl();
 #endif
 
