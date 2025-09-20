@@ -15,9 +15,9 @@ typedef JL_TIMER_TypeDef    GPTIMER;
 #define TIMER_BASE_ADDR GPTIMER0
 #define TIMER_OFFSET    (GPTIMER1 - GPTIMER0)
 
-#define TIMER_CNT_SIZE  0xFFFF
-#define TIMER_PRD_SIZE  0xFFFF
-#define TIMER_PWM_SIZE  0xFFFF
+#define TIMER_CNT_SIZE  0xFFFFFFFF
+#define TIMER_PRD_SIZE  0xFFFFFFFF
+#define TIMER_PWM_SIZE  0xFFFFFFFF
 
 #define IRQ_TIMEx_IDX_LIST  IRQ_TIME0_IDX, \
                             IRQ_TIME1_IDX, \
@@ -92,6 +92,13 @@ typedef enum gptimerx : u8 {
 #define GPTIMER_SYS_SET_PRD(x)  GPTIMER_SYS->PRD = (x)-1
 #define GPTIMER_SYS_CLK_SRC     12 //MHz单位
 #define GPTIMER_SYS_CLK_DIV     2 // 右移两位 等效于 除以4
+
+#define     GPTIMER_CLK_SEL(t,v)    SFR((t)->CON,10,4, (v)>>10)
+#define     GPTIMER_CLK_DIV(t,v)    SFR((t)->CON,4,4, (v)>>4)
+#define     GPTIMER_SET_PRD(t,v)    (t)->PRD = (v)
+#define     GPTIMER_SET_CNT(t,v)    (t)->CNT = (v)
+#define     GPTIMER_START(t)        (t)->CON |= BIT(0)
+#define     GPTIMER_STOP(t)         (t)->CON = GPTIMER_PND_CLR
 
 #endif
 
