@@ -3,6 +3,10 @@
 #include "app_config.h"
 #include "cpu/includes.h"
 #include "gpio_config.h"
+#include "gSensor/gSensor_manage.h"
+#if TCFG_HRSENSOR_ENABLE
+#include "hr_sensor/hrSensor_manage.h"
+#endif
 
 void gpio_config_soft_poweroff(void);
 
@@ -33,6 +37,18 @@ static void __mask_io_cfg()
 
 u8 power_soff_callback()
 {
+
+#if TCFG_GSENSOR_ENABLE || TCFG_HRSENSOR_ENABLE
+    extern void sensor_del_data_check_cb();
+    sensor_del_data_check_cb();
+#endif
+#if TCFG_GSENSOR_ENABLE
+    gsensor_disable();
+#endif      //end if CONFIG_GSENSOR_ENABLE
+#if TCFG_HRSENSOR_ENABLE
+    hr_sensor_measure_hr_stop();
+#endif
+
     /*该函数未关中断*/
     do_platform_uninitcall();
 
@@ -71,7 +87,7 @@ void power_early_flowing()
     gpio_longpress_pin1_reset_config(IO_LDOIN_DET, 1, 8, 1);
 #endif
 
-#if CONFIG_DEBUG_ENABLE
+#if CONFIG_DEBUG_ENABLE || CONFIG_DEBUG_LITE_ENABLE
 #ifdef TCFG_DEBUG_UART_TX_PIN
     PORT_PROTECT(TCFG_DEBUG_UART_TX_PIN);
 #endif

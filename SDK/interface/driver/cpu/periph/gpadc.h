@@ -13,6 +13,13 @@ enum BATTERY_MODE {
 };
 
 //以下为用户常用api
+
+/**
+ * @brief gpadc_mem_init adc内存初始化
+ *
+ * @param adc_max_ch 配置最大的adc通道数量
+ */
+void gpadc_mem_init(u32 adc_max_ch);
 /**@brief 获取指定通道原始值,从队列中获取
   * @param[in]  ch      指定通道
   * @return     value   原始值,范围根据采样精度变化
@@ -104,7 +111,7 @@ u32 adc_set_voltage_mode(enum AD_CH ch, enum AD_MODE mode);
   * @param[in]  无
   * @return     无
   */
-void adc_init(void);
+void gpadc_init(void);
 
 /**@brief 触发一次adc队列采集,定时调用
   * @param[in]  无
@@ -129,6 +136,12 @@ void adc_dump(void);
   * @return     电池电压值,单位:mv   注意:底层已做换算,不需要乘以倍数
   */
 u32 gpadc_battery_get_voltage();
+
+/**@brief 电池电压fifo 刷新
+  * @param[in]  无
+  * @return     无
+  */
+void gpadc_battery_refresh();
 
 /**@brief 电池电压采集初始化
   * @param[in]  无
@@ -176,6 +189,7 @@ void adc_pmu_vbg_enable();
 void adc_pmu_vbg_disable();
 void adc_ana_ch_sel(enum AD_CH ch, u32 *_adc_con);
 void adc_internal_signal_to_io(enum AD_CH analog_ch, u16 gpio);
+u32 adc_value_to_voltage_for_extern_voltage(u32 adc_value, u32 extern_voltage);
 // void adc_pmu_ch_select(u32 ch);
 // void adc_audio_ch_select(u32 ch_sel);
 void adc_adjust_div(void);

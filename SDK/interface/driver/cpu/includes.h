@@ -17,6 +17,7 @@
 #include "asm/wdt.h"
 
 #include "gptimer.h"
+#include "gpadc.h"
 
 
 

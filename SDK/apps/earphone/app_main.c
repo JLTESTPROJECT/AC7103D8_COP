@@ -202,6 +202,9 @@ const struct task_info task_info_table[] = {
     {"dlog",                1,     0,  256,   128 },
 #endif
     {"aud_adc_demo",        1,     0,  512,   128 },
+#if (TCFG_HRSENSOR_ENABLE || TCFG_GSENSOR_ENABLE)
+    {"app_sensor",         1,     0,  512,   128 },
+#endif
     {0, 0},
 };
 

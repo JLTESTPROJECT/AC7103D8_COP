@@ -144,5 +144,6 @@
 -Iapps/earphone/include/le_audio
 -Iapps/earphone/include/le_audio/big
 -Iapps/earphone/include/le_audio/cig
+-Iapps/common/device/sensor/hr_sensor
 -Iinterface/system/math/cpu/br56
 

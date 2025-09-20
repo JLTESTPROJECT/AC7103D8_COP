@@ -11,6 +11,10 @@ SECTIONS
         imusensor_dev_begin = .;
         KEEP(*(.imusensor_dev))
         imusensor_dev_end = .;
+		
+        hrsensor_dev_begin = .;
+        KEEP(*(.hrsensor_dev))
+        hrsensor_dev_end = .;
 
         fm_dev_begin = .;
         KEEP(*(.fm_dev))

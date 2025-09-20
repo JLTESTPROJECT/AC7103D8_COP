@@ -248,6 +248,7 @@
 <Add directory="apps/earphone/include/le_audio" />
 <Add directory="apps/earphone/include/le_audio/big" />
 <Add directory="apps/earphone/include/le_audio/cig" />
+<Add directory="apps/common/device/sensor/hr_sensor" />
 <Add directory="interface/system/math/cpu/br56" />
 </Compiler>
 <Linker>
@@ -386,6 +387,9 @@
 <Add option="cpu/br56/liba/bfilterfun_lib.a" />
 <Add option="cpu/br56/liba/lib_opusdec_rom_dec.a" />
 <Add option="cpu/br56/liba/crypto_toolbox_Osize.a" />
+<Add option="apps/common/device/sensor/hr_sensor/hx3918/CodeBlocks_3605_spo2_20241021_v2.2.a" />
+<Add option="apps/common/device/sensor/hr_sensor/hx3918/CodeBlocks_3918_hrs_bp_20250324_v2.2.a" />
+<Add option="apps/common/device/sensor/hr_sensor/hx3918/CodeBlocks_3918_hrv_20241026_v2.2.a" />
 <Add option="cpu/br56/liba/lib_dns.a" />
 <Add option="cpu/br56/liba/update.a" />
 <Add option="cpu/br56/liba/cbuf.a" />
@@ -474,7 +478,28 @@
 <Unit filename="apps/common/device/key/touch_key.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/device/key/touch_key.h" />
 <Unit filename="apps/common/device/key/uart_key.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="apps/common/device/sensor/app_sensor.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="apps/common/device/sensor/gSensor/bma580.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="apps/common/device/sensor/gSensor/gSensor_manage.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/device/sensor/gSensor/gSensor_manage.h" />
+<Unit filename="apps/common/device/sensor/gSensor/stk832x.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="apps/common/device/sensor/hr_sensor/hrSensor_manage.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="apps/common/device/sensor/hr_sensor/hrSensor_manage.h" />
+<Unit filename="apps/common/device/sensor/hr_sensor/hx3918/hx3918.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="apps/common/device/sensor/hr_sensor/hx3918/hx3918.h" />
+<Unit filename="apps/common/device/sensor/hr_sensor/hx3918/hx3918_check_touch.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="apps/common/device/sensor/hr_sensor/hx3918/hx3918_check_touch.h" />
+<Unit filename="apps/common/device/sensor/hr_sensor/hx3918/hx3918_factory_test.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="apps/common/device/sensor/hr_sensor/hx3918/hx3918_factory_test.h" />
+<Unit filename="apps/common/device/sensor/hr_sensor/hx3918/hx3918_hrs_agc.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="apps/common/device/sensor/hr_sensor/hx3918/hx3918_hrs_agc.h" />
+<Unit filename="apps/common/device/sensor/hr_sensor/hx3918/hx3918_hrv_agc.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="apps/common/device/sensor/hr_sensor/hx3918/hx3918_hrv_agc.h" />
+<Unit filename="apps/common/device/sensor/hr_sensor/hx3918/hx3918_spo2_agc.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="apps/common/device/sensor/hr_sensor/hx3918/hx3918_spo2_agc.h" />
+<Unit filename="apps/common/device/sensor/hr_sensor/hx3918/tyhx_hrs_alg.h" />
+<Unit filename="apps/common/device/sensor/hr_sensor/hx3918/tyhx_hrv_alg.h" />
+<Unit filename="apps/common/device/sensor/hr_sensor/hx3918/tyhx_spo2_alg.h" />
 <Unit filename="apps/common/device/sensor/imu_sensor/icm_42670p/InvError.h" />
 <Unit filename="apps/common/device/sensor/imu_sensor/icm_42670p/icm_42670p.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/device/sensor/imu_sensor/icm_42670p/icm_42670p.h" />
@@ -1485,7 +1510,6 @@
 <Unit filename="cpu/br56/ui_driver/led7/led7_driver.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="cpu/br56/ui_driver/led7/led7_driver_cfg.h" />
 <Unit filename="cpu/br56/ui_driver/ui_common.c"><Option compilerVer="CC"/></Unit>
-<Unit filename="cpu/components/gpadc_battery.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="cpu/components/iic_api.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="cpu/components/iic_soft.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="cpu/components/ir_decoder.c"><Option compilerVer="CC"/></Unit>
