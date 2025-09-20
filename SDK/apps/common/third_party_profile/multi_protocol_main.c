@@ -443,7 +443,7 @@ void multi_protocol_bt_init(void)
     dma_rx_resume_register(multi_protocol_resume);
     dma_protocol_all_init();
 #endif
-#if (BT_AI_SEL_PROTOCOL & TUYA_DEMO_EN)
+#if (THIRD_PARTY_PROTOCOLS_SEL & TUYA_DEMO_EN)
     extern void tuya_bt_ble_init(void);
     tuya_bt_ble_init();
 #endif
@@ -541,7 +541,7 @@ void bt_ble_adv_enable(u8 enable)
 #if (THIRD_PARTY_PROTOCOLS_SEL & GFPS_EN)
     gfps_bt_ble_adv_enable(enable);
 #endif
-#if (BT_AI_SEL_PROTOCOL & TUYA_DEMO_EN)
+#if (THIRD_PARTY_PROTOCOLS_SEL & TUYA_DEMO_EN)
     extern void tuya_bt_ble_adv_enable(u8 enable);
     tuya_bt_ble_adv_enable(enable);
 #endif
