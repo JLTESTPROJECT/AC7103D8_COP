@@ -391,6 +391,7 @@
 <Add option="apps/common/device/sensor/hr_sensor/hx3918/CodeBlocks_3918_hrs_bp_20250324_v2.2.a" />
 <Add option="apps/common/device/sensor/hr_sensor/hx3918/CodeBlocks_3918_hrv_20241026_v2.2.a" />
 <Add option="cpu/br56/liba/lib_dns.a" />
+<Add option="apps/common/third_party_profile/tuya_protocol/sdk/lib/libtuya_lib.a" />
 <Add option="cpu/br56/liba/update.a" />
 <Add option="cpu/br56/liba/cbuf.a" />
 <Add option="cpu/br56/liba/lbuf.a" />

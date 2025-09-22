@@ -275,6 +275,7 @@ LFLAGS := \
 	apps/common/device/sensor/hr_sensor/hx3918/CodeBlocks_3918_hrs_bp_20250324_v2.2.a \
 	apps/common/device/sensor/hr_sensor/hx3918/CodeBlocks_3918_hrv_20241026_v2.2.a \
 	cpu/br56/liba/lib_dns.a \
+	apps/common/third_party_profile/tuya_protocol/sdk/lib/libtuya_lib.a \
 	cpu/br56/liba/update.a \
 	cpu/br56/liba/cbuf.a \
 	cpu/br56/liba/lbuf.a \
@@ -291,7 +292,7 @@ LFLAGS := \
 	cpu/br56/liba/cbuf.a  \
 	cpu/br56/liba/vm.a  \
 	cpu/br56/liba/fs.a  \
-	cpu/br56/liba/libtuya_lib.a  \
+	cpu/br56/liba/cfg_tool.a  \
 	--end-group \
 	-Tcpu/br56/sdk.ld \
 	-M=cpu/br56/tools/sdk.map \
