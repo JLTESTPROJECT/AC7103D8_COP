@@ -25,7 +25,7 @@
 #include "auracast_app_protocol.h"
 #endif
 
-#if ((THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN | GFPS_EN | MMA_EN | FMNA_EN | REALME_EN | SWIFT_PAIR_EN | DMA_EN | ONLINE_DEBUG_EN | CUSTOM_DEMO_EN | XIMALAYA_EN | AURACAST_APP_EN)) || \
+#if ((THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN | GFPS_EN | MMA_EN | FMNA_EN |  TUYA_DEMO_EN | REALME_EN | SWIFT_PAIR_EN | DMA_EN | ONLINE_DEBUG_EN | CUSTOM_DEMO_EN | XIMALAYA_EN | AURACAST_APP_EN)) || \
 		(TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN | LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN)))
 
 #define ATT_LOCAL_PAYLOAD_SIZE    (517)//(517)              //note: need >= 20
@@ -443,6 +443,7 @@ void multi_protocol_bt_init(void)
     dma_rx_resume_register(multi_protocol_resume);
     dma_protocol_all_init();
 #endif
+
 #if (THIRD_PARTY_PROTOCOLS_SEL & TUYA_DEMO_EN)
     extern void tuya_bt_ble_init(void);
     tuya_bt_ble_init();
