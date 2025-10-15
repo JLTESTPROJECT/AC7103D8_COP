@@ -91,7 +91,7 @@ int aud_clock_alloc(const char *name, u32 clk)
 
 int aud_clock_free(char *name)
 {
-    y_printf("aud_clock_alloc:%s\n", name);
+    y_printf("aud_clock_free:%s\n", name);
     return clock_free(name);
 
 }

@@ -98,6 +98,12 @@ static volatile u8 ota_status = 0;
 static succ_report_t succ_report;
 static bool g_write_vm_flag = true;
 
+#if USER_FILE_UPDATE_V2_EN
+extern const int support_user_file_update_v2_en;
+extern void user_file_flash_file_download_init(void);
+#endif
+
+
 int syscfg_write_update_check(u16 item_id, void *buf, u16 len)
 {
     return g_write_vm_flag;
@@ -609,6 +615,11 @@ static void update_init_common_handle(int type)
             tws_api_auto_role_switch_disable();
             tws_sync_update_api_register(get_tws_update_api());
             tws_ota_init();
+        }
+#endif
+#if CONFIG_USER_FILE_UPDATE_V2_EN
+        if (support_user_file_update_v2_en) {
+            user_file_flash_file_download_init();
         }
 #endif
         if (BT_UPDATA == type) {

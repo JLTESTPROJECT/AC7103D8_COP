@@ -7,6 +7,7 @@
 #include "hx3918.h"
 #include "hx3918_factory_test.h"
 
+#if TCFG_HX3918_ENABLE
 void hx3918_factory_ft_card_test_config(void)//灰卡10mm高度测试配置
 {
     uint16_t sample_rate = 25;                  /*config the data rate of chip alps2_fm ,uint is Hz*/
@@ -534,3 +535,4 @@ factory_result_t hx3918_factroy_test(uint32_t  test_mode)
     DEBUG_PRINTF("%d %d %d\r\n", factory_reslts.green_data_final, factory_reslts.red_data_final, factory_reslts.ir_data_final);
     return factory_reslts;
 }
+#endif // TCFG_HX3918_ENABLE

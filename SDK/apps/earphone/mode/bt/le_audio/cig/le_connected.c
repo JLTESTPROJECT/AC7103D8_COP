@@ -137,6 +137,7 @@ static struct le_audio_mode_ops *le_audio_switch_ops = NULL; /*!< 广播音频�
 #if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_UNICAST_SINK_EN)
 u8 cig_peripheral_support_lea_profile  = 0;			// 是否支持公有的cis协议
 u8 cig_peripheral_support_dongle = 1;
+u8 lea_cfg_only_dongle_support = 1;
 #elif (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_UNICAST_SINK_EN )
 u8 cig_peripheral_support_lea_profile  = 1;			// 是否支持公有的cis协议
 u8 cig_peripheral_support_dongle = 0;

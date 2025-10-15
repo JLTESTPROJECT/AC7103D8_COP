@@ -20,6 +20,7 @@
                 "CONFIG_UCOS_ENABLE",
                 "CONFIG_EQ_SUPPORT_ASYNC",
                 "EQ_CORE_V1",
+                "AAC_DEC_IN_MASK",
                 "CONFIG_BT_CTRLER_IN_MASK",
                 "CONFIG_CRYPTO_TOOLBOX_OSIZE_IN_MASKROM",
                 "CONFIG_CRYPTO_RESET_BITS_SZIE_IN_MASKROM",

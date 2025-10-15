@@ -239,6 +239,8 @@ c_SRC_FILES += \
 	  audio/common/uartPcmSender.c
 #endif
 
+c_SRC_FILES += \
+	  audio/common/demo/audio_demo.c
 #if 0
 c_SRC_FILES += \
 	  audio/common/demo/codec_demo/audio_enc_file_demo.c \
@@ -680,6 +682,17 @@ c_SRC_FILES += \
 #if (OTA_TWS_SAME_TIME_ENABLE && OTA_TWS_SAME_TIME_NEW && !OTA_TWS_SAME_TIME_NEW_LESS)
 c_SRC_FILES += \
 	apps/common/update/update_tws_new.c
+#endif
+
+#if (CONFIG_USER_FILE_UPDATE_V2_EN)
+c_SRC_FILES += \
+apps/common/update/user_file_download/user_file_download.c
+c_SRC_FILES += \
+apps/common/update/user_file_download/reserve_file_download.c
+#if (CONFIG_USER_FILE_UPDATE_V2_TWS)
+c_SRC_FILES += \
+apps/common/update/user_file_download/user_file_update_tws.c
+#endif
 #endif
 
 #if (OTA_TWS_SAME_TIME_ENABLE && OTA_TWS_SAME_TIME_NEW && OTA_TWS_SAME_TIME_NEW_LESS)
@@ -1743,7 +1756,7 @@ c_SRC_FILES += \
 c_SRC_FILES += \
       cpu/br56/charge/charge_ocp.c
 
-#if TCFG_CHARGE_ENABLE
+#if 1//TCFG_CHARGE_ENABLE
 c_SRC_FILES += \
       cpu/br56/charge/charge.c \
       cpu/br56/charge/charge_config.c
@@ -1856,9 +1869,18 @@ c_SRC_FILES += \
 c_SRC_FILES += \
 	apps/common/device/sensor/gSensor/gSensor_manage.c \
 
+#if TCFG_SC7A20_EN
+c_SRC_FILES += \
+	apps/common/device/sensor/gSensor/SC7A20.c \
+
+MASK_LIBS+= \
+	apps/common/device/sensor/gSensor/sensor_algorithm_jl_motion.a \
+
+#endif
+
 #if TCFG_STK832x_EN
 c_SRC_FILES += \
-	apps/common/device/sensor/gSensor/stk832x.c \
+	$(ROOT)/apps/common/device/sensor/gSensor/stk832x.c \
 
 #endif
 #if TCFG_BMA580_EN
@@ -1882,9 +1904,23 @@ c_SRC_FILES += \
 	apps/common/device/sensor/hr_sensor/hx3918/hx3918_factory_test.c \
 
 MASK_LIBS+= \
-   $(ROOT)/apps/common/device/sensor/hr_sensor/hx3918/CodeBlocks_3605_spo2_20241021_v2.2.a \
+   apps/common/device/sensor/hr_sensor/hx3918/CodeBlocks_3605_spo2_20241021_v2.2.a \
    $(ROOT)/apps/common/device/sensor/hr_sensor/hx3918/CodeBlocks_3918_hrs_bp_20250324_v2.2.a \
    $(ROOT)/apps/common/device/sensor/hr_sensor/hx3918/CodeBlocks_3918_hrv_20241026_v2.2.a \
 
 #endif
+
+#if TCFG_HX3011_ENABLE
+c_SRC_FILES += \
+	$(ROOT)/apps/common/device/sensor/hr_sensor/hx3011/hx3011.c \
+	apps/common/device/sensor/hr_sensor/hx3011/hx3011_check_touch.c \
+	apps/common/device/sensor/hr_sensor/hx3011/hx3011_hrs_agc.c \
+	apps/common/device/sensor/hr_sensor/hx3011/hx3011_spo2_agc.c \
+	apps/common/device/sensor/hr_sensor/hx3011/hx3011_factory_test.c \
+
+MASK_LIBS+= \
+   $(ROOT)/apps/common/device/sensor/hr_sensor/hx3011/CodeBlocks_3011_hrs_spo2_20250606_v2.2.a \
+
+#endif
+
 #endif

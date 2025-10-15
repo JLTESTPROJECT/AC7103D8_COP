@@ -37,7 +37,7 @@ void go_mask_usb_updata()
     cpu_reset();
 
 #else
-    usb_g_hold(0);
+    usb_stop(0);
 #if USB_MAX_HW_NUM > 1
     usb_g_hold(1);
 #endif

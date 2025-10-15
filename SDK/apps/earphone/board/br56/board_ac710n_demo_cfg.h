@@ -526,6 +526,7 @@
 //*********************************************************************************//
 #define TCFG_HRSENSOR_ENABLE                      0     //hr-sensor使能
 #define TCFG_HX3918_ENABLE                        0
+#define TCFG_HX3011_ENABLE                        0
 #define TCFG_HRSENOR_USER_IIC_TYPE                0     //0:软件IIC  1:硬件IIC
 
 //*********************************************************************************//

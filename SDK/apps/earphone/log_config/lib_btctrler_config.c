@@ -455,7 +455,17 @@ const int config_btctler_le_master_multilink = 0;
 	const int config_btctler_le_hw_nums = 2;
 #endif
 
+#if ((TCFG_LE_AUDIO_APP_CONFIG) & (LE_AUDIO_JL_UNICAST_SINK_EN))
+	const int CONFIG_JL_UNICAST_ENABLE     = 1;
+#else
+	const int CONFIG_JL_UNICAST_ENABLE     = 0;
+#endif
 
+#if ((TCFG_LE_AUDIO_APP_CONFIG) & (LE_AUDIO_JL_AURACAST_SINK_EN))
+	const int CONFIG_JL_AURACAST_ENABLE    = 1;
+#else
+	const int CONFIG_JL_AURACAST_ENABLE    = 0;
+#endif
 
 const int config_btctler_le_slave_conn_update_winden = 2500;//range:100 to 2500
 #if (defined CONFIG_CPU_BR50 || defined CONFIG_CPU_BR52)

@@ -184,7 +184,7 @@ void aec_toggle(u8 toggle);
 *********************************************************************
 */
 int aec_cfg_update(AEC_CONFIG *cfg);
-
+int sms_tde_cfg_update(AEC_CONFIG *cfg);
 /*
 *********************************************************************
 *                  			AEC Reboot

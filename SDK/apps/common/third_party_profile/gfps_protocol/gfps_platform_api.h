@@ -36,6 +36,7 @@ extern int gfps_ble_adv_enable(u8 enable);
 extern void gfps_battery_update(void);
 extern u8 gfps_rfcomm_connect_state_get(void);
 extern void gfps_rfcomm_connect_state_set(u8 state);
+extern void gfps_edr_conn_handler(u8 *edr_addr, u8 flag);
 
 extern void gfps_sync_info_to_new_master(void);
 

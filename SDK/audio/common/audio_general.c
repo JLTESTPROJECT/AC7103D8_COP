@@ -200,6 +200,11 @@ const int config_audio_adc7_input_mode = 0;
  *******************************************************************
  */
 const int config_audio_cvp_ref_source = 1;/*0:DAC Internal 1:External*/
+#ifdef TCFG_AUDIO_SIDETONE_ENABLE
+const int config_audio_cvp_ref_ch_recognize_enable = TCFG_AUDIO_SIDETONE_ENABLE;
+#else
+const int config_audio_cvp_ref_ch_recognize_enable = 0;
+#endif
 
 /*
  *******************************************************************

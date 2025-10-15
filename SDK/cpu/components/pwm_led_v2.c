@@ -461,6 +461,10 @@ void pwm_led_hw_init(void *pdata)
     //初始化引脚
     pwm_led_io_mount();
 
+    pwm_led_lrc_clk_init();
+    JL_PLED->CON0 &= ~(0b11 << 2);      //PWM_LED选择LRD_200K做时钟源
+    JL_PLED->CON0 &= ~(0b1111 << 4);    //时钟源不分频
+
     if (__this->first_logic == 0) {
         JL_PLED->CON0 |=  BIT(23);
     } else {

@@ -82,7 +82,7 @@ void eartouch_event_handler(u8 state)
     __this->local_st = state;
     r_printf("EARTCH STA: %s ", (__this->local_st) ? "OUT" : "IN");
     int msg = (state == EARTOUCH_STATE_IN_EAR) ? APP_MSG_EARTCH_IN_EAR : APP_MSG_EARTCH_OUT_EAR;
-    os_taskq_post_type("app_core", MSG_FROM_EARTCH, 1, &msg);
+    os_taskq_post_type("app_core", MSG_FROM_APP, 1, &msg);
 #endif
 }
 

@@ -301,7 +301,11 @@ static void app_testbox_update_event_handle(u8 *data, u16 size)
 #endif
     /* 打一个uartkey给maskrom识别 */
     chargestore_set_update_ram();
+
     /* reset之后在maskrom收loader，然后执行 */
+#if defined(CONFIG_CPU_BR52)
+    power_set_mode(PWR_LDO15);
+#endif
     cpu_reset();
 }
 

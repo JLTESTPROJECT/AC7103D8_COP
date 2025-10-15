@@ -107,6 +107,9 @@ const struct task_info task_info_table[] = {
     {"tws_ota",				2,	   0,   256,   0   },
     {"tws_ota_msg",			2,	   0,   256,   128 },
     {"dw_update",		 	1,	   0,   256,   128 },
+#if (CONFIG_USER_FILE_UPDATE_V2_EN)
+    {"ex_f_update",			1,	    1,  512,   0    },
+#endif
 #if TCFG_AUDIO_DATA_EXPORT_DEFINE
     {"aud_capture",         4,     0,   512,   256 },
     {"data_export",         5,     0,   512,   256 },
@@ -293,6 +296,7 @@ __INITCALL_BANK_CODE
 void check_power_on_key(void)
 {
     u32 delay_10ms_cnt = 0;
+    int key_ng_cnt = 0;
 
     while (1) {
         wdt_clear();
@@ -301,6 +305,7 @@ void check_power_on_key(void)
         if (get_power_on_status()) {
             putchar('+');
             delay_10ms_cnt++;
+            key_ng_cnt = 0;
             if (delay_10ms_cnt > 70) {
                 app_var.poweron_reason = SYS_POWERON_BY_KEY;
                 return;
@@ -308,8 +313,11 @@ void check_power_on_key(void)
         } else {
             log_info("enter softpoweroff\n");
             delay_10ms_cnt = 0;
-            app_var.poweroff_reason = SYS_POWEROFF_BY_KEY;
-            power_set_soft_poweroff();
+            key_ng_cnt++;
+            if (key_ng_cnt > 10) {
+                app_var.poweroff_reason = SYS_POWEROFF_BY_KEY;
+                power_set_soft_poweroff();
+            }
         }
     }
 }

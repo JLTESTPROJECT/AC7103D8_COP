@@ -528,8 +528,13 @@ int audio_aec_open(struct audio_aec_init_param_t *init_param, s16 enablebit, int
 #endif/*TCFG_AEC_TOOL_ONLINE_ENABLE*/
     aec_param->output_handle = audio_aec_output;
     aec_param->far_noise_gate = 10;
+    audio_aec_param_init(aec_param, init_param->node_uuid);
     if (ref_sr) {
-        aec_param->ref_sr  = ref_sr;
+        if (aec_param->adc_ref_en) {
+            aec_param->ref_sr  = sample_rate; // 硬回采参考数据采样率ref_sr和ADC采样率sample_rate保持一致
+        } else {
+            aec_param->ref_sr  = ref_sr;	  // 软回采
+        }
     } else {
         aec_param->ref_sr  = usb_mic_is_running();
     }
@@ -545,7 +550,6 @@ int audio_aec_open(struct audio_aec_init_param_t *init_param, s16 enablebit, int
     }
     aec_param->ref_channel = ref_channel;
 
-    audio_aec_param_init(aec_param, init_param->node_uuid);
     if (enablebit >= 0) {
         aec_param->EnableBit = enablebit;
     }
@@ -925,6 +929,20 @@ void aec_input_clear_enable(u8 enable)
 
 #endif/*TCFG_AUDIO_DUAL_MIC_ENABLE == 0) && TCFG_AUDIO_TRIPLE_MIC_ENABLE == 0*/
 #endif /*TCFG_CVP_DEVELOP_ENABLE*/
+
+const u16 audio_cvp_uuid_table[10] = {
+    NODE_UUID_CVP_SMS_ANS,
+    NODE_UUID_CVP_SMS_DNS,
+    NODE_UUID_CVP_DMS_ANS,
+    NODE_UUID_CVP_DMS_DNS,
+    NODE_UUID_CVP_DMS_FLEXIBLE_DNS,
+
+    NODE_UUID_CVP_DMS_FLEXIBLE_ANS,
+    NODE_UUID_CVP_DMS_HYBRID_DNS,
+    NODE_UUID_CVP_DMS_AWN_DNS,
+    NODE_UUID_CVP_3MIC,
+    NODE_UUID_CVP_V3
+};
 
 struct cvp_context_setup {
     u16 active_node_uuid;

@@ -107,8 +107,13 @@ IMU_SENSOR_PLATFORM_DATA_END();
 /************************** gsensor ****************************/
 #if TCFG_GSENSOR_ENABLE
 GSENSOR_PLATFORM_DATA_BEGIN(gSensor_data)
+#if TCFG_SC7A20_EN
+.iic = 0,
+ .gSensor_name = "sc7a20",
+#elif TCFG_STK832x_EN
 .iic = 0,
  .gSensor_name = "stk832x",
+#endif
   GSENSOR_PLATFORM_DATA_END();
 #endif
 
@@ -118,6 +123,9 @@ HRSENSOR_PLATFORM_DATA_BEGIN(hr_sensor_data)
 #if TCFG_HX3918_ENABLE
 .iic = 0,
  .hrSensor_name = "hx3918",
+#elif TCFG_HX3011_ENABLE
+.iic = 0,
+ .hrSensor_name = "hx3011",
 #endif
   HRSENSOR_PLATFORM_DATA_END()
 #endif

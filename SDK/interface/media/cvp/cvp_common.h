@@ -49,6 +49,8 @@ enum {
     CVP_OUTWAY_REF_IGNORE,
     CVP_DNS_NOISEGATE_VAL,
     CVP_DRC_SWITCH,
+    CVP_SET_EQ,
+    CVP_SET_ANC_STATEMODE,
 };
 int aec_ioctl(int cmd, int value, void *priv);
 int sms_tde_ioctl(int cmd, int value, void *priv);

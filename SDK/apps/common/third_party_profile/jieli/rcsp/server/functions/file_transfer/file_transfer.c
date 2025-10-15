@@ -425,7 +425,8 @@ static void file_transfer_download_file_check(void)
 static int file_rename(const char *rename)
 {
 #ifdef TONE_FILE_RESERVED_AREA_NAME
-    if (RCSPDevMapRESERVE == ftp_d->dev_handle) {
+    /* if (RCSPDevMapRESERVE == ftp_d->dev_handle) { */
+    if ((FILE_TRANSFER_TONE_FILE == ftp_d->special_flag) || (RCSPDevMapRESERVE == ftp_d->dev_handle)) {
         return 0;
     }
 #endif

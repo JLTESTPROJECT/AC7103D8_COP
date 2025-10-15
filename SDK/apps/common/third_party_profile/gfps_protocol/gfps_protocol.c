@@ -58,6 +58,7 @@ static struct gfps_protocol_t gfps_protocol = {0};
 #define INIT_PAIR_ADV_INTERVAL      150
 #define SUBS_PAIR_ADV_INTERVAL      352
 
+// GFP 进入配对模式，在线程调用
 void gfps_set_pair_mode_by_user(u8 disconn_ble)
 {
     if (disconn_ble) {
@@ -111,6 +112,7 @@ void generate_rfcomm_battery_data(u8 *data)
 
     data[0] = (tws_api_get_local_channel() == 'L') ? self_val : sibling_val; //左耳电量
     data[1] = (tws_api_get_local_channel() == 'R') ? self_val : sibling_val; //右耳电量
+
     printf("%s, l:%x, r:%x, bat:%x", __func__, data[0], data[1], data[2]);
     if (data[0] == 0xFF) {
         data[0] = 0;
@@ -470,8 +472,13 @@ static int gfps_bt_status_event_handler(int *msg)
         __this->poweron_reconn = 0;
         gfps_adv_interval_set(SUBS_PAIR_ADV_INTERVAL); //连接上手机间隔改为220ms，防止fast pair validator测试fail
         set_gfps_pair_state(1);
+        gfps_edr_conn_handler(bt->args, 1);
         gfps_bt_ble_adv_enable(0);
         gfps_bt_ble_adv_enable(1);
+        break;
+    case BT_STATUS_FIRST_DISCONNECT:
+    case BT_STATUS_SECOND_DISCONNECT:
+        gfps_edr_conn_handler(bt->args, 0);
         break;
     case BT_STATUS_PHONE_INCOME:
     case BT_STATUS_PHONE_OUT:

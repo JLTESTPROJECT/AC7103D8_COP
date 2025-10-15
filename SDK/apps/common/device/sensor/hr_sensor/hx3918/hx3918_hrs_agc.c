@@ -13,6 +13,8 @@
 #include "hx3918_prox.h"
 #endif
 
+#if TCFG_HX3918_ENABLE
+
 #ifdef HRS_ALG_LIB
 
 extern uint8_t hx3918_hrs_agc_idac;
@@ -1040,6 +1042,8 @@ uint8_t hx3918_hrs_read(ppg_sensor_data_t *s_dat)
     return 1;
 }
 #endif
+
+#endif // TCFG_HX3918_ENABLE
 
 
 

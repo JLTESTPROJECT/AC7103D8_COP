@@ -224,12 +224,12 @@ void cvp_dms_param_dump(struct dms_attr *param, u8 cvp_algo)
     printf("enc_process_maxfreq:%d", param->enc_process_maxfreq);
     printf("enc_process_minfreq:%d", param->enc_process_minfreq);
     if (cvp_algo == DMS_HYBRID) {
-        puts("snr_db_T0:");
-        put_float(param->snr_db_T0);
-        puts("snr_db_T1:");
-        put_float(param->snr_db_T1);
-        puts("floor_noise_db_T:");
-        put_float(param->floor_noise_db_T);
+        puts("noise_level_db_T0");
+        put_float(param->noise_level_db_T0);
+        puts("noise_level_db_T1");
+        put_float(param->noise_level_db_T1);
+        puts("compen_db:");
+        put_float(param->compen_db);
         puts("compen_db:");
         put_float(param->compen_db);
 

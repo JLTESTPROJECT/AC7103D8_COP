@@ -163,6 +163,7 @@ LFLAGS := \
 	cpu/br56/liba/libDualMicSystem_pi32v2_OnChip.a \
 	cpu/br56/liba/libDualMicSystem_flexible_pi32v2_OnChip.a \
 	cpu/br56/liba/libDualMicSystem_Awn.a \
+	cpu/br56/liba/libDualMicSystem_Hybrid.a \
 	cpu/br56/liba/libAdaptiveEchoSuppress_pi32v2_OnChip.a \
 	cpu/br56/liba/libOpcore_maskrom_pi32v2_OnChip.a \
 	cpu/br56/liba/lib_advaudio_plc.a \
@@ -256,9 +257,11 @@ LFLAGS := \
 	cpu/br56/liba/libStereoToLCR_pi32v2_OnChip.a \
 	cpu/br56/liba/sbsbrir.a \
 	cpu/br56/liba/spatial_brir.a \
+	apps/common/device/sensor/gSensor/sensor_algorithm_jl_motion.a \
 	apps/common/device/sensor/hr_sensor/hx3918/CodeBlocks_3605_spo2_20241021_v2.2.a \
 	apps/common/device/sensor/hr_sensor/hx3918/CodeBlocks_3918_hrs_bp_20250324_v2.2.a \
 	apps/common/device/sensor/hr_sensor/hx3918/CodeBlocks_3918_hrv_20241026_v2.2.a \
+	apps/common/device/sensor/hr_sensor/hx3011/CodeBlocks_3011_hrs_spo2_20250606_v2.2.a \
 	cpu/br56/liba/libFFT_pi32v2_OnChip.a \
 	cpu/br56/liba/lib_wtg_dec.a \
 	cpu/br56/liba/bfilterfun_lib.a \

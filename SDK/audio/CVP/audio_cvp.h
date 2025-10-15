@@ -208,6 +208,9 @@ int audio_cvp_v3_probe_param_update(struct audio_cvp_pre_param_t *cfg);
 int audio_cvp_v3_toggle_set(u8 toggle);
 int audio_cvp_v3_ioctl(int cmd, int value, void *priv);
 void audio_cvp_v3_set_output_way(u8 en);
+int audio_cvp_v3_get_wind_detect_info(int *wd_flag, float *wd_val);
+int audio_cvp_v3_get_bandwidth_info(int is_wb_state);
+int audio_cvp_v3_get_mic_state_info(int mic_state);
 
 void audio_sms_vf_spk_data_push(s16 *data0, s16 *data1, u16 len);
 void audio_sms_vf_talk_mic_push(s16 *buf, u16 len);

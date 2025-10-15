@@ -45,6 +45,10 @@ static void (*sync_update_crc_init_hdl)(void) = NULL;
 static u32(*sync_update_crc_calc_hdl)(u32 init_crc, const void *data, u32 len) = NULL;
 extern const int support_dual_bank_update_no_erase;
 extern const int support_dual_bank_update_breakpoint;
+extern const int support_dual_bank_sync_verify_en;
+
+extern void user_file_update_tws_init_slave(void);
+extern void user_file_update_tws_deinit_slave(void);
 
 struct _bt_event {
     u8 event;
@@ -97,6 +101,10 @@ void tws_ota_timeout(void *priv) 		//从机没收到命令超时就退出升级
 {
     tws_ota_close();
     dual_bank_passive_update_exit(NULL);
+#if (CONFIG_USER_FILE_UPDATE_V2_EN && CONFIG_USER_FILE_UPDATE_V2_TWS)
+    user_file_update_tws_deinit_slave();
+#endif
+
 }
 
 void tws_ota_timeout_reset(void)
@@ -308,8 +316,10 @@ u16 tws_ota_enter_verify(void *priv)
     if (tws_ota_trans_to_sibling((u8 *)&rsp_data, 2)) {
         return -1;
     }
-    if (os_sem_pend(&tws_ota_sem, 800) ==  OS_TIMEOUT) {
-        return -1;
+    if (0 == support_dual_bank_sync_verify_en) {
+        if (os_sem_pend(&tws_ota_sem, 800) ==  OS_TIMEOUT) {
+            return -1;
+        }
     }
     printf("tws_ota_enter_verify222\n");
     return 0;
@@ -621,6 +631,10 @@ static void deal_sibling_tws_ota_trans(void *data, u16 len)
             rsp_data[2] = OTA_TWS_CMD_SUCC;
         }
         tws_ota_trans_to_sibling(rsp_data, 3);
+
+#if (CONFIG_USER_FILE_UPDATE_V2_EN && CONFIG_USER_FILE_UPDATE_V2_TWS)
+        user_file_update_tws_init_slave();
+#endif
         break;
     case OTA_TWS_START_UPDATE_RSP:
         g_printf("MSG_OTA_TWS_START_UPDATE_RSP\n");
