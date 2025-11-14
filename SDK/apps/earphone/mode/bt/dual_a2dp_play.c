@@ -23,6 +23,7 @@
 #include "tws_dual_conn.h"
 #include "dac_node.h"
 #include "tws_dual_share.h"
+#include "debug/audio_debug.h"
 #if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SINK_EN)
 #include "le_audio_player.h"
 #include "app_le_auracast.h"
@@ -191,7 +192,8 @@ static void tws_a2dp_play_in_task(u8 *data)
             a2dp_media_close(bt_addr);
             break;
         }
-#if (TCFG_BT_A2DP_PLAYER_ENABLE == 0)
+#if ((TCFG_BT_A2DP_PLAYER_ENABLE == 0) || BT_INTERFERE_WITH_AUDIO_DEBUG)
+        y_printf("a2dp_player disable");
         break;
 #endif
 #if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_UNICAST_SINK_EN)
@@ -348,10 +350,6 @@ void tws_a2dp_play_send_cmd(u8 cmd, u8 *_data, u8 len, u8 tx_do_action)
 void tws_a2dp_play_send_cmd(u8 cmd, u8 *_data, u8 len, u8 tx_do_action)
 {
     u8 data[16];
-
-    if (!tx_do_action) {
-        return;
-    }
     data[0] = cmd;
     data[1] = 2;
     memcpy(data + 2, _data, len);
@@ -539,6 +537,20 @@ static int a2dp_bt_status_event_handler(int *event)
             bt_cmd_prepare_for_addr(bt->args, USER_CTRL_HFP_DISCONNECT, 0, NULL);
             bt_cmd_prepare_for_addr(bt->args, USER_CTRL_HFP_CMD_CONN, 0, NULL);
         }
+#if (LE_AUDIO_JL_DONGLE_UNICAST_WITH_PHONE_CONN_CONFIG & LE_AUDIO_JL_DONGLE_UNICAST_WITH_PHONE_CONN_PLAY_PREEMPTEDK)
+        if (is_cig_phone_call_play() || is_cig_other_phone_call_play()) {  //如果dongle那边在cis通话，edr播歌无法进行抢占
+            y_printf("is_cig_phone_call_play, a2dp can not preempt\n");
+            a2dp_player_close(bt->args);
+            printf("stop device_a a2dp,for cis\n");
+            a2dp_media_mute(bt->args);
+            memcpy(le_audio_a2dp_preempted_addr, bt->args, 6);
+            if (tws_api_get_role() == TWS_ROLE_MASTER) {
+                btstack_device_control(device_a, USER_CTRL_AVCTP_OPID_PAUSE);
+                tws_a2dp_play_send_cmd(CMD_A2DP_MUTE, bt->args, 6, 1);
+            }
+            break;
+        }
+#endif
         if (esco_player_runing()) {
             r_printf("esco_player_runing");
             a2dp_media_close(bt->args);

@@ -49,6 +49,8 @@ static struct lp_touch_key_config_data lp_touch_key_cfg_data;
 
 static u16 touch_ch_res_buf[LPCTMU_CHANNEL_SIZE];
 
+static u8 key_msg_state = 0;
+
 
 void lp_touch_key_reset_algo(void);
 
@@ -216,8 +218,16 @@ void lp_touch_key_ctmu_res_deal(u32 pnd_type)
         if (algo_valid) {
             __this->identify_algo_invalid &= ~BIT(ch_idx);
             lpctmu_cache_ch_res_key_msg_lim(ch, ref_lim_l, ref_lim_h);
+
+            if ((ch_res < ref_lim_l) || (ch_res > ref_lim_h)) {
+                key_msg_state |=  BIT(ch_idx);
+            } else {
+                key_msg_state &= ~BIT(ch_idx);
+            }
+
             lpctmu_cur_trim_by_res(ch, 0);
         } else {
+            key_msg_state &= ~BIT(ch_idx);
             __this->last_touch_state &= ~BIT(ch_idx);
             __this->identify_algo_invalid |=  BIT(ch_idx);
             if (data_len <= __this->pdata->key_num) {
@@ -310,10 +320,10 @@ void lp_touch_key_ctmu_res_deal(u32 pnd_type)
 #endif
     {
 #if TCFG_LP_EARTCH_KEY_ENABLE
-        if ((__this->last_touch_state) || (__this->identify_algo_invalid) || (__this->eartch.algo_state)) {
+        if ((__this->last_touch_state) || (__this->identify_algo_invalid) || (__this->eartch.algo_state) || (key_msg_state)) {
 #else
         /* log_debug("key:%x invld:%x",  __this->last_touch_state, __this->identify_algo_invalid); */
-        if ((__this->last_touch_state) || (__this->identify_algo_invalid)) {
+        if ((__this->last_touch_state) || (__this->identify_algo_invalid) || (key_msg_state)) {
 #endif
             lpctmu_set_dma_res_ie(1);
         } else {
@@ -329,7 +339,7 @@ u32 lp_touch_key_get_last_touch_state(void)
     if (!__this) {
         return 0;
     }
-    u32 state = (__this->identify_algo_invalid << 16) | __this->last_touch_state;
+    u32 state = (key_msg_state << 24) | (__this->identify_algo_invalid << 16) | __this->last_touch_state;
     return state;
 }
 
@@ -363,6 +373,7 @@ void lp_touch_key_task(void *p)
         touch_abandon_short_click_once = 0;
     }
 
+    key_msg_state = 0;
     __this->last_touch_state = 0;
     __this->identify_algo_invalid = 0;
 

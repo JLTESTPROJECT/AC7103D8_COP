@@ -93,6 +93,7 @@ const char *dma_product_key = "seXazCNK6CfAI0xlmEsScZ9Mo071I2oD";
 const char *dma_triad_id    = "002aCDEy0000002700002833";
 const char *dma_secret      = "b1cc860c49af8d0b";
 u8 dma_test_mac[] = {0xF4, 0x43, 0x88, 0x28, 0x18, 0x08};
+const char *dma_test_sn     = "1723846";
 
 /**************** DMA PRODUCT INFO TEST END ******************/
 
@@ -153,6 +154,16 @@ void bt_update_testbox_addr(u8 *addr)
 {
 
 }
+
+
+#if DMA_PRODUCT_INFO_TEST
+int get_vender_special_SN(char *serial_number)
+{
+    memcpy(serial_number, dma_test_sn, strlen(dma_test_sn));
+    return 7;
+}
+#endif
+
 
 bool dueros_dma_get_manufacturer_info(u8 *read_buf, u16 len)
 {

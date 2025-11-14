@@ -196,6 +196,15 @@ const int config_audio_adc7_input_mode = 0;
 
 /*
  *******************************************************************
+ *						Audio Debug Config
+ *******************************************************************
+ */
+const int config_esco_media_stream_dump_enable = 0;	//ESCO Media Stream Dump
+const int config_a2dp_media_stream_dump_enable = 0;	//A2dp Media Stream Dump
+const int config_lea_media_stream_dump_enable = 0;	//LE Audio Media Stream Dump
+
+/*
+ *******************************************************************
  *						Audio CVP Config
  *******************************************************************
  */
@@ -236,6 +245,10 @@ const int config_mty_repeat_enable = 1; //mty 支持循环播放
 //           1: 堆栈buf 在每一帧run的时候申请，run 结束后释放。
 //解码和能量检测共用配置
 const int AAC_DEC_STKBUF_RELEASE_ENABLE = 1;
+
+/////////////////////JLVOC codec/////////////////
+const int JLVOC_encode_printf_parameter = 0; //JLVOC 编码打印使能
+const int JLVOC_decode_printf_parameter = 0; //JLVOC 解码打印使能
 
 /*
  *******************************************************************
@@ -563,6 +576,13 @@ const int spatial_brir_azimuth = -1;    /* -1加载所有brir，角度调试模�
 const u8 const_mic_capless_open_delay_debug = 0;
 const u8 const_mic_capless_trim_delay_debug = 0;
 
+//***********************
+//*   	LLNS DNS   *
+//***********************
+const u8 LLNS_DNS_AGC_EN = 0; //预留配置，当前版本不支持AGC
+const u32 LLNS_DNS_SUPPORT_SAMPLE_RATE = TCFG_AUDIO_GLOBAL_SAMPLE_RATE; //仅支持32k、48k采样率
+const u16 LLNS_DNS_PROCESS_FRAME_SIZE = (LLNS_DNS_SUPPORT_SAMPLE_RATE == 32000) ? 480 : 720; //降噪一次输出数据长度(点)，不可更改
+const u32 NN_TABLE_SELECT = (LLNS_DNS_SUPPORT_SAMPLE_RATE == 32000) ? BIT(0) : BIT(1);
 
 const char log_tag_const_v_ALINK  = CONFIG_DEBUG_LIB(0);
 const char log_tag_const_c_ALINK  = CONFIG_DEBUG_LIB(0);

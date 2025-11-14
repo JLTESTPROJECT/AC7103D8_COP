@@ -107,6 +107,16 @@ void write_scan_conn_enable(bool scan_enable, bool conn_enable)
         conn_enable = 0;
     }
 #endif
+#if TCFG_JL_UNICAST_EDR_MODE_SWITCH_ENABLE
+    if (jl_unicast_edr_mode_get() == JL_UNICAST_MODE_DEFAULT) {
+        scan_enable = 0;
+        conn_enable = 0;
+        y_printf("JL_UNICAST_MODE_DEFAULT disbale scan conn\n");
+    } else if (jl_unicast_edr_mode_get() == JL_UNICAST_MODE_EDR) {
+        le_audio_adv_api_enable(0);
+        y_printf("JL_UNICAST_MODE_EDR disbale le_audio_adv\n");
+    }
+#endif
 #endif
     if (classic_update_task_exist_flag_get()) {
         g_printf("bt dual close for update\n");
@@ -329,7 +339,7 @@ void dual_conn_page_device()
 }
 
 
-static void dual_conn_page_devices_init()
+void dual_conn_page_devices_init()
 {
     u8 mac_addr[6];
 
@@ -395,7 +405,16 @@ static int dual_conn_btstack_event_handler(int *_event)
         break;
 #endif
         puts("dual_conn BT_STATUS_INIT_OK");
+#if TCFG_JL_UNICAST_EDR_MODE_SWITCH_ENABLE
+        if (jl_unicast_edr_mode_get() == JL_UNICAST_MODE_DEFAULT) {
+            printf("cis mode, edr not page\n");
+            break;
+        } else {
+            dual_conn_page_devices_init();
+        }
+#else
         dual_conn_page_devices_init();
+#endif
 #if (TCFG_BT_BACKGROUND_ENABLE)
         bt_background_switch_mode_after_initializes();
 #endif

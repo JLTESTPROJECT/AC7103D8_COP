@@ -19,7 +19,7 @@
 #pragma code_seg(	".bt_dma_port_code")
 #endif
 
-#define USE_OWN_ADV_DATA            0    /*百度提供的库会提供广播包数据，不需要自己生成*/
+#define USE_OWN_ADV_DATA            1    /*百度提供的库会提供广播包数据，不需要自己生成*/
 #define PRINT_DMA_DATA_EN           0
 
 void *dma_app_ble_hdl = NULL;
@@ -334,16 +334,15 @@ static int att_write_callback(void *ble_hdl, hci_con_handle_t connection_handle,
         log_info_hexdump(buffer, buffer_size);
         check_connetion_updata_deal();
         log_info("------ota write ccc:%04x, %02x\n", handle, buffer[0]);
-        att_set_ccc_config(handle, buffer[0]);
+        multi_att_set_ccc_config(connection_handle, handle, buffer[0]);
         server_register_dueros_ota_send_callbak(ota_send_user_data_do);
         break;
 
     case ATT_CHARACTERISTIC_b84ac9c6_29c5_46d4_bba1_9d534784330f_01_CLIENT_CONFIGURATION_HANDLE:
-
         set_ble_work_state(BLE_ST_NOTIFY_IDICATE);
         check_connetion_updata_deal();
         log_info("------write ccc:%04x, %02x\n", handle, buffer[0]);
-        att_set_ccc_config(handle, buffer[0]);
+        multi_att_set_ccc_config(connection_handle, handle, buffer[0]);
         server_register_dueros_send_callbak(app_send_user_data_do);
         //dueros_send_ver();
         break;
@@ -802,6 +801,7 @@ int dma_ble_adv_enable(u8 enable)
 void dma_ble_init(void)
 {
     log_info("***** ble_init******\n");
+    u8 ble_mac[6];
 
     gap_device_name = (char *)bt_get_local_name();
     gap_device_name_len = strlen(gap_device_name);
@@ -815,7 +815,9 @@ void dma_ble_init(void)
     dma_ble_module_enable(1);
     dma_bt_ble_adv_enable(0);
     ///reset ble mac address
-    dma_ble_set_mac_addr((u8 *)bt_get_mac_addr());
+    /* memcpy(ble_mac, (u8 *)bt_get_mac_addr(), 6); */
+    bt_make_ble_address(ble_mac, (u8 *)bt_get_mac_addr());
+    dma_ble_set_mac_addr(ble_mac);
 }
 
 void dma_ble_exit(void)

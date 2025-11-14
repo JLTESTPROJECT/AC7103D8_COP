@@ -30,6 +30,7 @@
 #include "vol_sync.h"
 #include "audio_config.h"
 #include "bt_slience_detect.h"
+#include "debug/audio_debug.h"
 #if TCFG_SMART_VOICE_ENABLE
 #include "asr/jl_kws.h"
 #include "smart_voice/smart_voice.h"
@@ -603,7 +604,8 @@ static int bt_phone_status_event_handler(int *msg)
             //r_printf("---bt_get_call_vol_for_addr--%d\n", call_vol);
             app_audio_state_switch(APP_AUDIO_STATE_CALL, app_var.aec_dac_gain, NULL);
             app_audio_set_volume(APP_AUDIO_STATE_CALL, call_vol, 1);
-#if (TCFG_BT_ESCO_PLAYER_ENABLE == 0)
+#if ((TCFG_BT_ESCO_PLAYER_ENABLE == 0) || BT_INTERFERE_WITH_AUDIO_DEBUG)
+            y_printf("esco_player disable");
             lmp_private_esco_suspend_resume(1);
 #else
             bt_phone_esco_play(bt->args);

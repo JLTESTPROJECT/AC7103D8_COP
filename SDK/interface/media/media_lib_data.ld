@@ -102,6 +102,8 @@
 	*(.ape_dec_data)
 	*(.ape_data)
 	*(.llns_dns.data)
+	*(.jlvodecode.data)
+	*(.jlvoencode.data)
 
 	*(.audio_track_data)
 	*(.audio_eq_data)

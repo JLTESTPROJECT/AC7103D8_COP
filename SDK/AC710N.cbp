@@ -215,6 +215,8 @@
 <Add directory="apps/common/third_party_profile/jieli/rcsp/client/rcsp_m_update" />
 <Add directory="apps/common/third_party_profile/ximalaya_protocol" />
 <Add directory="apps/common/third_party_profile/auracast_app" />
+<Add directory="apps/common/third_party_profile/jieli/jl_earbox" />
+<Add directory="interface/btstack/third_party/jl_earbox" />
 <Add directory="apps/common/third_party_profile/bt_fmy" />
 <Add directory="interface/btstack" />
 <Add directory="apps/common/device/usb" />
@@ -281,6 +283,7 @@
 <Add option="cpu/br56/liba/btstack.a" />
 <Add option="cpu/br56/liba/bt_hash_enc.a" />
 <Add option="cpu/br56/liba/rcsp_stack.a" />
+<Add option="cpu/br56/liba/lib_jl_earbox.a" />
 <Add option="cpu/br56/liba/btctrler.a" />
 <Add option="cpu/br56/liba/aec.a" />
 <Add option="cpu/br56/liba/media.a" />
@@ -330,6 +333,7 @@
 <Add option="cpu/br56/liba/lib_speex_codec.a" />
 <Add option="cpu/br56/liba/libjlsp.a" />
 <Add option="cpu/br56/liba/lib_nn_v3.a" />
+<Add option="cpu/br56/liba/lib_nn_v3_params.a" />
 <Add option="cpu/br56/liba/libjlsp_kws.a" />
 <Add option="cpu/br56/liba/libjlsp_kws_far_keyword.a" />
 <Add option="cpu/br56/liba/libjlsp_kws_india_english.a" />
@@ -735,6 +739,21 @@
 <Unit filename="apps/common/third_party_profile/interface/app_protocol_ota.h" />
 <Unit filename="apps/common/third_party_profile/interface/app_protocol_tme.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/third_party_profile/jieli/gatt_common/le_gatt_common.h" />
+<Unit filename="apps/common/third_party_profile/jieli/jl_earbox/edr_hid_user.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="apps/common/third_party_profile/jieli/jl_earbox/edr_hid_user.h" />
+<Unit filename="apps/common/third_party_profile/jieli/jl_earbox/sbox_connect_emitter.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="apps/common/third_party_profile/jieli/jl_earbox/sbox_connect_emitter.h" />
+<Unit filename="apps/common/third_party_profile/jieli/jl_earbox/sbox_core_config.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="apps/common/third_party_profile/jieli/jl_earbox/sbox_core_config.h" />
+<Unit filename="apps/common/third_party_profile/jieli/jl_earbox/sbox_eq_switch.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="apps/common/third_party_profile/jieli/jl_earbox/sbox_eq_switch.h" />
+<Unit filename="apps/common/third_party_profile/jieli/jl_earbox/sbox_protocol.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="apps/common/third_party_profile/jieli/jl_earbox/sbox_protocol.h" />
+<Unit filename="apps/common/third_party_profile/jieli/jl_earbox/sbox_uart_app.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="apps/common/third_party_profile/jieli/jl_earbox/sbox_user_app.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="apps/common/third_party_profile/jieli/jl_earbox/sbox_user_app.h" />
+<Unit filename="apps/common/third_party_profile/jieli/jl_earbox/user_video_ctr.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="apps/common/third_party_profile/jieli/jl_earbox/user_video_ctr.h" />
 <Unit filename="apps/common/third_party_profile/jieli/le_client_demo.h" />
 <Unit filename="apps/common/third_party_profile/jieli/le_common.h" />
 <Unit filename="apps/common/third_party_profile/jieli/online_db/online_db_deal.c"><Option compilerVer="CC"/></Unit>
@@ -1230,6 +1249,8 @@
 <Unit filename="audio/anc/audio_anc_debug_tool.h" />
 <Unit filename="audio/anc/audio_anc_fade_ctr.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/anc/audio_anc_fade_ctr.h" />
+<Unit filename="audio/anc/audio_anc_lvl_sync.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="audio/anc/audio_anc_lvl_sync.h" />
 <Unit filename="audio/anc/audio_anc_mult_scene.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/anc/audio_anc_mult_scene.h" />
 <Unit filename="audio/common/amplitude_statistic.c"><Option compilerVer="CC"/></Unit>
@@ -1243,6 +1264,7 @@
 <Unit filename="audio/common/audio_event_handler.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/common/audio_export_demo.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/common/audio_general.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="audio/common/audio_general_config.h" />
 <Unit filename="audio/common/audio_iis_lrclk_capture.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/common/audio_iis_lrclk_capture.h" />
 <Unit filename="audio/common/audio_node_config.c"><Option compilerVer="CC"/></Unit>
@@ -1279,6 +1301,7 @@
 <Unit filename="audio/common/icsd/adt/icsd_adt.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/common/icsd/adt/icsd_adt_alg.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/common/icsd/adt/icsd_adt_app.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="audio/common/icsd/adt/icsd_adt_app.h" />
 <Unit filename="audio/common/icsd/adt/icsd_adt_config.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/common/icsd/adt/icsd_adt_demo.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/common/icsd/aeq/icsd_aeq.c"><Option compilerVer="CC"/></Unit>
@@ -1634,6 +1657,7 @@
 <Unit filename="interface/btstack/third_party/common/spp_user.h" />
 <Unit filename="interface/btstack/third_party/dma/dma_api.h" />
 <Unit filename="interface/btstack/third_party/fmna/fmna_api.h" />
+<Unit filename="interface/btstack/third_party/jl_earbox/sbox_core_api.h" />
 <Unit filename="interface/btstack/third_party/le_audio/big.h" />
 <Unit filename="interface/btstack/third_party/le_audio/cig.h" />
 <Unit filename="interface/btstack/third_party/rcsp/JL_rcsp_api.h" />
@@ -1738,6 +1762,7 @@
 <Unit filename="interface/media/PLC.h" />
 <Unit filename="interface/media/Resample_api.h" />
 <Unit filename="interface/media/anc_btspp.h" />
+<Unit filename="interface/media/anc_howling_detect.h" />
 <Unit filename="interface/media/anc_uart.h" />
 <Unit filename="interface/media/anctool.h" />
 <Unit filename="interface/media/asr/jl_kws.h" />

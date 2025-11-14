@@ -19,7 +19,7 @@
 #include "app_testbox.h"
 #include "update.h"
 #include "btstack_rcsp_user.h"
-#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN)))
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
 #include "app_le_connected.h"
 #endif
 /********edr蓝牙相关状态debug打印说明***********************
@@ -106,13 +106,13 @@ void write_scan_conn_enable(bool scan_enable, bool conn_enable)
         scan_enable = 0;
         conn_enable = 0;
     }
-#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN)))
+#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_UNICAST_SINK_EN)
     if (is_cig_phone_conn() || is_cig_other_phone_conn()) {
         g_printf("bt_get_total_connect_dev=%d\n", bt_get_total_connect_dev());
         scan_enable = 0;
         conn_enable = 0;
     }
-#elif (TCFG_LE_AUDIO_APP_CONFIG&LE_AUDIO_JL_UNICAST_SINK_EN)
+#elif (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_UNICAST_SINK_EN)
     g_printf("bt_get_total_connect_dev=%d\n", bt_get_total_connect_dev());
 #if LE_AUDIO_JL_DONGLE_UNICAST_WITH_PHONE_CONN_CONFIG
     if (bt_get_total_connect_dev() == 0) {
@@ -131,6 +131,16 @@ void write_scan_conn_enable(bool scan_enable, bool conn_enable)
     if (is_cig_phone_conn() || is_cig_other_phone_conn()) {
         scan_enable = 0;
         conn_enable = 0;
+    }
+#endif
+#if TCFG_JL_UNICAST_EDR_MODE_SWITCH_ENABLE
+    if (jl_unicast_edr_mode_get() == JL_UNICAST_MODE_DEFAULT) {
+        scan_enable = 0;
+        conn_enable = 0;
+        y_printf("JL_UNICAST_MODE_DEFAULT disbale scan conn\n");
+    } else if (jl_unicast_edr_mode_get() == JL_UNICAST_MODE_EDR) {
+        le_audio_adv_api_enable(0);
+        y_printf("JL_UNICAST_MODE_EDR disbale le_audio_adv\n");
     }
 #endif
 #endif
@@ -681,7 +691,7 @@ void dual_conn_page_device()
 }
 
 
-static void dual_conn_page_devices_init()
+void dual_conn_page_devices_init()
 {
     u8 mac_addr[6];
 
@@ -749,7 +759,17 @@ static int dual_conn_btstack_event_handler(int *_event)
     printf("dual_conn_btstack_event_handler:%d\n", event->event);
     switch (event->event) {
     case BT_STATUS_INIT_OK:
+        puts("dual_conn BT_STATUS_INIT_OK");
+#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_UNICAST_SINK_EN) && TCFG_JL_UNICAST_EDR_MODE_SWITCH_ENABLE
+        if (jl_unicast_edr_mode_get() == JL_UNICAST_MODE_DEFAULT) {
+            printf("cis mode, edr not page\n");
+            break;
+        } else {
+            dual_conn_page_devices_init();
+        }
+#else
         dual_conn_page_devices_init();
+#endif
         return 0;
     case BT_STATUS_FIRST_CONNECTED:
         bt_set_need_keep_scan(0);
@@ -1052,7 +1072,7 @@ static int dual_conn_tws_event_handler(int *_event)
 
         if (role == TWS_ROLE_MASTER) {
             tws_api_auto_role_switch_disable();
-#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN)))
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
             u32 slave_info =  event->args[3] | (event->args[4] << 8) | (event->args[5] << 16) | (event->args[6] << 24) ;
             printf("====slave_info:%x\n", slave_info);
             if (slave_info & TWS_STA_LE_AUDIO_CONNECTED) {
@@ -1200,7 +1220,7 @@ int tws_host_get_local_role()
     if (!page_list_empty()) {
         state |= TWS_STA_HAVE_PAGE_INFO;
     }
-#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN)))
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
     if (is_cig_phone_conn()) {
         state |= TWS_STA_LE_AUDIO_CONNECTED;
     }
@@ -1222,14 +1242,15 @@ bool tws_host_role_switch(int remote_info, int local_info)
     if (remote_info & TWS_STA_LE_AUDIO_CONNECTED) { //对方已连手机le_audio
         return FALSE;
     }
-    if ((local_info & TWS_STA_HAVE_PAGE_INFO) && !(remote_info & TWS_STA_HAVE_PAGE_INFO)) {
-        //tws超时断开同时与手机也超时断开，再次tws连接上后，还需要继续回连手机，有回连信息端要继续做回主机
-        return TRUE;
-    }
 #if RCSP_MODE
     if (bt_rcsp_ble_conn_num()) {
         //只连ble不连edr的情况下，tws重新连接后有ble连接的做主机
         y_printf("tws_host_role_switch = 1, %s %d\n", __func__, __LINE__);
+        return TRUE;
+    }
+#else
+    if ((local_info & TWS_STA_HAVE_PAGE_INFO) && !(remote_info & TWS_STA_HAVE_PAGE_INFO)) {
+        //tws超时断开同时与手机也超时断开，再次tws连接上后，还需要继续回连手机，有回连信息端要继续做回主机
         return TRUE;
     }
 #endif
@@ -1300,6 +1321,7 @@ static void msg_tws_start_pair_timeout(void *p)
 {
     g_dual_conn.timer = 0;
     tws_api_wait_pair_by_code(0, bt_get_local_name(), 0);
+    tws_set_search_sbiling_state(0);
     app_send_message(APP_MSG_TWS_START_PAIR_TIMEOUT, 0);
 }
 
@@ -1358,6 +1380,7 @@ static int dual_conn_app_event_handler(int *msg)
         break;
     case APP_MSG_TWS_START_PAIR:
         tws_api_search_sibling_by_code();
+        tws_set_search_sbiling_state(1);
         if (g_dual_conn.timer) {
             sys_timeout_del(g_dual_conn.timer);
         }

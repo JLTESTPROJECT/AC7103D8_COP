@@ -30,6 +30,7 @@
 #include "audio_anc_common_plug.h"
 #include "dac_node.h"
 #include "clock_manager/clock_manager.h"
+#include "audio_anc_lvl_sync.h"
 #if ANC_HOWLING_DETECT_EN
 #include "anc_howling_detect.h"
 #endif
@@ -705,6 +706,16 @@ static void anc_task(void *p)
             case ANC_MSG_COEFF_UPDATE:
                 anc_coeff_online_update(&anc_hdl->param, 0);			//更新ANC滤波器
                 break;
+#if TCFG_AUDIO_ANC_ENV_ADAPTIVE_GAIN_LITE_ENABLE
+            case ANC_MSG_ENV_NOISE_LVL:
+                audio_env_noise_event_process((u8)msg[2]);
+                break;
+#endif
+#if TCFG_AUDIO_ANC_ENV_ADAPTIVE_VOLUME_LITE_ENABLE
+            case ANC_MSG_AVC_NOISE_LVL:
+                audio_icsd_adptive_vol_event_process((u8)msg[2]);
+                break;
+#endif
             }
         } else {
             user_anc_log("res:%d,%d", res, msg[1]);
@@ -1207,6 +1218,10 @@ void anc_init(void)
 //初始化ANC ADC相关参数，注意需在audio_adc_init后调用
     audio_anc_adc_ch_set();
     audio_anc_mic_management(&anc_hdl->param);
+
+#if (TCFG_AUDIO_ANC_ENV_ENABLE || TCFG_AUDIO_ANC_AVC_ENABLE || TCFG_AUDIO_ANC_WIND_NOISE_DET_ENABLE)
+    audio_anc_lvl_sync_list_init();
+#endif
 
 #if ANC_ADAPTIVE_EN
     audio_anc_power_adaptive_init(&anc_hdl->param);
@@ -2896,5 +2911,110 @@ void audio_anc_howldet_fade_set(u16 gain)
         audio_anc_fade_ctr_set(ANC_FADE_MODE_HOWLDET, AUDIO_ANC_FDAE_CH_ALL, gain);
     }
 }
+
+#if (TCFG_AUDIO_ANC_ENV_ENABLE || TCFG_AUDIO_ANC_AVC_ENABLE)
+static int audio_anc_env_enable_check()
+{
+#if TCFG_AUDIO_ANC_ENV_ADAPTIVE_GAIN_ENABLE
+    return (audio_icsd_adt_env_noise_det_get() & AUDIO_ANC_ENV_NOISE_DET_GAIN_ADAPTIVE);
+#elif TCFG_AUDIO_ANC_ENV_ADAPTIVE_GAIN_LITE_ENABLE
+    return 1;
+#else
+    return 0;
+#endif
+}
+
+static int audio_anc_avc_enable_check()
+{
+#if TCFG_AUDIO_ANC_ENV_ADAPTIVE_VOLUME_ENABLE
+    return (audio_icsd_adt_env_noise_det_get() & AUDIO_ANC_ENV_NOISE_DET_VOLUME_ADAPTIVE);
+#elif TCFG_AUDIO_ANC_ENV_ADAPTIVE_VOLUME_LITE_ENABLE
+    return 1;
+#else
+    return 0;
+#endif
+}
+
+void audio_anc_env_avc_thr_to_lvl_sync(int noise_thr)
+{
+    int env_lvl = -1;
+    int avc_lvl = -1;
+    noise_thr = (noise_thr < 0) ? 0 : noise_thr;
+    if (audio_anc_env_enable_check()) {
+        env_lvl = audio_anc_env_thr_to_lvl(noise_thr);
+        struct audio_anc_lvl_sync *env_hdl = audio_anc_lvl_sync_get_hdl_by_name(ANC_LVL_SYNC_ENV);
+        if (env_hdl) {
+            user_anc_log("env cur_lvl %d, env_lvl %d\n", env_hdl->cur_lvl, env_lvl);
+            if (env_hdl->cur_lvl == env_lvl) {
+                env_lvl = -1;
+            }
+        }
+    }
+    if (audio_anc_avc_enable_check()) {
+        avc_lvl = audio_anc_avc_thr_to_lvl(noise_thr);
+        struct audio_anc_lvl_sync *avc_hdl = audio_anc_lvl_sync_get_hdl_by_name(ANC_LVL_SYNC_AVC);
+        if (avc_hdl) {
+            user_anc_log("avc cur_lvl %d, env_lvl %d\n", avc_hdl->cur_lvl, avc_lvl);
+            if (avc_hdl->cur_lvl == avc_lvl) {
+                avc_lvl = -1;
+            }
+        }
+    }
+    if ((avc_lvl == -1) && (env_lvl == -1)) {
+        return;
+    }
+    u8 data[4] = {AUDIO_ANC_LVL_SYNC_CMP, (u8)env_lvl, 0, 0};
+    static u32 next_period = 0;
+    /*间隔200ms以上发送一次数据*/
+    if (time_after(jiffies, next_period)) {
+        next_period = jiffies + msecs_to_jiffies(200);
+#if TCFG_USER_TWS_ENABLE
+        if (tws_in_sniff_state()) {
+            /*如果在蓝牙siniff下需要退出蓝牙sniff再发送*/
+            tws_api_tx_unsniff_req();
+        }
+        if (get_tws_sibling_connect_state()) {
+            if (audio_anc_env_enable_check() && (env_lvl != -1)) {
+                //环境自适应
+                /* user_anc_log("[env]SYNC_ICSD_ADT_ENV_NOISE_LVL_CMP %d\n", env_lvl); */
+                data[0] = AUDIO_ANC_LVL_SYNC_CMP;
+                data[1] = env_lvl;
+                audio_anc_env_lvl_sync_info(data, 4);
+            }
+            if (audio_anc_avc_enable_check() && (avc_lvl != -1)) {
+                //音量自适应
+                /* user_anc_log("[avc]SYNC_ICSD_ADT_AVC_NOISE_LVL_CMP %d\n", avc_lvl); */
+                data[0] = AUDIO_ANC_LVL_SYNC_CMP;
+                data[1] = avc_lvl;
+                audio_anc_avc_lvl_sync_info(data, 4);
+            }
+        } else {
+            /*没有tws时直接更新状态*/
+            if (audio_anc_env_enable_check() && (env_lvl != -1)) {
+                data[0] = AUDIO_ANC_LVL_SYNC_RESULT;
+                data[1] = env_lvl;
+                audio_anc_env_lvl_sync_info(data, 4);
+            }
+            if (audio_anc_avc_enable_check() && (avc_lvl != -1)) {
+                data[0] = AUDIO_ANC_LVL_SYNC_RESULT;
+                data[1] = avc_lvl;
+                audio_anc_avc_lvl_sync_info(data, 4);
+            }
+        }
+#else
+        if (audio_anc_env_enable_check() && (env_lvl != -1)) {
+            data[0] = AUDIO_ANC_LVL_SYNC_RESULT;
+            data[1] = env_lvl;
+            audio_anc_env_lvl_sync_info(data, 4);
+        }
+        if (audio_anc_avc_enable_check() && (avc_lvl != -1)) {
+            data[0] = AUDIO_ANC_LVL_SYNC_RESULT;
+            data[1] = avc_lvl;
+            audio_anc_avc_lvl_sync_info(data, 4);
+        }
+#endif //TCFG_USER_TWS_ENABLE
+    }
+}
+#endif
 
 #endif/*TCFG_AUDIO_ANC_ENABLE*/

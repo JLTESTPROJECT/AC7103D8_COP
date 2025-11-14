@@ -371,7 +371,8 @@ int connected_perip_connect_deal(void *priv)
     params.fmt.coding_type = LE_AUDIO_CODEC_TYPE;
 #if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_UNICAST_SINK_EN)
     params.fmt.coding_type = le_audio_get_dongle_codec_type();
-    ASSERT(params.fmt.coding_type, "codec_type not defined");
+    // 需要leaudio发射源确实是否提前设置编解码格式
+    ASSERT(params.fmt.coding_type, "le_audio_source need send coding_type!\n");
 #endif
     params.fmt.dec_ch_mode = LEA_DEC_OUTPUT_CHANNEL;
     params.fmt.flush_timeout = hdl->flush_timeout_C_to_P;
@@ -460,7 +461,7 @@ int connected_perip_connect_deal(void *priv)
     return 0;
 }
 
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_UNICAST_SINK_EN))
+#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_UNICAST_SINK_EN)
 /**
  * @brief 私有cis命令开启或者关闭解码器
  *
@@ -479,7 +480,9 @@ void connected_perip_connect_recoder(u8 en, u16 acl_hdl)
         struct le_audio_stream_params params = {0};
         get_encoder_params_fmt(&params.fmt);
         params.latency = 50 * 1000;//tx延时暂时先设置 50ms
-        params.fmt.coding_type = LE_AUDIO_CODEC_TYPE;
+        params.fmt.coding_type = le_audio_get_dongle_codec_type();
+        // 需要leaudio发射源确实是否提前设置编解码格式
+        ASSERT(params.fmt.coding_type, "le_audio_source need send coding_type!\n");
         params.fmt.dec_ch_mode = LEA_DEC_OUTPUT_CHANNEL;
         params.service_type = LEA_SERVICE_CALL;
         connected_mutex_pend(&connected_mutex, __LINE__);
@@ -1090,6 +1093,7 @@ int connected_perip_open(cig_parameter_t *params)
 
     return available_cig_hdl;
 }
+
 int cis_audio_player_resume(u8 cig_hdl, u8 cig_phone_call_play)
 {
     int ret = 0;
@@ -1111,6 +1115,7 @@ int cis_audio_player_resume(u8 cig_hdl, u8 cig_phone_call_play)
         return 0;
     }
 
+    printf("cis_audio_player_resume\n");
     le_audio_switch_ops = get_connected_audio_sw_ops();
 
     for (i = 0; i < CIG_MAX_CIS_NUMS; i++) {
@@ -1125,6 +1130,11 @@ int cis_audio_player_resume(u8 cig_hdl, u8 cig_phone_call_play)
                 params.fmt.sample_rate = get_cig_audio_coding_sample_rate();
             }
             params.fmt.coding_type = LE_AUDIO_CODEC_TYPE;
+#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_UNICAST_SINK_EN)
+            params.fmt.coding_type = le_audio_get_dongle_codec_type();
+            // 需要leaudio发射源确实是否提前设置编解码格式
+            ASSERT(params.fmt.coding_type, "le_audio_source need send coding_type!\n");
+#endif
             params.fmt.dec_ch_mode = LEA_DEC_OUTPUT_CHANNEL;
             params.fmt.flush_timeout = connected_hdl->cis_hdl_info[i].flush_timeout;
             params.fmt.isoIntervalUs = connected_hdl->cis_hdl_info[i].isoIntervalUs;
@@ -1156,6 +1166,7 @@ int cis_audio_player_resume(u8 cig_hdl, u8 cig_phone_call_play)
 
 int cis_audio_player_close(u8 cig_hdl)
 {
+    printf("cis_audio_player_close\n");
     struct connected_hdl *p;
     struct connected_rx_audio_hdl player;
     int ret = 0;
@@ -1395,6 +1406,7 @@ int connected_send_acl_data(u16 acl_hdl, void *data, size_t length)
 /* ----------------------------------------------------------------------------*/
 void cis_audio_recorder_reset(u16 cis_hdl)
 {
+    printf("cis_audio_recorder_reset\n");
     u8 i;
     struct connected_hdl *p;
     void *recorder = 0;
@@ -1437,6 +1449,7 @@ void cis_audio_recorder_reset(u16 cis_hdl)
 /* ----------------------------------------------------------------------------*/
 void cis_audio_recorder_close(u16 cis_hdl)
 {
+    printf("cis_audio_recorder_close\n");
     u8 i;
     struct connected_hdl *p;
     void *recorder = 0;
@@ -1460,6 +1473,12 @@ void cis_audio_recorder_close(u16 cis_hdl)
         }
     }
     connected_mutex_post(&connected_mutex, __LINE__);
+}
+
+u8 is_cis_connected_init()
+{
+    log_info("connected_init_flag:%d\n", connected_init_flag);
+    return connected_init_flag;
 }
 
 #endif

@@ -1711,7 +1711,7 @@ static void audio_icsd_adt_task(void *p)
                         }
 #endif /*ICSD_ADT_WIND_INFO_SPP_DEBUG_EN*/
                     }
-#if TCFG_AUDIO_VOLUME_ADAPTIVE_ENABLE
+#if TCFG_AUDIO_ANC_ENV_ADAPTIVE_VOLUME_ENABLE
                     audio_icsd_adptive_vol_event_process(noise_lvl);
 #endif
 #if TCFG_AUDIO_ANC_ENV_ADAPTIVE_GAIN_ENABLE
@@ -2505,73 +2505,6 @@ int audio_anc_wind_noise_process_fade(wind_info_t *wind_info, u8 anc_wind_noise_
         wind_info->last_lvl = wind_info->preset_lvl;
         return wind_info->preset_lvl;
     }
-    return 0;
-}
-
-static void anc_gain_fade_timer(void *priv)
-{
-    struct anc_fade_handle *hdl = (struct anc_fade_handle *)priv;
-    if (!hdl) {
-        return;
-    }
-    int fade_setp = hdl->fade_setp;
-    int target_gain = hdl->target_gain;
-    u8 fade_gain_mode = hdl->fade_gain_mode;
-    if (hdl->cur_gain == target_gain) {
-        sys_timer_del(hdl->timer_id);
-        hdl->timer_id = 0;
-#if TCFG_AUDIO_ANC_REAL_TIME_ADAPTIVE_ENABLE
-        //环境自适应，当增益等于16384时，才恢复RTANC
-        if (anc_env_adaptive_gain_suspend) {
-            anc_env_adaptive_gain_suspend = 0;
-            audio_anc_real_time_adaptive_resume();
-        }
-#endif
-        return ;
-    } else if (hdl->cur_gain > target_gain) {
-        hdl->cur_gain -= fade_setp;
-        hdl->cur_gain = (hdl->cur_gain < target_gain) ? target_gain : hdl->cur_gain;
-    } else if (hdl->cur_gain < target_gain) {
-        hdl->cur_gain += fade_setp;
-        hdl->cur_gain = (hdl->cur_gain > target_gain) ? target_gain : hdl->cur_gain;
-    }
-    icsd_anc_fade_set(fade_gain_mode, hdl->cur_gain);
-    // adt_log("gain fade: mode %d, hdl->cur_gain %d, target_gain %d, fade_setp %d \n", fade_gain_mode, hdl->cur_gain, target_gain, fade_setp);
-}
-
-/*anc增益淡入淡出*/
-int audio_anc_gain_fade_process(struct anc_fade_handle *hdl, enum anc_fade_mode_t mode, int target_gain, int fade_time_ms)
-{
-    adt_log("audio_anc_gain_fade_process \n");
-    if (!hdl) {
-        return -1;
-    }
-
-    if (hdl->timer_id) {
-        sys_timer_del(hdl->timer_id);
-    }
-#if TCFG_AUDIO_ANC_REAL_TIME_ADAPTIVE_ENABLE
-    //触发环境自适应，挂起RTANC
-    if (!anc_env_adaptive_gain_suspend) {
-        anc_env_adaptive_gain_suspend = 1;
-        audio_anc_real_time_adaptive_suspend();
-    }
-#endif
-
-    hdl->target_gain = target_gain;
-
-    if (fade_time_ms == 0) {
-        icsd_anc_fade_set(mode, target_gain);
-        hdl->cur_gain = target_gain;
-        return 0;
-    }
-
-    hdl->fade_gain_mode = mode;
-    int gain_diff = hdl->cur_gain - target_gain;
-    gain_diff = (gain_diff < 0) ? (gain_diff * (-1)) : gain_diff;
-    hdl->fade_setp = gain_diff / (fade_time_ms / hdl->timer_ms);
-    hdl->timer_id = sys_timer_add((void *)hdl, anc_gain_fade_timer, hdl->timer_ms);
-    adt_log("gain fade: mode %d, cur_gain %d, target_gain %d, fade_setp %d \n", hdl->fade_gain_mode, hdl->cur_gain, hdl->target_gain, hdl->fade_setp);
     return 0;
 }
 

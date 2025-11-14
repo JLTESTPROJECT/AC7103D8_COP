@@ -953,7 +953,7 @@ struct cvp_context_setup g_cvp_context = {0};
 
 int audio_cvp_phase_align(void)
 {
-    if ((g_cvp_context.aec_status() == 0)  || (g_cvp_context.read_ref_data == NULL)) {
+    if ((g_cvp_context.aec_status == NULL) || (g_cvp_context.aec_status() == 0)  || (g_cvp_context.read_ref_data == NULL)) {
         return 0;
     }
     return g_cvp_context.read_ref_data();

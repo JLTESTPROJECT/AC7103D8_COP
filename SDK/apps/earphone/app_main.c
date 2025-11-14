@@ -106,7 +106,7 @@ const struct task_info task_info_table[] = {
     {"update",				1,	   0,   512,   0   },
     {"tws_ota",				2,	   0,   256,   0   },
     {"tws_ota_msg",			2,	   0,   256,   128 },
-    {"dw_update",		 	1,	   0,   256,   128 },
+    {"dw_update",		 	1,	   0,   512,   128 },
 #if (CONFIG_USER_FILE_UPDATE_V2_EN)
     {"ex_f_update",			1,	    1,  512,   0    },
 #endif
@@ -169,6 +169,8 @@ const struct task_info task_info_table[] = {
 #endif
 #if TCFG_AUDIO_SPATIAL_EFFECT_ENABLE
     {"imu_sensor",      2,     1,   512,   128 },
+#endif
+#if (TCFG_AUDIO_SPATIAL_EFFECT_ENABLE || TCFG_AUDIO_SOMATOSENSORY_ENABLE)
     {"imu_trim",            1,     0,   256,   128 },
 #endif
 //  {"periph_demo",       3,     0,   512,   0 },
@@ -617,6 +619,42 @@ struct app_mode *app_mode_switch_handler(int *msg)
         return next_mode;
     }
 }
+
+#if 0
+//用于查找重复出现的字符
+static u8 putchar_num = 0;
+int (putchar)(int a)    //重定义putchar
+{
+    uint32_t rets_addr;
+    __asm__ volatile("%0 = rets ;" : "=r"(rets_addr));
+    if (a == 'a') {   //修改需要查找putchar的字符
+        putchar_num++;
+    }
+    if (putchar_num == 5) {    //打印连续出现5次的字符的rets
+        y_printf("char:%c rets:%x\n", a, rets_addr);
+        putchar_num =  0;
+    }
+#ifdef __LOG_ENABLE
+    if (log_output_lock() != 0) {
+        struct logbuf *lb = log_output_start(1);
+        if (lb) {
+            log_putchar(lb, a);
+            log_output_end(lb);
+        }
+    } else {
+        log_putbyte(a);
+        log_output_unlock();
+    }
+#else
+    if (a == '\r') {
+        return a;
+    }
+    putbyte(a);
+#endif
+    return a;
+}
+#endif
+
 
 #if 0
 void timer_no_response_callback(const char *task_name, void *func, u32 msec, void *timer, u32 curr_msec)

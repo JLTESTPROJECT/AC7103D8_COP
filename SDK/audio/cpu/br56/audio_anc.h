@@ -81,7 +81,7 @@
    ANC场景增益自适应配置
    (场景是变量，与耳道自适应功能相互独立)
  */
-#define ANC_ADAPTIVE_EN		    	0						/*ANC增益自适应使能*/
+#define ANC_ADAPTIVE_EN                     (TCFG_AUDIO_ANC_ENV_ADAPTIVE_GAIN_LITE_ENABLE | TCFG_AUDIO_ANC_ENV_ADAPTIVE_VOLUME_LITE_ENABLE)
 
 
 #if (TCFG_ANC_MUSIC_ANTI_CLIPPING_MODE == ANC_CLIPPING_MODE_DYNAMIC_ANC_GAIN)
@@ -111,6 +111,13 @@
 #define ANC_HOWLING_TARGET_GAIN				0		/*啸叫时的目标增益, range [0 - 16384]; default 0 */
 #define ANC_HOWLING_HOLD_TIME				1000	/*啸叫目标增益的持续时间(单位ms), range [0 - 10000]; default 1000 */
 #define ANC_HOWLING_RESUME_TIME				4000	/*恢复到正常增益的时间(单位ms), range [200 - 10000]; default 4000 */
+
+#if (!ANC_HOWLING_DETECT_EN && ANC_ADAPTIVE_EN)
+//br56 anc硬件功率获取需要打开anc啸叫检测
+#undef ANC_HOWLING_DETECT_EN
+#define ANC_HOWLING_DETECT_EN       1
+#define ANC_ADAPTIVE_HOWLING_IE_DISABLE      1
+#endif
 
 #if ANC_TRAIN_MODE == ANC_FB_EN
 #define ANC_MODE_ENABLE			ANC_OFF_BIT | ANC_ON_BIT
@@ -194,6 +201,8 @@ enum {
     ANC_MSG_COEFF_UPDATE,		//无缝切换滤波器
     ANC_MSG_AFQ_CMD,
     ANC_MSG_46KOUT_DEMO,
+    ANC_MSG_ENV_NOISE_LVL,
+    ANC_MSG_AVC_NOISE_LVL,
 };
 
 /*ANC MIC动态增益调整状态*/
@@ -201,6 +210,13 @@ enum {
     ANC_MIC_DY_STA_INIT = 0,	/*准备状态*/
     ANC_MIC_DY_STA_START,		/*进行状态*/
     ANC_MIC_DY_STA_STOP,		/*停止状态*/
+};
+
+enum ANC_EXT_IOC {
+    ANC_EXT_IOC_INIT = 1,
+    ANC_EXT_IOC_EXIT,
+    ANC_EXT_IOC_SUSPEND,
+    ANC_EXT_IOC_RESUME,
 };
 
 #define ANC_CONFIG_LFF_EN ((TCFG_AUDIO_ANC_TRAIN_MODE & (ANC_HYBRID_EN | ANC_FF_EN)) && (TCFG_AUDIO_ANC_CH & ANC_L_CH))
@@ -481,5 +497,24 @@ void audio_anc_param_reset(u8 fade_en);
 
 u8 anc_btspp_train_again(u8 mode, u32 dat);
 
+/*音量自适应ioctl*/
+int audio_adt_avc_ioctl(int cmd, int arg);
+
+int audio_anc_avc_thr_to_lvl(int avc_thr);
+
+void audio_anc_avc_lvl_sync_info(u8 *data, int len);
+
+void audio_icsd_adptive_vol_event_process(u8 avc_lvl);
+
+/*环境自适应ioctl*/
+int audio_adt_env_ioctl(int cmd, int arg);
+
+int audio_anc_env_thr_to_lvl(int wind_thr);
+
+void audio_anc_env_lvl_sync_info(u8 *data, int len);
+
+int audio_env_noise_event_process(u8 env_lvl);
+
+void audio_anc_env_avc_thr_to_lvl_sync(int noise_thr);
 
 #endif/*AUDIO_ANC_H*/

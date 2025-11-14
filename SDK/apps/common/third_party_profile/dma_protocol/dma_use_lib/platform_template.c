@@ -240,6 +240,7 @@ bool platform_set_ble_advertise_data(const char *t_adv_data, uint8_t adv_data_le
 {
     dma_log("%s\n", __func__);
     printf(">>>>>>>>> %s %d %d %d\n", __func__, adv_data_len, scan_response_len, ibeacon_adv_data_len);
+#if 0
     if (adv_data_len != 0) {
         puts("dma_adv_data:");
         put_buf((const u8 *)t_adv_data, adv_data_len);
@@ -257,6 +258,8 @@ bool platform_set_ble_advertise_data(const char *t_adv_data, uint8_t adv_data_le
         memcpy(dma_scan_rsp_data, scan_response, scan_response_len);
         dma_scan_rsp_data_len = scan_response_len;
     }
+#endif
+#if 0
     if (ibeacon_adv_data_len != 0) {
         puts("ibeacon_adv_data:");
         put_buf((const u8 *)ibeacon_adv_data, ibeacon_adv_data_len);
@@ -266,6 +269,7 @@ bool platform_set_ble_advertise_data(const char *t_adv_data, uint8_t adv_data_le
     } else {
         dma_ibeacon_data_len = 0;
     }
+#endif
     //later
     return true;
 }
@@ -358,17 +362,14 @@ bool platform_get_linkkey_exist_state(const uint8_t *bt_address)
         return false;
     }
 };
-extern u32 dma_serial_number_int;
 extern char dma_serial_number[];
 __attribute__((weak))
-int get_vender_special_SN(char *addr)
+int get_vender_special_SN(char *serial_number)
 {
     return 0;
 }
 bool platform_get_serial_number(DMA_SN_TYPE sn_type, uint8_t *serial_number)
 {
-    //1723846
-    //要问问要不要特殊指定
     u8 temp_addr[6];
     u8 value_1 = 0, value_2 = 0;
     char serial_number_int[33];
@@ -376,13 +377,11 @@ bool platform_get_serial_number(DMA_SN_TYPE sn_type, uint8_t *serial_number)
     SN_len = get_vender_special_SN(serial_number_int);
     if (SN_len > 0) {
         memcpy(serial_number, serial_number_int, SN_len);
+        dma_log("%s---%d==%s\n", __func__, sn_type, serial_number);
         return true;
     }
-    memset(serial_number_int, 0, 33);
-    dma_log("dma_serial_number_int %d\n", dma_serial_number_int);
-    sprintf(serial_number_int, "%d", dma_serial_number_int);
-    dma_log("%s---%d==%s-%s\n", __func__, sn_type, dma_serial_number, serial_number_int);
-    memcpy(serial_number, serial_number_int, strlen((const char *)serial_number_int));
+    dma_log("%s---%d==%s\n", __func__, sn_type, dma_serial_number);
+    memcpy(serial_number, dma_serial_number, strlen((const char *)dma_serial_number));
     return true;
 }
 
@@ -1063,7 +1062,7 @@ uint32_t platform_dma_init()
     init_error = dma_protocol_init(
                      (uint8_t *)__this_cfg->dma_cfg_file_product_id,
                      (uint8_t *)__this_cfg->dma_cfg_file_product_key,
-                     vendor_id,
+                     JL_vendor_id,
                      device_type,
                      3,
                      dma_queue_buffer_pool

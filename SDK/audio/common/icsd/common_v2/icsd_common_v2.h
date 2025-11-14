@@ -16,6 +16,8 @@
 #define ICSD_WIND_LFF_LFB_TALK      4
 #define ICSD_WIND_RFF_TALK      	5
 
+#define ICSD_ENV_LVL_PRINTF             		1   //环境自适应阈值打印使能
+#define ICSD_AVC_LVL_PRINTF                     1   //音量自适应阈值打印使能
 
 unsigned long jiffies_usec(void);
 

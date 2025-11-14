@@ -18,7 +18,7 @@
 #include "app_config.h"
 #include "spinlock.h"
 #include "syscfg_id.h"
-
+#include "app_testbox.h"
 #define LOG_TAG_CONST   CHARGE
 #define LOG_TAG         "[CHARGE]"
 #define LOG_INFO_ENABLE

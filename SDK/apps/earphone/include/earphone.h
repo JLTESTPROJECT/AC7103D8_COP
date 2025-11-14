@@ -77,54 +77,6 @@ int tuya_sys_event_handler_specific(struct sys_event *event);
 #define EARPHONE_STATE_ENTER_SOFT_POWEROFF()    tuya_earphone_state_enter_soft_poweroff()
 #define EARPHONE_STATE_TWS_INIT(a)              tuya_earphone_state_tws_init(a)
 #define EARPHONE_STATE_TWS_CONNECTED(a, b)      tuya_earphone_state_tws_connected(a,b)
-#define SYS_EVENT_HANDLER_SPECIFIC(a)           tuya_sys_event_handler_specific(a)
-#define TWS_EVENT_MASSAGE_HANDLER(a)            0
-#define SYS_EVENT_REMAP(a) 				        0
-#define EARPHONE_STATE_SNIFF(a)
-#define EARPHONE_STATE_ROLE_SWITCH(a)
-
-
-#elif ((THIRD_PARTY_PROTOCOLS_SEL & (GFPS_EN | REALME_EN | TME_EN | DMA_EN | GMA_EN | MMA_EN | FMNA_EN | SWIFT_PAIR_EN | ONLINE_DEBUG_EN | CUSTOM_DEMO_EN | XIMALAYA_EN | AURACAST_APP_EN)) | LE_AUDIO_EN)
-#define EARPHONE_STATE_INIT()                   do { } while(0)
-#define EARPHONE_STATE_SET_PAGE_SCAN_ENABLE()   do { } while(0)
-#define EARPHONE_STATE_GET_CONNECT_MAC_ADDR()   do { } while(0)
-#define EARPHONE_STATE_CANCEL_PAGE_SCAN()       do { } while(0)
-#define EARPHONE_STATE_ENTER_SOFT_POWEROFF()    do { } while(0)
-#define EARPHONE_STATE_TWS_INIT(a)              do { } while(0)
-#define EARPHONE_STATE_TWS_CONNECTED(a, b)      do { } while(0)
-#define SYS_EVENT_HANDLER_SPECIFIC(a)           do { } while(0)
-#define TWS_EVENT_MASSAGE_HANDLER(a)            0
-#define SYS_EVENT_REMAP(a) 				        0
-#define EARPHONE_STATE_SNIFF(a)
-#define EARPHONE_STATE_ROLE_SWITCH(a)
-
-#elif TCFG_WIRELESS_MIC_ENABLE
-#define EARPHONE_STATE_INIT()                   do { } while(0)
-#define EARPHONE_STATE_SET_PAGE_SCAN_ENABLE()   do { } while(0)
-#define EARPHONE_STATE_GET_CONNECT_MAC_ADDR()   do { } while(0)
-#define EARPHONE_STATE_CANCEL_PAGE_SCAN()       do { } while(0)
-#define EARPHONE_STATE_ENTER_SOFT_POWEROFF()    do { } while(0)
-#define EARPHONE_STATE_TWS_INIT(a)              do { } while(0)
-#define EARPHONE_STATE_TWS_CONNECTED(a, b)      do { } while(0)
-#define SYS_EVENT_HANDLER_SPECIFIC(a)           do { } while(0)
-#define TWS_EVENT_MASSAGE_HANDLER(a)            0
-#define SYS_EVENT_REMAP(a) 				        0
-#define EARPHONE_STATE_SNIFF(a)
-#define EARPHONE_STATE_ROLE_SWITCH(a)
-
-#elif TCFG_WIRELESS_MIC_ENABLE
-#define EARPHONE_STATE_INIT()                   do { } while(0)
-#define EARPHONE_STATE_SET_PAGE_SCAN_ENABLE()   do { } while(0)
-#define EARPHONE_STATE_GET_CONNECT_MAC_ADDR()   do { } while(0)
-#define EARPHONE_STATE_CANCEL_PAGE_SCAN()       do { } while(0)
-#define EARPHONE_STATE_ENTER_SOFT_POWEROFF()    do { } while(0)
-#define EARPHONE_STATE_TWS_INIT(a)              do { } while(0)
-#define EARPHONE_STATE_TWS_CONNECTED(a, b)      do { } while(0)
-#define SYS_EVENT_HANDLER_SPECIFIC(a)           do { } while(0)
-#define TWS_EVENT_MASSAGE_HANDLER(a)            0
-#define SYS_EVENT_REMAP(a) 				        0
-#define EARPHONE_STATE_SNIFF(a)
-#define EARPHONE_STATE_ROLE_SWITCH(a)
 
 #else
 #define EARPHONE_STATE_INIT()                   do { } while(0)
@@ -134,11 +86,6 @@ int tuya_sys_event_handler_specific(struct sys_event *event);
 #define EARPHONE_STATE_ENTER_SOFT_POWEROFF()    do { } while(0)
 #define EARPHONE_STATE_TWS_INIT(a)              do { } while(0)
 #define EARPHONE_STATE_TWS_CONNECTED(a, b)      do { } while(0)
-#define SYS_EVENT_HANDLER_SPECIFIC(a)           do { } while(0)
-#define TWS_EVENT_MASSAGE_HANDLER(a)            0
-#define SYS_EVENT_REMAP(a) 				        0
-#define EARPHONE_STATE_SNIFF(a)
-#define EARPHONE_STATE_ROLE_SWITCH(a)
 
 #endif
 
@@ -152,11 +99,6 @@ int tuya_sys_event_handler_specific(struct sys_event *event);
 #define EARPHONE_STATE_ENTER_SOFT_POWEROFF()    do { } while(0)
 #define EARPHONE_STATE_TWS_INIT(a)              do { } while(0)
 #define EARPHONE_STATE_TWS_CONNECTED(a, b)      do { } while(0)
-#define SYS_EVENT_HANDLER_SPECIFIC(a)           do { } while(0)
-#define TWS_EVENT_MASSAGE_HANDLER(a)            0
-#define SYS_EVENT_REMAP(a) 				        0
-#define EARPHONE_STATE_SNIFF(a)
-#define EARPHONE_STATE_ROLE_SWITCH(a)
 #endif
 
 

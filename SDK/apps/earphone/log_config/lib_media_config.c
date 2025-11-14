@@ -439,10 +439,11 @@ const  int  silk_fsW_enable = 1;  //支持16-24k采样率
   1 : 时域PLC
   2 : 频域PLC  目前推荐使用，需要的资源相比APLC/NPLC 比较少, 修复效果也不错
   3 : 仅补静音包
-  4 : APLC 需要官方授权  并将下面的配置config_lib_lc3_enc_ltpf_idx_enable 使能，才能得到更好的体验，但是编码需要的mip会更多,
-      解码在丢包触发plc时，需要的mips 也会增多(编解码都会增多1.5倍以上),如果未使能对应常量,则相当于频域PLC.
-  5 : NPLC JL 新一带PLC  修复效果接近于aplc，但是解码触发plc 的时候需要的mips 至少会翻倍。
-  4/5 的修复效果是最好的，但是需要增加30K~45K代码量,ram增大10K(立体声需要增大20K以上)以上，mips也需要的更多。建议在资源和效率允许的情况下在使用。
+  4 : APLC 需要官方授权（发邮件给[kurt.zou@iis-extern.fraunhofer.de] 或者访问官网[https://www.iis.fraunhofer.de/zh.html]获取联系方式）
+	  将下面的配置config_lib_lc3_enc_ltpf_idx_enable 使能，才能得到更好的体验，但是编码需要的mip会更多,
+      解码在丢包触发PLC时，需要的mips 也会增多(编解码都会增多1.5倍以上),如果未使能对应常量,则相当于频域PLC.
+  5 : NPLC 新一代自研PLC，修复效果接近于APLC，但是解码触发PLC的时候需要的mips 至少会翻倍。
+  注:4/5 的修复效果是最好的，但是需要增加30K~45K代码量,ram增大10K(立体声需要增大20K以上)以上，mips也需要的更多。建议在资源和效率允许的情况下在使用。
  */
 const int LC3_PLC_EN = 2;
 const char config_lib_lc3_enc_ltpf_idx_enable = 0;   //是否编码ltpf参数,影响aplc效果. 速度要求比较高,编解码需要mips 都会增多,非APLC类型建议关掉
@@ -793,14 +794,6 @@ const int audio_effect_nsgate_pro_enable = 0;
 #endif
 
 //***********************
-//*   	LLNS DNS   *
-//***********************
-const u8 LLNS_DNS_AGC_EN = 0; //可以默认置1，由节点的配置判断是否使能agc
-const u32 LLNS_DNS_SUPPORT_SAMPLE_RATE = TCFG_AUDIO_GLOBAL_SAMPLE_RATE; //仅支持32k、48k采样率
-const u16 LLNS_DNS_PROCESS_FRAME_SIZE = (LLNS_DNS_SUPPORT_SAMPLE_RATE == 32000) ? 480 : 720; //降噪一次输出数据长度(点)，请在原厂指导下更改
-const u32 LLNS_DNS_TABLE_SELECT = (LLNS_DNS_SUPPORT_SAMPLE_RATE == 32000) ? BIT(0) : BIT(1);
-
-//***********************
 //*   	Others          *
 //***********************
 const  int RS_FAST_MODE_QUALITY = 2;	//软件变采样 滤波阶数配置，范围2到8， 8代表16阶的变采样模式 ,速度跟它的大小呈正相关
@@ -1037,6 +1030,12 @@ const char log_tag_const_c_ANC_ADAPTIVE  = CONFIG_DEBUG_LIB(0);
 const char log_tag_const_i_ANC_ADAPTIVE  = CONFIG_DEBUG_LIB(0);
 const char log_tag_const_d_ANC_ADAPTIVE  = CONFIG_DEBUG_LIB(0);
 const char log_tag_const_e_ANC_ADAPTIVE  = CONFIG_DEBUG_LIB(TRUE);
+
+const char log_tag_const_v_THR_DET  = CONFIG_DEBUG_LIB(0);
+const char log_tag_const_c_THR_DET  = CONFIG_DEBUG_LIB(0);
+const char log_tag_const_i_THR_DET  = CONFIG_DEBUG_LIB(0);
+const char log_tag_const_d_THR_DET  = CONFIG_DEBUG_LIB(0);
+const char log_tag_const_e_THR_DET  = CONFIG_DEBUG_LIB(TRUE);
 
 const char log_tag_const_v_JLSTREAM = CONFIG_DEBUG_LIB(0);
 const char log_tag_const_c_JLSTREAM = CONFIG_DEBUG_LIB(0);

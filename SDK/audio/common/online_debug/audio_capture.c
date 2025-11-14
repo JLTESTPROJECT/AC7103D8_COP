@@ -113,6 +113,15 @@ extern struct audio_adc_hdl adc_hdl;
 #else
 #define SPP_SEND_INTERVAL	6	//ms
 #endif
+
+#if (TCFG_SENSOR_DATA_EXPORT_ENABLE == SENSOR_DATA_EXPORT_USE_PC_SPP)
+//借用spp音频导出流程导出陀螺仪数据
+#undef AC_MIC_TYPE
+#define AC_MIC_TYPE         0
+#undef SPP_EXPORT_CH
+#define SPP_EXPORT_CH       1
+#endif
+
 #endif
 /******************************************************************/
 
@@ -838,6 +847,39 @@ static void audio_capture_board_init()
 #endif/*AUDIO_DATA_EXPORT_VIA_SD*/
 
     dm.state = AC_STATE_INIT;
+}
+
+int audio_capture_cbuf_write(u8 index, void *data, u32 len)
+{
+    if (dm.state != AC_STATE_START) {
+        return 0;
+    }
+    u32 wlen = 0;
+    switch (index) {
+    case 0:
+        wlen = cbuf_write(&dm.mic0_cb, data, len);
+        if (wlen != len) {
+            AC_ERR_LOG("mic0_cbuf full:%d,%d\n", wlen, len);
+        }
+        break;
+#if (SPP_EXPORT_CH > 1)
+    case 1:
+        wlen = cbuf_write(&dm.mic1_cb, data, len);
+        if (wlen != len) {
+            AC_ERR_LOG("mic0_cbuf full:%d,%d\n", wlen, len);
+        }
+        break;
+#endif
+#if (SPP_EXPORT_CH > 2)
+    case 2:
+        wlen = cbuf_write(&dm.mic2_cb, data, len);
+        if (wlen != len) {
+            AC_ERR_LOG("mic0_cbuf full:%d,%d\n", wlen, len);
+        }
+        break;
+#endif
+    }
+    return wlen;
 }
 
 int audio_capture_start(void)

@@ -50,7 +50,6 @@ extern void dueros_dma_manufacturer_info_init();
 extern int dma_disconnect(void *addr);
 extern int dma_update_tws_state_to_lib(int state);
 extern void dma_get_battery_callback_register(bool (*handler)(u8 battery_type, u8 *value));
-extern void dma_set_pid(u32 pid);
 extern int dma_tws_data_deal(u8 *data, int len);
 extern int dma_ble_set_mac_addr(u8 *ble_addr);
 extern void dma_ble_disconnect(void);

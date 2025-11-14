@@ -32,6 +32,7 @@ enum audio_module {
     AUD_MODULE_DRC,
     AUD_MODULE_DRC_ADV,
     AUD_MODULE_DYN_EQ,
+    AUD_MODULE_DYN_EQ_PRO,
     AUD_MODULE_DISTORTION,
     AUD_MODULE_NOISEGATE_PRO,
     AUD_MODULE_LIMITER,
@@ -64,6 +65,7 @@ enum audio_module {
     AUD_MODULE_STEREO_TO_LCR_TMPBUF,
     AUD_MODULE_SPATIAL_BRIR,
     AUD_MODULE_SPATIAL_BRIR_TMPBUF,
+    AUD_MODULE_THR_DET,
     //Codec Modules
     AUD_MODULE_AAC,
     AUD_MODULE_AAC_TMP,
@@ -74,6 +76,15 @@ enum audio_module {
     AUD_MODULE_JLA_ENC,
     AUD_MODULE_JLA_V2_DEC,
     AUD_MODULE_JLA_V2_ENC,
+    AUD_MODULE_MP3_DEC,
+    AUD_MODULE_MP3_DEC_TMP,
+    //CVP Modules
+    AUD_MODULE_CVP_1MIC_RUN,
+    AUD_MODULE_CVP_1MIC_TMP,
+    AUD_MODULE_CVP_2MIC_RUN,
+    AUD_MODULE_CVP_2MIC_TMP,
+    AUD_MODULE_CVP_3MIC_RUN,
+    AUD_MODULE_CVP_3MIC_TMP,
 };
 
 static const char *mm_module[] = {
@@ -104,6 +115,7 @@ static const char *mm_module[] = {
     "DRC",
     "DRCAdv",
     "DynEQ",
+    "DynEQPro",
     "Distortion",
     "NoiseGatePro",
     "Limiter",
@@ -136,6 +148,7 @@ static const char *mm_module[] = {
     "StereoToLCRTmp",
     "SpatialBRIR",
     "SpatialBRIRTmp",
+    "AudioThrDet"
     //Codec Modules
     "AAC_Dec",
     "AAC_Dec_Tmp",
@@ -146,6 +159,15 @@ static const char *mm_module[] = {
     "JLA_Enc",
     "JLAV2_Dec",
     "JLAV2_Enc",
+    "MP3_Dec",
+    "MP3_Dec_Tmp",
+    //CVP Modules
+    "CVP_1MIC",
+    "CVP_1MIC_Tmp",
+    "CVP_2MIC",
+    "CVP_2MIC_Tmp",
+    "CVP_3MIC",
+    "CVP_3MIC_Tmp",
     "InValid0", //非法模块名，存在模块名和模块序号对不上的情况
     "InValid1", //非法模块名，存在模块名和模块序号对不上的情况
     "InValid2", //非法模块名，存在模块名和模块序号对不上的情况

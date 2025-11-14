@@ -677,6 +677,12 @@ static int rcsp_app_msg_handler(int *msg)
         log_info("APP_MSG_TWS_CONNECTED");
         rcsp_bt_state_tws_connected(0, NULL);
         break;
+    case APP_MSG_TWS_POWERON_CONN_TIMEOUT:
+    case APP_MSG_TWS_POWERON_PAIR_TIMEOUT:
+    case APP_MSG_TWS_START_CONN_TIMEOUT:
+        log_info("tws connect timeout,open adv");
+        rcsp_ble_adv_enable_with_con_dev();
+        break;
 #endif
     case APP_MSG_POWER_OFF://1
         log_info("APP_MSG_POWER_OFF");
@@ -868,7 +874,7 @@ static void rcsp_interface_bt_handle_tws_sync_in_irq(void *_data, u16 len, bool 
         argv[3] = (int)len;
         int ret = os_taskq_post_type("app_core", Q_CALLBACK, 4, argv);
         if (ret) {
-            log_e("taskq post err \n");
+            log_e("rcsp_interface_bt_handle_tws_sync_in_irq taskq post err\n");
             free(rx_data);
         }
     }
@@ -879,7 +885,7 @@ REGISTER_TWS_FUNC_STUB(tws_rcsp_bt_hdl_sync) = {
     .func = rcsp_interface_bt_handle_tws_sync_in_irq,
 };
 
-void rcsp_interface_bt_handle_tws_sync(void)
+static void rcsp_interface_bt_handle_tws_send_in_task()
 {
     if (IS_CHARGE_EN()) {
         rcsp_printf("%s, %s, %d\n", __FILE__, __FUNCTION__, __LINE__);
@@ -901,6 +907,17 @@ void rcsp_interface_bt_handle_tws_sync(void)
     /* } */
 }
 
+void rcsp_interface_bt_handle_tws_sync(void)
+{
+    int argv[2];
+    argv[0] = (int)rcsp_interface_bt_handle_tws_send_in_task;
+    argv[1] = 0;
+    int ret = os_taskq_post_type("app_core", Q_CALLBACK, 2, argv);
+    if (ret) {
+        printf("rcsp_interface_bt_handle_tws_sync taskq post err, ret:%d\n", ret);
+    }
+}
+
 /**
  * 清除rcsp蓝牙ble连接信息并同步到tws对端
  */
@@ -911,7 +928,6 @@ void rcsp_clear_ble_hdl_and_tws_sync(void)
     bt_rcsp_set_conn_info(ble_con_handle, NULL, 0);
     u16 ble_con_handle1 = app_ble_get_hdl_con_handle(rcsp_server_ble_hdl1);
     bt_rcsp_set_conn_info(ble_con_handle1, NULL, 0);
-    rcsp_interface_bt_handle_tws_sync();
 }
 
 #endif // !TCFG_THIRD_PARTY_PROTOCOLS_SIMPLIFIED

@@ -392,7 +392,7 @@ static void app_common_app_event_handler(int *msg)
         audio_icsd_wind_detect_demo();
         break;
 #endif
-#if (defined TCFG_AUDIO_VOLUME_ADAPTIVE_ENABLE) && TCFG_AUDIO_VOLUME_ADAPTIVE_ENABLE
+#if (defined TCFG_AUDIO_ANC_ENV_ADAPTIVE_VOLUME_ENABLE) && TCFG_AUDIO_ANC_ENV_ADAPTIVE_VOLUME_ENABLE
     case APP_MSG_ADAPTIVE_VOL_SWITCH:
         audio_icsd_adaptive_vol_demo();
         break;

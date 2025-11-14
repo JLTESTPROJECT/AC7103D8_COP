@@ -25,6 +25,22 @@ enum anc_fade_mode_t {
     ANC_FADE_MODE_USER,				//用户模式
 };
 
+#define ANC_FADE_GAIN_MAX_FLOAT (16384.0f)
+struct anc_fade_handle {
+    int timer_ms; //配置定时器周期
+    u8 fade_setp_flag; //配置0:增益，1：dB值
+    int timer_id; //记录定时器id
+    int cur_gain; //记录当前增益
+    int fade_setp;//记录淡入淡出步进
+    float fade_setp_dB;//记录淡入淡出步进,dB
+    int target_gain; //记录目标增益
+    u8 fade_gain_mode;//记录当前设置fade gain的模式
+
+    int cur_gain_tmp;
+    float fade_setp_dB_tmp;
+};
+/*anc增益淡入淡出*/
+int audio_anc_gain_fade_process(struct anc_fade_handle *hdl, enum anc_fade_mode_t mode, int target_gain, int fade_time_ms);
 
 /*
    ANC淡入淡出增益设置

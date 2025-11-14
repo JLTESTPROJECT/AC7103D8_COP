@@ -176,6 +176,9 @@ struct _ancbox_info {
     int audio_dut_len;
     u8 *audio_dut_buffer;
 #endif
+    u8 *last_data;		//最后一包数据
+    u32 last_offset;	//最后一包数据的偏移量
+    u32 last_data_len;	//最后一包数据长度
 };
 
 #define DEFAULT_BAUDRATE            9600
@@ -451,9 +454,15 @@ static void anc_read_file_data(u8 *cmd, u32 offset, u32 data_len)
     cmd[0] = CMD_ANC_MODULE;
     cmd[1] = CMD_ANC_READ_FILE_DATA;
     if (__this->file_hdl == NULL) {
-        cmd[1] = CMD_ANC_FAIL;
-        chargestore_api_write(cmd, 2);
-        return;
+        //若offset等于上次的offset, 则表示数据重发，发送最后一包数据
+        if ((__this->last_offset == offset) && __this->last_data && __this->last_data_len) {
+            memcpy(&cmd[2], __this->last_data, __this->last_data_len);
+            chargestore_api_write(cmd, data_len + 2);
+        } else {
+            cmd[1] = CMD_ANC_FAIL;
+            chargestore_api_write(cmd, 2);
+            return;
+        }
     }
 
     //读文件限制拦截
@@ -471,11 +480,21 @@ static void anc_read_file_data(u8 *cmd, u32 offset, u32 data_len)
     }
 
     //拆包读取数据
+    __this->last_offset = offset;
     memcpy(&cmd[2], __this->file_hdl + offset, data_len);
     chargestore_api_write(cmd, data_len + 2);
 
     //-----读文件结束:释放资源-----
     if (__this->file_len == offset + data_len) {
+
+        //记录最后一包数据缓存，支持最后一包数据重发
+        __this->last_data_len = data_len;
+        if (__this->last_data) {
+            free(__this->last_data)	;
+        }
+        __this->last_data = malloc(data_len);
+        memcpy(__this->last_data, __this->file_hdl + offset, data_len);
+
         switch (__this->file_id) {
         case FILE_ID_MIC_SPK:
             anc_debug_ctr(1);

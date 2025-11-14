@@ -119,21 +119,6 @@ typedef struct {
     float ratio_thr;//设置判断阈值百分比，范围：0~1
 } wind_info_t;
 
-struct anc_fade_handle {
-    int timer_ms; //配置定时器周期
-    int timer_id; //记录定时器id
-    int cur_gain; //记录当前增益
-    int fade_setp;//记录淡入淡出步进
-    int target_gain; //记录目标增益
-    u8 fade_gain_mode;//记录当前设置fade gain的模式
-};
-
-u8 get_icsd_anc_wind_noise_lvl(wind_lvl_det_t *wind_lvl_det, u8 wind_lvl);
-void audio_adt_wn_process_fade_timer(void *p);
-int audio_anc_wind_noise_process_fade(wind_info_t *wind_info, u8 anc_wind_noise_lvl);
-/*anc增益淡入淡出*/
-int audio_anc_gain_fade_process(struct anc_fade_handle *hdl, enum anc_fade_mode_t mode, int target_gain, int fade_time_ms);
-
 /*获取是否需要先开anc再开免摘的状态*/
 u8 get_adt_open_in_anc_state();
 

@@ -184,6 +184,7 @@ SECTIONS
         *(.math_fast_funtion_code)
 
 
+#if  TCFG_CODE_TO_RAM_COMPRESS_ENABLE
 		/* *(.edr_link.text) */
 		/* *(.lmp.text) */
 		/* *(.baseband_manger.text) */
@@ -206,7 +207,6 @@ SECTIONS
 		//*(.dac_node.text)
 		//*(.a2dp_streamctrl.text)
 
-#if  TCFG_CODE_TO_RAM_COMPRESS_ENABLE
 		*(.sbc_hwaccel.text)
 		*(.eq_coeff_design.text)
 		*(.aac.text)

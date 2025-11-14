@@ -23,7 +23,9 @@
 #include "jlstream.h"
 #if TCFG_USER_TWS_ENABLE
 #include "bt_tws.h"
+#include "sniff.h"
 #endif/*TCFG_USER_TWS_ENABLE*/
+#include "anc_howling_detect.h"
 
 #if 0
 #define anc_plug_log	printf
@@ -247,10 +249,6 @@ void audio_anc_music_dynamic_gain_suspend(void)
 ********************************************************/
 #if ANC_ADAPTIVE_EN
 
-#define ANC_ADAPTIVE_MODE					ANC_ADAPTIVE_GAIN_MODE	/*ANC增益自适应模式*/
-#define ANC_ADAPTIVE_TONE_EN				0						/*ANC增益自适应提示音使能*/
-#define ANC_ADAPTIVE_POWER_DET_TIME			7200					/*ANC场景自适应检测时间(单位ms), 越小越不稳定，range [2000-∞]; default 7200*/
-
 struct anc_power_adaptive_hdl {
     u8 now_ref_lvl;			/*场景自适应FF当前等级*/
     u8 now_err_lvl;			/*场景自适应FB当前等级*/
@@ -302,6 +300,13 @@ void audio_anc_power_adaptive_init(audio_anc_t *param)
     power_adaptive_hdl->now_ref_lvl = 0xff;
     power_adaptive_hdl->now_err_lvl = 0xff;
 
+#if TCFG_AUDIO_ANC_ENV_ADAPTIVE_GAIN_LITE_ENABLE
+    audio_adt_env_ioctl(ANC_EXT_IOC_INIT, 0);
+#endif
+#if TCFG_AUDIO_ANC_ENV_ADAPTIVE_VOLUME_LITE_ENABLE
+    audio_adt_avc_ioctl(ANC_EXT_IOC_INIT, 0);
+#endif
+
     //算法参数初始化
     cfg.det_time = ANC_ADAPTIVE_POWER_DET_TIME;
     cfg.fade_gain_set = audio_anc_power_adaptive_fade;
@@ -311,7 +316,14 @@ void audio_anc_power_adaptive_init(audio_anc_t *param)
     cfg.err_param = anc_power_adaptive_param;
     cfg.err_max_lvl = sizeof(anc_power_adaptive_param) / sizeof(anc_adap_param_t);
     cfg.param = param;
+#if (TCFG_AUDIO_ANC_ENV_ADAPTIVE_GAIN_LITE_ENABLE || TCFG_AUDIO_ANC_ENV_ADAPTIVE_VOLUME_LITE_ENABLE)
+    cfg.pow_output_cb = audio_anc_env_avc_thr_to_lvl_sync;
+#endif
     anc_pow_adap_init(&cfg);
+#if defined(ANC_ADAPTIVE_HOWLING_IE_DISABLE) && ANC_ADAPTIVE_HOWLING_IE_DISABLE
+    //br56 anc硬件功率获取需要打开anc啸叫检测，此处关闭howling的中断使能
+    anc_howling_detect_toggle(0);
+#endif
 }
 
 #if TCFG_USER_TWS_ENABLE
@@ -479,7 +491,7 @@ void audio_anc_power_adaptive_resume(void)
 
 #if ANC_DUT_MIC_CMP_GAIN_ENABLE
 
-static struct anc_mic_gain_cmp_cfg *anc_dut_mic_cmp;
+static struct anc_mic_gain_cmp_cfg *anc_dut_mic_cmp = NULL;
 
 enum {
     CMD_MIC_CMP_GAIN_EN = 0X5F,		//FF/FB 增益补偿使能
@@ -487,6 +499,8 @@ enum {
     CMD_MIC_CMP_GAIN_GET = 0X61,	//FF/FB 增益补偿读取
     CMD_MIC_CMP_GAIN_CLEAN = 0X62,	//FF/FB 增益补偿清0
     CMD_MIC_CMP_GAIN_SAVE = 0X63,	//FF/FB 增益补偿保存
+    CMD_MIC_CMP_GAIN_ALL_GET = 0X64, //FF/FB 增益补偿结构体获取
+    CMD_MIC_CMP_GAIN_ALL_SET = 0X65, //FF/FB 增益补偿结构体设置
 };
 
 //ANC MIC补偿值初始化
@@ -503,7 +517,12 @@ void audio_anc_mic_gain_cmp_init(void *mic_cmp)
             anc_dut_mic_cmp->rff_gain = 1.0f;
             anc_dut_mic_cmp->rfb_gain = 1.0f;
         } else {
-            printf("anc_mic_cmp cap vm read succ !!!");
+            printf("anc_mic_cmp cap vm read succ: en %d lff_gain %d/1000 lfb_gain %d/1000 rff_gain %d/1000 rfb_gain %d/1000\n",
+                   anc_dut_mic_cmp->en,
+                   (int)(anc_dut_mic_cmp->lff_gain * 1000.0f),
+                   (int)(anc_dut_mic_cmp->lfb_gain * 1000.0f),
+                   (int)(anc_dut_mic_cmp->rff_gain * 1000.0f),
+                   (int)(anc_dut_mic_cmp->rfb_gain * 1000.0f));
         }
     }
 }
@@ -581,8 +600,28 @@ int audio_anc_mic_gain_cmp_cmd_process(u8 cmd, u8 *buf, int len)
             return 1;
         }
         break;
+    case CMD_MIC_CMP_GAIN_ALL_SET:
+        anc_plug_log("CMD_MIC_CMP_GAIN_ALL_SET\n");
+        if (len != sizeof(struct anc_mic_gain_cmp_cfg)) {
+            return 1;
+        }
+        memcpy(anc_dut_mic_cmp, buf, len);
+#if ANC_MULT_ORDER_ENABLE
+        audio_anc_mult_scene_update(audio_anc_mult_scene_get());
+#endif
+        break;
+
     }
     return 0;
+}
+
+u8 *audio_anc_mic_gain_cmp_cfg_get(int *len)
+{
+    if (anc_dut_mic_cmp) {
+        *len = sizeof(struct anc_mic_gain_cmp_cfg);
+        return (u8 *)anc_dut_mic_cmp;
+    }
+    return NULL;
 }
 
 #endif

@@ -404,6 +404,7 @@ c_SRC_FILES += \
 	  audio/anc/audio_anc_debug_tool.c \
 	  audio/anc/audio_anc_mult_scene.c \
 	  audio/anc/audio_anc_common.c \
+	  audio/anc/audio_anc_lvl_sync.c \
 
 #endif
 #endif
@@ -451,9 +452,19 @@ c_SRC_FILES += \
 #endif
 
 #if EXPORT_SOMATOSENSORY_ENABLE
+#if TCFG_AUDIO_SOMATOSENSORY_ENABLE
 c_SRC_FILES += \
 	audio/effect/somatosensory/audio_somatosensory.c \
 
+#if !TCFG_SPATIAL_AUDIO_ENABLE
+    //头部姿态检测使能但空间音效未使能的情况下，需要补充以下陀螺仪相关文件
+c_SRC_FILES += \
+	audio/effect/spatial_effect/spatial_effect_imu.c \
+	audio/effect/spatial_effect/spatial_imu_trim.c \
+	audio/common/online_debug/aud_spatial_effect_dut.c \
+
+#endif
+#endif
 #endif
 
 // Clear Voice Process(AEC/NLP/NS/AGC...)
@@ -1318,6 +1329,20 @@ c_SRC_FILES += \
 #endif
 
 
+#if THIRD_PARTY_PROTOCOLS_SEL & JL_SBOX_EN
+c_SRC_FILES += \
+    apps/common/third_party_profile/jieli/jl_earbox/sbox_core_config.c \
+    apps/common/third_party_profile/jieli/jl_earbox/sbox_protocol.c \
+    apps/common/third_party_profile/jieli/jl_earbox/sbox_user_app.c \
+    apps/common/third_party_profile/jieli/jl_earbox/sbox_uart_app.c \
+    apps/common/third_party_profile/jieli/jl_earbox/sbox_eq_switch.c \
+    apps/common/third_party_profile/jieli/jl_earbox/user_video_ctr.c \
+    apps/common/third_party_profile/jieli/jl_earbox/edr_hid_user.c \
+    apps/common/third_party_profile/jieli/jl_earbox/sbox_connect_emitter.c \
+
+//apps/common/third_party_profile/jieli/jl_earbox/sbox_key_setting.c \
+
+#endif
 
 // *INDENT-OFF*
 

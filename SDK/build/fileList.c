@@ -299,6 +299,7 @@ objs += \
 	  $(ROOT)/audio/anc/audio_anc_debug_tool.o \
 	  $(ROOT)/audio/anc/audio_anc_mult_scene.o \
 	  $(ROOT)/audio/anc/audio_anc_common.o \
+	  $(ROOT)/audio/anc/audio_anc_lvl_sync.o \
 
 #endif
 
@@ -339,6 +340,11 @@ objs += \
 #if EXPORT_SOMATOSENSORY_ENABLE
 objs += \
 	$(ROOT)/audio/effect/somatosensory/audio_somatosensory.o \
+
+objs += \
+	$(ROOT)/audio/effect/spatial_effect/spatial_effect_imu.o \
+	$(ROOT)/audio/effect/spatial_effect/spatial_imu_trim.o \
+	$(ROOT)/audio/common/online_debug/aud_spatial_effect_dut.o \
 
 #endif
 
@@ -972,6 +978,17 @@ objs += \
     $(ROOT)/apps/common/third_party_profile/ximalaya_protocol/xmly_config.o \
     $(ROOT)/apps/common/third_party_profile/ximalaya_protocol/xmly_ble.o \
 
+
+
+objs += \
+    $(ROOT)/apps/common/third_party_profile/jieli/jl_earbox/sbox_core_config.o \
+    $(ROOT)/apps/common/third_party_profile/jieli/jl_earbox/sbox_protocol.o \
+    $(ROOT)/apps/common/third_party_profile/jieli/jl_earbox/sbox_user_app.o \
+    $(ROOT)/apps/common/third_party_profile/jieli/jl_earbox/sbox_uart_app.o \
+    $(ROOT)/apps/common/third_party_profile/jieli/jl_earbox/sbox_eq_switch.o \
+    $(ROOT)/apps/common/third_party_profile/jieli/jl_earbox/user_video_ctr.o \
+    $(ROOT)/apps/common/third_party_profile/jieli/jl_earbox/edr_hid_user.o \
+    $(ROOT)/apps/common/third_party_profile/jieli/jl_earbox/sbox_connect_emitter.o \
 
 
 

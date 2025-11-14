@@ -63,7 +63,7 @@ sbc_decoder_hw_plug
 #endif
 
 #if TCFG_TONE_MSBC_ENABLE || TCFG_DEC_MSBC_ENABLE
-msbc_decoder_plug
+msbc_decoder_hw_plug
 #endif
 
 
@@ -72,11 +72,7 @@ pdm_mic_file_plug
 #endif
 
 #if TCFG_ENC_MSBC_ENABLE
-#if TCFG_BT_DONGLE_ENABLE
-msbc_encoder_soft_plug
-#else
-msbc_encoder_hw_plug
-#endif
+msbc_encoder_plug
 #endif
 
 
@@ -626,5 +622,13 @@ mute_node_adapter
 
 #if TCFG_VIRTUAL_SURROUND_HP_NODE_ENABLE
 virtual_surround_hp_node_adapter
+#endif
+
+#if TCFG_JL_VOCODER_DEC_ENABLE
+jl_vocoder_dec_plug
+#endif
+
+#if TCFG_JL_VOCODER_ENC_ENABLE
+jl_vocoder_encoder_plug
 #endif
 

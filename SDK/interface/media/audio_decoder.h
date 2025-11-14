@@ -3,6 +3,7 @@
 
 #include "generic/typedef.h"
 #include "media/audio_base.h"
+#include "media_memory.h"
 
 
 

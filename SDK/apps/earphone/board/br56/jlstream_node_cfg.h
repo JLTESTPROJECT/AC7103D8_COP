@@ -301,5 +301,9 @@
 #define EQ_CFG_TYPE_HP 0 // Hp
 #define EQ_CFG_TYPE_LP 0 // Lp
 // ------------流程图EQ节点类型宏定义------------
+
+// ------------表单节点全局配置宏------------
+#define CVP_BF_VERSION 2 // VERSION
+// ------------表单节点全局配置宏------------
 #endif
 

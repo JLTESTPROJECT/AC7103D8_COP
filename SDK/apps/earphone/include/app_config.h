@@ -78,6 +78,7 @@
 #define    AURACAST_APP_EN          (1 << 17)
 #define    MULTI_CLIENT_EN          (1 << 18)
 #define    ANCS_AMS_MODE_EN         (1 << 19)
+#define    JL_SBOX_EN               (1 << 20)
 
 #if TCFG_THIRD_PARTY_PROTOCOLS_ENABLE
 #define THIRD_PARTY_PROTOCOLS_SEL  TCFG_THIRD_PARTY_PROTOCOLS_SEL
@@ -129,9 +130,6 @@
 
 #undef  TCFG_BT_BLE_BREDR_SAME_ADDR
 #define  TCFG_BT_BLE_BREDR_SAME_ADDR 0x0
-#if TCFG_THIRD_PARTY_PROTOCOLS_SIMPLIFIED && TCFG_RCSP_DUAL_CONN_ENABLE
-#error "三方协议简化版本不支持RCSP一拖二功能"
-#endif
 #endif
 
 #if (TCFG_THIRD_PARTY_PROTOCOLS_SEL & GFPS_EN) && (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_UNICAST_SINK_EN)
@@ -141,6 +139,8 @@
 #ifndef TCFG_JL_UNICAST_BOUND_PAIR_EN
 #define TCFG_JL_UNICAST_BOUND_PAIR_EN 0				// 可通过JL小板实现耳机和Dongle的绑定配对
 #endif
+
+#define JL_UNICAST_ACL_MAX_PDU_CTOP				36 // 与LEA dongle传输的私有命令最大数据长度
 
 // #undef TCFG_LOWPOWER_LOWPOWER_SEL
 // #define  TCFG_LOWPOWER_LOWPOWER_SEL 0x0//低功耗连接还有问题
@@ -153,6 +153,9 @@
 #define LE_AUDIO_JL_DONGLE_UNICAST_WITH_PHONE_CONN_SWITCH 0 // JL_UNICAST、EDR一拖二使能
 #endif
 #if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_UNICAST_SINK_EN) && LE_AUDIO_JL_DONGLE_UNICAST_WITH_PHONE_CONN_SWITCH
+#if TCFG_JL_UNICAST_EDR_MODE_SWITCH_ENABLE
+#error "SDK中JL_UNICAST一拖二与模式切换功能默认不共存，如需使用可参考现有逻辑与接口自行开发新UI"
+#endif
 #ifndef LE_AUDIO_JL_DONGLE_UNICAST_WITH_PHONE_CONN_CONFIG
 #define LE_AUDIO_JL_DONGLE_UNICAST_WITH_PHONE_CONN_CONFIG  LE_AUDIO_JL_DONGLE_UNICAST_WITH_PHONE_CONN_PLAY_PREEMPTEDK
 #endif
@@ -288,6 +291,14 @@
 
 #if !(THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
 #define	   RCSP_MODE			     RCSP_MODE_OFF
+#endif
+
+#ifndef TCFG_USER_EDR_ENABLE
+#define TCFG_USER_EDR_ENABLE        0
+#endif
+#if (THIRD_PARTY_PROTOCOLS_SEL & JL_SBOX_EN)
+#undef TCFG_USER_EDR_ENABLE
+#define TCFG_USER_EDR_ENABLE        1
 #endif
 
 //单双备份的配置在board_xxx_global_cfg里配置，需要注意只有RCSP才支持单双备份，其余升级都是只支持双备份升级
@@ -647,7 +658,15 @@
 
 #define  SYS_VOL_TYPE 	VOL_TYPE_DIGITAL/*目前仅支持软件数字音量模式*/
 
-#define TCFG_AUDIO_ANC_ENV_NOISE_DET_ENABLE (TCFG_AUDIO_VOLUME_ADAPTIVE_ENABLE | TCFG_AUDIO_ANC_ENV_ADAPTIVE_GAIN_ENABLE)
+//icsd 环境噪声检测模式：标准
+#define TCFG_AUDIO_ANC_ENV_ADAPTIVE_GAIN_ENABLE             (TCFG_AUDIO_ANC_ENV_NOISE_DET_MODE && TCFG_AUDIO_ANC_ENV_ENABLE)
+#define TCFG_AUDIO_ANC_ENV_ADAPTIVE_VOLUME_ENABLE           (TCFG_AUDIO_ANC_ENV_NOISE_DET_MODE && TCFG_AUDIO_ANC_AVC_ENABLE)
+
+//anc硬件 环境噪声检测模式：轻量
+#define TCFG_AUDIO_ANC_ENV_ADAPTIVE_GAIN_LITE_ENABLE        (!TCFG_AUDIO_ANC_ENV_NOISE_DET_MODE && TCFG_AUDIO_ANC_ENV_ENABLE)
+#define TCFG_AUDIO_ANC_ENV_ADAPTIVE_VOLUME_LITE_ENABLE      (!TCFG_AUDIO_ANC_ENV_NOISE_DET_MODE && TCFG_AUDIO_ANC_AVC_ENABLE)
+
+#define TCFG_AUDIO_ANC_ENV_NOISE_DET_ENABLE (TCFG_AUDIO_ANC_ENV_ADAPTIVE_VOLUME_ENABLE | TCFG_AUDIO_ANC_ENV_ADAPTIVE_GAIN_ENABLE)
 
 /*智能免摘，广域点击，风噪检测，实时自适应*/
 #if (TCFG_AUDIO_SPEAK_TO_CHAT_ENABLE || \
@@ -735,6 +754,66 @@
 #else
 #define TCFG_AUDIO_CVP_OUTPUT_WAY_IIS_ENABLE    0
 #endif
+
+//*********************************************************************************//
+//                                  imu-sensor配置                                   //
+//*********************************************************************************//
+#define TCFG_IMUSENSOR_ENABLE                	1    //imu Sensor使能
+//mpu6887 cfg
+#define TCFG_MPU6887P_ENABLE                  	1
+#define TCFG_MPU6887P_INTERFACE_TYPE          	0 //0:iic, 1:spi
+#define TCFG_MPU6887P_USER_IIC_TYPE           	0 //iic有效:1:硬件iic, 0:软件iic
+#define TCFG_MPU6887P_USER_IIC_INDEX          	0 //IIC 序号
+#define TCFG_MPU6887P_DETECT_IO               	(-1) //传感器中断io
+#define TCFG_MPU6887P_AD0_SELETE_IO             IO_PORTC_03 //iic地址选择io
+
+//icm42670 cfg
+#define TCFG_ICM42670P_ENABLE                  	0
+#define TCFG_ICM42670P_INTERFACE_TYPE          	0 //0:iic, 1:spi
+#define TCFG_ICM42670P_USER_IIC_TYPE           	0 //iic有效:1:硬件iic, 0:软件iic
+#define TCFG_ICM42670P_USER_IIC_INDEX          	0 //IIC 序号
+#define TCFG_ICM42670P_DETECT_IO               	(-1) //传感器中断io
+#define TCFG_ICM42670P_AD0_SELETE_IO            (-1) //iic地址选择io
+
+#define VERSION_P                               1 //icm42670p
+#define VERSION_L                               2 //icm42670l
+#define TCFG_ICM42670_VERSION                   VERSION_L //版本选择
+
+//lsm6dsl cfg
+#define TCFG_LSM6DSL_ENABLE                     0
+#define TCFG_LSM6DSL_INTERFACE_TYPE             0 //0:iic, 1:spi
+#define TCFG_LSM6DSL_USER_IIC_TYPE              0 //1:硬件iic, 0:软件iic
+#define TCFG_LSM6DSL_USER_IIC_INDEX          	0 //IIC 序号
+#define TCFG_LSM6DSL_DETECT_IO               	(-1) //传感器中断io
+#define TCFG_LSM6DSL_AD0_SELETE_IO              (-1) //iic地址选择io
+
+/*
+ *imu-sensor power manager
+ *不用独立IO供电，则配置 NO_CONFIG_PORT
+ */
+#define TCFG_IMU_SENSOR_PWR_PORT                NO_CONFIG_PORT
+
+/*
+ * 使能该配置后，需搭配[串口写卡小板]使用
+ * 注：需要手动[使能] AUDIO_DATA_EXPORT_VIA_UART
+ */
+#define SENSOR_DATA_EXPORT_USE_UART 	        1
+/*
+ * 使能该配置后，需搭配[手机APP Audio Tools]使用
+ * Audio Tools->记录 可录制陀螺仪数据，录制前需要[打开]使用陀螺仪的应用，如头部姿态检测/空间音效
+ * Audio Tools->空间音效->传感器->校准 可校准陀螺仪，校准前需要[关闭]使用陀螺仪的应用，如头部姿态检测/空间音效
+ * 注：1、若是tws方案，需要使用单耳连接手机(tws不配对)
+ *     2、需要[关闭] AUDIO_DATA_EXPORT_VIA_SPP，否则与mic数据导出冲突
+ */
+#define SENSOR_DATA_EXPORT_USE_SPP 	            2
+/*
+ * 使能该配置后，需搭配[PC端工具 EffectTool->音频录制]使用
+ * 注：需要手动[使能] AUDIO_DATA_EXPORT_VIA_SPP
+ */
+#define SENSOR_DATA_EXPORT_USE_PC_SPP           3
+/*陀螺仪数据导出配置：量产版本应该关闭，仅作debug调试使用*/
+#define TCFG_SENSOR_DATA_EXPORT_ENABLE          DISABLE_THIS_MOUDLE
+
 
 /*Audio数据导出配置:通过蓝牙spp导出/sd写卡导出/uart写卡导出*/
 #define AUDIO_DATA_EXPORT_VIA_UART	1
@@ -959,7 +1038,7 @@
 #endif
 #include "usb_common_def.h"
 
-#if (TCFG_AUDIO_ASR_DEVELOP && TCFG_CVP_DEVELOP_ENABLE) || TCFG_VIRTUAL_SURROUND_PRO_MODULE_NODE_ENABLE
+#if (TCFG_AUDIO_ASR_DEVELOP && TCFG_CVP_DEVELOP_ENABLE) || TCFG_VIRTUAL_SURROUND_PRO_MODULE_NODE_ENABLE || ((TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_UNICAST_SINK_EN) && LE_AUDIO_JL_DONGLE_UNICAST_WITH_PHONE_CONN_SWITCH)
 #define TCFG_LOWPOWER_RAM_SIZE				0	                //ram:640-128*TCFG_LOWPOWER_RAM_SIZE 低功耗掉电ram大小，单位：128K，可设置值：0、2、3
 #elif (TCFG_BT_DONGLE_ENABLE||TCFG_SMART_VOICE_ENABLE || TCFG_AUDIO_ASR_DEVELOP || TCFG_CVP_DEVELOP_ENABLE \
 		|| TCFG_AUDIO_SPATIAL_EFFECT_ENABLE || TCFG_AUDIO_ANC_EAR_ADAPTIVE_EN || TCFG_ANC_SELF_DUT_GET_SZ \
@@ -1027,7 +1106,7 @@
 
 #if APP_ONLINE_DEBUG
 #undef THIRD_PARTY_PROTOCOLS_SEL
-#if (TCFG_THIRD_PARTY_PROTOCOLS_ENABLE && (TCFG_THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN | GFPS_EN | MMA_EN | FMNA_EN | REALME_EN | SWIFT_PAIR_EN | DMA_EN | CUSTOM_DEMO_EN | XIMALAYA_EN | AURACAST_APP_EN | MULTI_CLIENT_EN))) || ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN)))
+#if (TCFG_THIRD_PARTY_PROTOCOLS_ENABLE && (TCFG_THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN | GFPS_EN | MMA_EN | FMNA_EN | REALME_EN | SWIFT_PAIR_EN | DMA_EN | CUSTOM_DEMO_EN | XIMALAYA_EN | AURACAST_APP_EN | MULTI_CLIENT_EN | JL_SBOX_EN))) || ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN)))
 #define THIRD_PARTY_PROTOCOLS_SEL  (TCFG_THIRD_PARTY_PROTOCOLS_SEL | ONLINE_DEBUG_EN)
 #else
 #define THIRD_PARTY_PROTOCOLS_SEL  (ONLINE_DEBUG_EN)
@@ -1127,10 +1206,6 @@
 #endif
 #endif
 
-//*********************************************************************************//
-//                    关中断时间过长函数追踪配置                                      //
-//*********************************************************************************//
-#define TCFG_IRQ_TIME_DEBUG_ENABLE  0  //用于开启查找中断时间过久的函数功能,打印函数的rets和trance:"irq disable overlimit:"
 
 #ifndef __LD__
 #include "bt_profile_cfg.h"

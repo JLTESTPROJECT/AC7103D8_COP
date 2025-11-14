@@ -1,24 +1,65 @@
 #include "app_config.h"
-#if ((defined TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN) && TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN && \
-        TCFG_AUDIO_ANC_ENABLE && TCFG_AUDIO_VOLUME_ADAPTIVE_ENABLE)
+#include "audio_anc.h"
+#if TCFG_AUDIO_ANC_ENABLE
+#if ((TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN && TCFG_AUDIO_ANC_ENV_ADAPTIVE_VOLUME_ENABLE) || \
+        (ANC_ADAPTIVE_EN && TCFG_AUDIO_ANC_ENV_ADAPTIVE_VOLUME_LITE_ENABLE))
+
 #include "system/includes.h"
 #include "icsd_adt_app.h"
-#include "audio_anc.h"
 #include "asm/anc.h"
 #include "tone_player.h"
 #include "audio_config.h"
 #include "icsd_anc_user.h"
 #include "sniff.h"
+#include "icsd_adt.h"
+#include "media/audio_threshold_det.h"
+#include "audio_anc_lvl_sync.h"
+#include "audio_anc_common_plug.h"
 
-#if TCFG_AUDIO_ANC_REAL_TIME_ADAPTIVE_ENABLE
-#include "rt_anc_app.h"
+struct audio_avc_hdl {
+    void *avc_thr_hdl;  //噪声阈值检测模块句柄
+    struct audio_anc_lvl_sync *lvl_sync_hdl;
+    u16 last_vol_dB;    //记录上次设置的音量，防止重复设置
+};
+static struct audio_avc_hdl *avc_hdl = NULL;
+
+/* 注：噪声阈值表成员数，需要与音量偏移表第二维的成员数（即音量偏移表的列数）相同 */
+
+/* 1、噪声阈值表 */
+#if TCFG_AUDIO_ANC_ENV_ADAPTIVE_VOLUME_ENABLE
+//标准模式阈值表
+const int avc_thr_table[] = {0, 80, 160};
+#else
+//轻量模式阈值表
+const int avc_thr_table[] = {0, 60, 120};
 #endif
 
+/* 2、音量偏移表 */
+#define VOLUME_LEVEL    5 //将音量划分5个区间
+const u16 anc_avc_offset_table[][3] = { //不同音量区间下，同一噪声等级偏移的音量offset不同，使用该表控制
+    /* noise_lvl0  noise_lvl1  noise_lvl2 */
+    {0,         10,         16}, /*第1区间的音量: cur_vol < max_vol * 1/VOLUME_LEVEL*/
+#if (VOLUME_LEVEL >= 2)
+    {0,         8,          14}, /*第2区间的音量: cur_vol < max_vol * 2/VOLUME_LEVEL , cur_vol >= max_vol * 1/VOLUME_LEVEL*/
+#endif
+#if (VOLUME_LEVEL >= 3)
+    {0,         6,          12}, /*第3区间的音量: cur_vol < max_vol * 3/VOLUME_LEVEL, cur_vol >= max_vol * 2/VOLUME_LEVEL*/
+#endif
+#if (VOLUME_LEVEL >= 4)
+    {0,         4,          10}, /*第4区间的音量: cur_vol < max_vol * 4/VOLUME_LEVEL, cur_vol >= max_vol * 3/VOLUME_LEVEL*/
+#endif
+#if (VOLUME_LEVEL >= 5)
+    {0,         2,          8}, /*第5区间的音量: cur_vol < max_vol * 5/VOLUME_LEVELi, cur_vol >= max_vol * 4/VOLUME_LEVEL*/
+#endif
+};
+
+#if TCFG_AUDIO_ANC_ENV_ADAPTIVE_VOLUME_ENABLE
 /*打开音量自适应*/
 int audio_icsd_adaptive_vol_open()
 {
     printf("%s", __func__);
     u8 adt_mode = ADT_ENV_NOISE_DET_MODE;
+    audio_icsd_adt_env_noise_det_set(AUDIO_ANC_ENV_NOISE_DET_VOLUME_ADAPTIVE);
     return audio_icsd_adt_sync_open(adt_mode);
 }
 
@@ -27,9 +68,8 @@ int audio_icsd_adaptive_vol_close()
 {
     printf("%s", __func__);
     u8 adt_mode = ADT_ENV_NOISE_DET_MODE;
+    audio_icsd_adt_env_noise_det_clear(AUDIO_ANC_ENV_NOISE_DET_VOLUME_ADAPTIVE);
     int ret = audio_icsd_adt_sync_close(adt_mode, 0);
-    /*关闭音量自适应后恢复音量*/
-    audio_app_set_vol_offset_dB(0);
     return ret;
 }
 
@@ -51,108 +91,173 @@ void audio_icsd_adaptive_vol_demo()
         audio_icsd_adaptive_vol_close();
     }
 }
-
-struct adaptive_vol_param {
-    u8 noise_lvl_thr;/*噪声阈值*/
-    float offset_dB;/*小于噪声阈值的音量偏移*/
-};
-
-/*将音量划分5个不同的区间，每一个区间下，不同大小的噪声，设置不同的音量偏移大小*/
-#define VOLUME_LEVEL    5
-/*将噪声大小划分6个等级*/
-#define NOISE_LEVEL     6
-
-static const struct adaptive_vol_param avc_parm[VOLUME_LEVEL][NOISE_LEVEL + 1] = {
-    /*第1区间的音量: cur_vol < max_vol * 1/VOLUME_LEVEL*/
-    {
-        {40, 0},//噪声小于40，音量+0dB
-        {45, 8},//噪声在40~45，音量+8dB
-        {50, 16},//噪声在45~50，音量+16dB
-        {60, 20},//噪声在50~60，音量+20dB
-        {70, 25},
-        {80, 30},
-        {90, 35}
-    },
-#if (VOLUME_LEVEL >= 2)
-    /*第2区间的音量: cur_vol < max_vol * 2/VOLUME_LEVEL , cur_vol >= max_vol * 1/VOLUME_LEVEL*/
-    {
-        {40, 0},
-        {45, 4},
-        {50, 8},
-        {60, 10},
-        {70, 14},
-        {80, 18},
-        {90, 22}
-    },
 #endif
-#if (VOLUME_LEVEL >= 3)
-    /*第3区间的音量: cur_vol < max_vol * 3/VOLUME_LEVEL, cur_vol >= max_vol * 2/VOLUME_LEVEL*/
-    {
-        {40, 0},
-        {45, 2},
-        {50, 4},
-        {60, 8},
-        {70, 10},
-        {80, 12},
-        {90, 15}
-    },
+
+static int audio_anc_avc_enable_check()
+{
+#if TCFG_AUDIO_ANC_ENV_ADAPTIVE_VOLUME_ENABLE
+    return (audio_icsd_adt_env_noise_det_get() & AUDIO_ANC_ENV_NOISE_DET_VOLUME_ADAPTIVE);
+#elif TCFG_AUDIO_ANC_ENV_ADAPTIVE_VOLUME_LITE_ENABLE
+    return 1;
 #endif
-#if (VOLUME_LEVEL >= 4)
-    /*第4区间的音量: cur_vol < max_vol * 4/VOLUME_LEVEL, cur_vol >= max_vol * 3/VOLUME_LEVEL*/
-    {
-        {40, 0},
-        {45, 2},
-        {50, 3},
-        {60, 4},
-        {70, 5},
-        {80, 10},
-        {90, 12}
-    },
-#endif
-#if (VOLUME_LEVEL >= 5)
-    /*第5区间的音量: cur_vol < max_vol * 5/VOLUME_LEVELi, cur_vol >= max_vol * 4/VOLUME_LEVEL*/
-    {
-        {40, 0},
-        {45, 1},
-        {50, 3},
-        {60, 6},
-        {70, 9},
-        {80, 9},
-        {90, 10}
+    return 1;
+}
+
+int audio_anc_avc_thr_to_lvl(int avc_thr)
+{
+    if (!avc_hdl) {
+        return -1;
     }
+    if (!audio_anc_avc_enable_check()) {
+        return -1;
+    }
+    /*anc模式下才改音量*/
+    if (anc_mode_get() != ANC_OFF) {
+        /*划分环境噪声等级*/
+        int avc_lvl = audio_threshold_det_run(avc_hdl->avc_thr_hdl, avc_thr);
+#if ICSD_AVC_LVL_PRINTF
+        printf("avc_det-avc_thr: %d, avc_lvl: %d\n", avc_thr, avc_lvl);
 #endif
-};
+        return avc_lvl;
+    }
+    return -1;
+}
+
+void audio_anc_avc_lvl_sync_info(u8 *data, int len)
+{
+    if (!avc_hdl) {
+        return;
+    }
+    audio_anc_lvl_sync_info(avc_hdl->lvl_sync_hdl, data, len);
+}
+
 
 /*音量偏移处理*/
-void audio_icsd_adptive_vol_event_process(u8 spldb_iir)
+void audio_icsd_adptive_vol_event_process(u8 avc_lvl)
 {
-    /* printf("%s, spldb_iir:%d", __func__, (u8)(spldb_iir)) */
-    int i = 0;
-    int j = 0;
-
+    if (!avc_hdl) {
+        return;
+    }
+    if (!audio_anc_avc_enable_check()) {
+        return;
+    }
+    if (anc_mode_get() == ANC_OFF) {
+        return;
+    }
     /*获取最大音量等级*/
     s16 max_vol = app_audio_get_max_volume();
     s16 cur_vol = app_audio_get_volume(APP_AUDIO_CURRENT_STATE);
-    /* printf("cur_vol %d, max_vol %d", cur_vol, max_vol); */
+#if ICSD_AVC_LVL_PRINTF
+    printf("avc_det-cur_vol %d, max_vol %d", cur_vol, max_vol);
+#endif
+    u8 vol_lvl = 0;
 
-    for (i = 0; i < VOLUME_LEVEL; i++) {
-        /*查找当前音量在哪个音量区间*/
+    /*
+     * 查找当前音量在哪个音量区间，确定vol_lvl档位
+     * 该逻辑也可根据实际样机的音量表以及调试情况自行修改
+     */
+    for (u8 i = 0; i < VOLUME_LEVEL; i++) {
         if (cur_vol <= (max_vol * (i + 1) / VOLUME_LEVEL)) {
-
-            for (j = 0; j < NOISE_LEVEL; j++) {
-                /*判断当前噪声在哪个等级*/
-                if (spldb_iir <= avc_parm[i][j].noise_lvl_thr) {
-                    audio_app_set_vol_offset_dB(avc_parm[i][j].offset_dB);
-                    /* printf("vol_lvl:%d, noise_lvl: %d, noise_lvl_thr: %d, dB: %d", i, j, avc_parm[i][j].noise_lvl_thr, (int)avc_parm[i][j].offset_dB); */
-                    break;
-                }
-            }
-            /*处于最大噪声等级*/
-            audio_app_set_vol_offset_dB(avc_parm[i][j].offset_dB);
-            /* printf("vol_lvl:%d, noise_lvl: %d, noise_lvl_thr: %d, dB: %d", i, j, avc_parm[i][j].noise_lvl_thr, (int)avc_parm[i][j].offset_dB); */
+            vol_lvl = i;
             break;
         }
     }
+
+#if ICSD_AVC_LVL_PRINTF
+    printf("avc_det-vol_lvl %d, noise_lvl %d, offset_dB %d\n", vol_lvl, avc_lvl, anc_avc_offset_table[vol_lvl][avc_lvl]);
+#endif
+    if (avc_hdl->last_vol_dB == anc_avc_offset_table[vol_lvl][avc_lvl]) {
+        //与上次计算结果得到的音量一致，不设置
+        return;
+    }
+    audio_app_set_vol_offset_dB((float)anc_avc_offset_table[vol_lvl][avc_lvl]);
+    avc_hdl->last_vol_dB = anc_avc_offset_table[vol_lvl][avc_lvl];
 }
 
-#endif /*(defined TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN) && TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN*/
+static void audio_anc_avc_lvl_sync_cb(void *_hdl)
+{
+    struct audio_anc_lvl_sync *hdl = (struct audio_anc_lvl_sync *)_hdl;
+    int err = 0;
+#if TCFG_AUDIO_ANC_ENV_ADAPTIVE_VOLUME_ENABLE
+    err = os_taskq_post_msg(SPEAK_TO_CHAT_TASK_NAME, 2, ICSD_ADT_AVC_NOISE_LVL, hdl->cur_lvl);
+
+#elif TCFG_AUDIO_ANC_ENV_ADAPTIVE_VOLUME_LITE_ENABLE
+    err = os_taskq_post_msg("anc", 2, ANC_MSG_AVC_NOISE_LVL, hdl->cur_lvl);
+
+#endif
+    if (err != OS_NO_ERR) {
+        printf("audio_anc_avc_lvl_sync_cb err %d\n", err);
+    }
+
+}
+
+static void audio_avc_ioc_init()
+{
+    if (avc_hdl) {
+        return;
+    }
+    avc_hdl = zalloc(sizeof(struct audio_avc_hdl));
+    if (!avc_hdl) {
+        return;
+    }
+    //阈值检测
+    struct threshold_det_param param = {0};
+    param.thr_table = avc_thr_table;
+    param.thr_lvl_num = ARRAY_SIZE(avc_thr_table);
+    param.thr_debounce = 10;
+#if TCFG_AUDIO_ANC_ENV_ADAPTIVE_VOLUME_ENABLE
+    param.run_interval = avc_run_interval * 11;
+    param.lvl_up_hold_time = 1000;
+    param.lvl_down_hold_time = 1000;
+#elif TCFG_AUDIO_ANC_ENV_ADAPTIVE_VOLUME_LITE_ENABLE
+    param.run_interval = ANC_ADAPTIVE_POWER_DET_TIME / 2;
+    param.lvl_up_hold_time = ANC_ADAPTIVE_POWER_DET_TIME / 2;
+    param.lvl_down_hold_time = ANC_ADAPTIVE_POWER_DET_TIME / 2;
+#endif
+    param.default_lvl = 0; //默认最低档位
+    avc_hdl->avc_thr_hdl = audio_threshold_det_open(&param);
+
+    //档位同步
+    struct audio_anc_lvl_sync_param lvl_sync_param = {0};
+    lvl_sync_param.sync_result_cb = audio_anc_avc_lvl_sync_cb;
+    lvl_sync_param.sync_check = 1;
+    lvl_sync_param.high_lvl_sync = 1;
+    lvl_sync_param.default_lvl = 0; //默认最低档位
+    lvl_sync_param.name = ANC_LVL_SYNC_AVC;
+    avc_hdl->lvl_sync_hdl = audio_anc_lvl_sync_open(&lvl_sync_param);
+}
+
+static void audio_avc_ioc_exit()
+{
+    if (avc_hdl) {
+        if (avc_hdl->avc_thr_hdl) {
+            audio_threshold_det_close(avc_hdl->avc_thr_hdl);
+            avc_hdl->avc_thr_hdl = NULL;
+        }
+        if (avc_hdl->lvl_sync_hdl) {
+            audio_anc_lvl_sync_close(avc_hdl->lvl_sync_hdl);
+            avc_hdl->lvl_sync_hdl = NULL;
+        }
+        free(avc_hdl);
+        avc_hdl = NULL;
+    }
+    /*关闭音量自适应后恢复音量*/
+    audio_app_set_vol_offset_dB(0);
+}
+
+int audio_adt_avc_ioctl(int cmd, int arg)
+{
+    switch (cmd) {
+    case ANC_EXT_IOC_INIT:
+        audio_avc_ioc_init();
+        break;
+    case ANC_EXT_IOC_EXIT:
+        audio_avc_ioc_exit();
+        break;
+    }
+    return 0;
+}
+
+
+#endif
+#endif

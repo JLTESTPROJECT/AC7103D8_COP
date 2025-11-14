@@ -33,6 +33,7 @@
 #include "bt_slience_detect.h"
 #include "clock_manager/clock_manager.h"
 #include "mix_record_api.h"
+#include "debug/audio_debug.h"
 #if TCFG_SMART_VOICE_ENABLE
 #include "asr/jl_kws.h"
 #include "smart_voice/smart_voice.h"
@@ -353,6 +354,11 @@ int bt_phone_hangup(u8 *bt_addr)
     }
     g_bt_hdl.phone_income_flag = 0;
     g_bt_hdl.phone_num_flag = 0;
+#if TCFG_TWS_AUTO_ROLE_SWITCH_ENABLE
+    //来电报号结束，恢复通话主从切换
+    y_printf("phone num stop,tws_api_auto_role_switch_enable\n");
+    tws_api_auto_role_switch_enable();
+#endif
     g_bt_hdl.phone_ring_sync_tws = 0;
     lmp_private_esco_suspend_resume(4);
 
@@ -431,6 +437,11 @@ int bt_phone_active(u8 *bt_addr)
     lmp_private_esco_suspend_resume(4);
     g_bt_hdl.phone_income_flag = 0;
     g_bt_hdl.phone_num_flag = 0;
+#if TCFG_TWS_AUTO_ROLE_SWITCH_ENABLE
+    //来电报号结束，恢复通话主从切换
+    y_printf("phone num stop,tws_api_auto_role_switch_enable\n");
+    tws_api_auto_role_switch_enable();
+#endif
     g_bt_hdl.phone_ring_sync_tws = 0;
     /* g_bt_hdl.phone_con_sync_ring = 0; */
     g_bt_hdl.phone_vol = 15;
@@ -539,7 +550,6 @@ int bt_phone_esco_play(u8 *bt_addr)
     y_printf("play the calling number\n");
     phone_income_num_check(NULL);
 #endif
-    tws_page_scan_deal_by_esco(1);
     pbg_user_mic_fixed_deal(1);
 #if (LE_AUDIO_JL_DONGLE_UNICAST_WITH_PHONE_CONN_CONFIG & LE_AUDIO_JL_DONGLE_UNICAST_WITH_PHONE_CONN_PLAY_MIX)
     if (ret) {
@@ -590,7 +600,6 @@ int bt_phone_esco_stop(u8 *bt_addr)
     if (app_var.goto_poweroff_flag) {
         return 0;
     }
-    tws_page_scan_deal_by_esco(0);
     pbg_user_mic_fixed_deal(0);
     return 0;
 
@@ -621,7 +630,8 @@ static void tws_esco_play_in_task(u8 *data)
     r_printf("tws_esco_play_in_task=%d\n", data[0]);
     switch (data[0]) {
     case CMD_OPEN_ESCO_PLAYER:
-#if (TCFG_BT_ESCO_PLAYER_ENABLE == 0)
+#if ((TCFG_BT_ESCO_PLAYER_ENABLE == 0) || BT_INTERFERE_WITH_AUDIO_DEBUG)
+        y_printf("esco_player disable");
         lmp_private_esco_suspend_resume(1);
         break;
 #endif
@@ -771,6 +781,11 @@ void phone_income_num_check(void *priv)
     g_bt_hdl.phone_timer_id = 0;
 
     if (g_bt_hdl.phone_num_flag) {
+#if TCFG_TWS_AUTO_ROLE_SWITCH_ENABLE
+        //来电报号开始，关闭自动主从切换
+        y_printf("phone num start,tws_api_auto_role_switch_disable\n")
+        tws_api_auto_role_switch_disable();
+#endif
         if (tws_api_get_role() == TWS_ROLE_MASTER) {
             if (g_bt_hdl.phone_ring_flag) {
                 tone_ring_player_stop();

@@ -110,6 +110,8 @@
 -Iapps/common/third_party_profile/jieli/rcsp/client/rcsp_m_update
 -Iapps/common/third_party_profile/ximalaya_protocol
 -Iapps/common/third_party_profile/auracast_app
+-Iapps/common/third_party_profile/jieli/jl_earbox
+-Iinterface/btstack/third_party/jl_earbox
 -Iapps/common/third_party_profile/bt_fmy
 -Iinterface/btstack
 -Iapps/common/device/usb

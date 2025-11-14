@@ -22,6 +22,7 @@
 #include "imu_sensor/mpu6887/mpu6887p.h"
 #include "imu_sensor/qmi8658/qmi8658c.h"
 #include "imu_sensor/icm_42670p/icm_42670p.h"
+#include "online_debug/audio_capture.h"
 
 
 #define MOTION_SENSOR_FIFO_ENABLE       1
@@ -684,6 +685,8 @@ int space_motion_data_read(void *sensor, void *data, int len)
 #elif (defined TCFG_SENSOR_DATA_EXPORT_ENABLE) && (TCFG_SENSOR_DATA_EXPORT_ENABLE == SENSOR_DATA_EXPORT_USE_SPP)
     extern int audio_data_export_run(u8 ch, u8 * data, int len);
     audio_data_export_run(0, data, data_len);
+#elif (defined TCFG_SENSOR_DATA_EXPORT_ENABLE) && (TCFG_SENSOR_DATA_EXPORT_ENABLE == SENSOR_DATA_EXPORT_USE_PC_SPP)
+    audio_capture_cbuf_write(0, data, data_len);
 #endif /*TCFG_SENSOR_DATA_EXPORT_ENABLE*/
 
     return data_len;

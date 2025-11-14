@@ -4,6 +4,10 @@
 
 #include "generic/typedef.h"
 
+#define ANC_ADAPTIVE_MODE					ANC_ADAPTIVE_GAIN_MODE	/*ANC增益自适应模式*/
+#define ANC_ADAPTIVE_TONE_EN				0						/*ANC增益自适应提示音使能*/
+#define ANC_ADAPTIVE_POWER_DET_TIME			7200					/*ANC场景自适应检测时间(单位ms), 越小越不稳定，range [2000-∞]; default 7200*/
+
 /********************************************************
 	   				ANC 防破音
 ********************************************************/
@@ -51,6 +55,8 @@ void audio_anc_mic_gain_cmp_init(void *mic_cmp);
 int audio_anc_mic_gain_cmp_cmd_process(u8 cmd, u8 *buf, int len);
 
 float audio_anc_mic_gain_cmp_get(u8 id);
+
+u8 *audio_anc_mic_gain_cmp_cfg_get(int *len);
 
 
 #endif/*_AUDIO_ANC_COMMON_PLUG_H_*/

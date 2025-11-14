@@ -144,6 +144,7 @@ LFLAGS := \
 	cpu/br56/liba/btstack.a \
 	cpu/br56/liba/bt_hash_enc.a \
 	cpu/br56/liba/rcsp_stack.a \
+	cpu/br56/liba/lib_jl_earbox.a \
 	cpu/br56/liba/btctrler.a \
 	cpu/br56/liba/aec.a \
 	cpu/br56/liba/media.a \
@@ -193,6 +194,7 @@ LFLAGS := \
 	cpu/br56/liba/lib_speex_codec.a \
 	cpu/br56/liba/libjlsp.a \
 	cpu/br56/liba/lib_nn_v3.a \
+	cpu/br56/liba/lib_nn_v3_params.a \
 	cpu/br56/liba/libjlsp_kws.a \
 	cpu/br56/liba/libjlsp_kws_far_keyword.a \
 	cpu/br56/liba/libjlsp_kws_india_english.a \

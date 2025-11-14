@@ -53,6 +53,7 @@
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
 /*音频模块代码全部不放RAM*/
 #define AFx_VBASS_AT_RAM				    0	//虚拟低音
+#define AFx_VBASS_PRO_AT_RAM			    0	//虚拟低音pro
 #define AFx_REVERB_AT_RAM				    0	//混响
 #define AFx_ECHO_AT_RAM				        0	//回声
 #define AFx_VOICECHANGER_AT_RAM			    0	//变声
@@ -107,6 +108,7 @@
 
 /*音效处理链接配置*/
 #define AFx_VBASS_AT_RAM				    0	//虚拟低音
+#define AFx_VBASS_PRO_AT_RAM			    0	//虚拟低音pro
 #define AFx_REVERB_AT_RAM				    0	//混响
 #define AFx_ECHO_AT_RAM				        0	//回声
 #define AFx_VOICECHANGER_AT_RAM			    0	//变声

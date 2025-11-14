@@ -161,6 +161,158 @@ void audio_anc_fade_ctr_del(enum anc_fade_mode_t mode)
 {
     audio_anc_fade_ctr_set(mode, 0, AUDIO_ANC_FADE_GAIN_DEFAULT);
 }
+void anc_fade_set(enum anc_fade_mode_t mode, int gain)
+{
+    if (mode == ANC_FADE_MODE_WIND_NOISE) {
+        audio_anc_fade_ctr_set(mode, AUDIO_ANC_FDAE_CH_FF, gain);
+    } else {
+        audio_anc_fade_ctr_set(mode, AUDIO_ANC_FDAE_CH_ALL, gain);
+    }
+}
+
+extern float eq_db2mag(float x);
+//增益越大，调的步进越小
+int get_anc_fade_gain_offset(struct anc_fade_handle *hdl)
+{
+    int cur_gain = hdl->cur_gain_tmp;
+    float offset_dB = hdl->fade_setp_dB_tmp;
+    //r_printf("cur %d, dB %d/100", cur_gain, (int)(offset_dB * 100));
+    float tar_dB = -90.f;
+    if (cur_gain) {
+        tar_dB = 20 * log10_float(cur_gain / ANC_FADE_GAIN_MAX_FLOAT) + offset_dB;
+    } else {
+        tar_dB += offset_dB;
+    }
+    //r_printf("tar_dB %d/100", (int)(tar_dB * 100));
+    int tar_gain = (int)(eq_db2mag(tar_dB) * ANC_FADE_GAIN_MAX_FLOAT + 0.5f);//+0.5四舍五入
+    //r_printf("tar_gain %d", (int)(tar_gain));
+    int gain_diff = tar_gain - cur_gain;
+
+    if (gain_diff == 0) {
+        gain_diff = 1;//避免一个dB步进的差值小于1
+
+        cur_gain += gain_diff;
+        hdl->cur_gain_tmp = cur_gain;
+    } else if (gain_diff < 0) {
+        cur_gain += gain_diff;
+        hdl->cur_gain_tmp = cur_gain;
+
+        gain_diff = gain_diff * (-1); //取正数
+    } else {
+        cur_gain += gain_diff;
+        hdl->cur_gain_tmp = cur_gain;
+    }
+    return gain_diff;
+}
+
+/*等dB间隔调增益，增益越大调的间隔越大 */
+int get_anc_fade_gain_offset_1(struct anc_fade_handle *hdl)
+{
+    int cur_gain = hdl->cur_gain;
+    float offset_dB = hdl->fade_setp_dB;
+    float tar_dB = -90.f;
+    if (cur_gain) {
+        tar_dB = 20 * log10_float(cur_gain / ANC_FADE_GAIN_MAX_FLOAT) + offset_dB;
+    } else {
+        tar_dB += offset_dB;
+    }
+
+    int tar_gain = (int)(eq_db2mag(tar_dB) * ANC_FADE_GAIN_MAX_FLOAT + 0.5f);//+0.5四舍五入
+    int gain_diff = tar_gain - cur_gain;
+    if (gain_diff == 0) {
+        gain_diff = 1;//避免一个dB步进的差值小于1
+    } else if (gain_diff < 0) {
+        gain_diff = gain_diff * (-1); //取正数
+    }
+    return gain_diff;
+}
+
+static void anc_gain_fade_timer(void *priv)
+{
+    struct anc_fade_handle *hdl = (struct anc_fade_handle *)priv;
+    if (!hdl) {
+        return;
+    }
+    //u32 start_ms = jiffies_usec();
+    int fade_setp = 0;
+    if (hdl->fade_setp_flag) {
+        fade_setp = get_anc_fade_gain_offset(hdl);
+    } else {
+        fade_setp = hdl->fade_setp;
+    }
+
+    int target_gain = hdl->target_gain;
+    u8 fade_gain_mode = hdl->fade_gain_mode;
+    if (hdl->cur_gain == target_gain) {
+        sys_timer_del(hdl->timer_id);
+        //sys_s_hi_timer_del(hdl->timer_id);
+        hdl->timer_id = 0;
+        r_printf("anc gain fade process end");
+        return ;
+    } else if (hdl->cur_gain > target_gain) {
+        hdl->cur_gain -= fade_setp;
+        hdl->cur_gain = (hdl->cur_gain < target_gain) ? target_gain : hdl->cur_gain;
+    } else if (hdl->cur_gain < target_gain) {
+        hdl->cur_gain += fade_setp;
+        hdl->cur_gain = (hdl->cur_gain > target_gain) ? target_gain : hdl->cur_gain;
+    }
+    anc_fade_set(fade_gain_mode, hdl->cur_gain);
+    //u32 end_ts = jiffies_usec();
+    //r_printf("us %d",end_ts-start_ms );
+    anc_fade_log("gain fade: mode %d, hdl->cur_gain %d, target_gain %d, fade_setp %d \n", fade_gain_mode, hdl->cur_gain, target_gain, fade_setp);
+}
+
+/*anc增益淡入淡出*/
+int audio_anc_gain_fade_process(struct anc_fade_handle *hdl, enum anc_fade_mode_t mode, int target_gain, int fade_time_ms)
+{
+    anc_fade_log("audio_anc_gain_fade_process \n");
+    if (!hdl) {
+        return -1;
+    }
+
+    if (hdl->timer_id) {
+        sys_timer_del(hdl->timer_id);
+    }
+    hdl->target_gain = target_gain;
+
+    if (fade_time_ms == 0) {
+        anc_fade_set(mode, target_gain);
+        hdl->cur_gain = target_gain;
+        return 0;
+    }
+
+    hdl->fade_setp_flag = 1;
+    hdl->fade_gain_mode = mode;
+    if (hdl->fade_setp_flag) {
+        float target_gain_dB = -90.f;
+        if (hdl->target_gain) {
+            target_gain_dB = 20 * log10_float(hdl->target_gain / ANC_FADE_GAIN_MAX_FLOAT);
+        }
+        float cur_gain_dB = -90.f;
+        if (hdl->cur_gain) {
+            cur_gain_dB = 20 * log10_float(hdl->cur_gain / ANC_FADE_GAIN_MAX_FLOAT);
+        }
+        anc_fade_log("target_gain_dB: %d/100, cur_gain_dB : %d/100", (int)(target_gain_dB * 100), (int)(cur_gain_dB * 100));
+
+        float gain_diff_dB = target_gain_dB - cur_gain_dB;
+        //gain_diff_dB = (gain_diff_dB < 0) ? (gain_diff_dB * (-1)) : gain_diff_dB;
+        hdl->fade_setp_dB = gain_diff_dB / (fade_time_ms / hdl->timer_ms);
+        anc_fade_log("gain fade: mode %d, cur_gain %d, target_gain %d, fade_setp_dB %d/100\n", hdl->fade_gain_mode, hdl->cur_gain, hdl->target_gain, (int)(hdl->fade_setp_dB * 100));
+
+        hdl->cur_gain_tmp = hdl->target_gain;
+        hdl->fade_setp_dB_tmp = hdl->fade_setp_dB * (-1);
+    } else {
+        int gain_diff = hdl->cur_gain - target_gain;
+        gain_diff = (gain_diff < 0) ? (gain_diff * (-1)) : gain_diff;
+        hdl->fade_setp = gain_diff / (fade_time_ms / hdl->timer_ms);
+        anc_fade_log("gain fade: mode %d, cur_gain %d, target_gain %d, fade_setp %d \n", hdl->fade_gain_mode, hdl->cur_gain, hdl->target_gain, hdl->fade_setp);
+    }
+
+    hdl->timer_id = sys_timer_add((void *)hdl, anc_gain_fade_timer, hdl->timer_ms);
+    //hdl->timer_id = sys_s_hi_timer_add((void *)hdl, anc_gain_fade_timer, hdl->timer_ms);
+
+    return 0;
+}
 
 #endif/*TCFG_AUDIO_ANC_ENABLE*/
 

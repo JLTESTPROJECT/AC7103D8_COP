@@ -14,6 +14,7 @@
 #include "audio_manager.h"
 #include "clock_manager/clock_manager.h"
 #include "dac_node.h"
+#include "debug/audio_debug.h"
 #if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SINK_EN)
 #include "le_audio_player.h"
 #include "app_le_auracast.h"
@@ -61,7 +62,8 @@ static void tws_a2dp_play_in_task(u8 *data)
             }
         }
 #endif
-#if (TCFG_BT_A2DP_PLAYER_ENABLE == 0)
+#if ((TCFG_BT_A2DP_PLAYER_ENABLE == 0) || BT_INTERFERE_WITH_AUDIO_DEBUG)
+        y_printf("a2dp_player disable");
         break;
 #endif
         dev_vol = data[8];

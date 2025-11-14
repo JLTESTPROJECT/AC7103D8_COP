@@ -10,6 +10,26 @@
 
 const int CONFIG_MEDIA_MEM_DEBUG = AUD_MEM_INFO_DUMP_ENABLE;
 
+static void flash_random_read_debug(u32 size)
+{
+    u32 ali_start = rand32();
+    u32 ali_end;
+    volatile u8 tmp;
+    extern u32 CODE_BEG;
+    ali_start %= 64 * 1024;
+    ali_start += (u32)&CODE_BEG;
+    ali_end = ali_start + size;
+
+    for (u32 i = ali_start;  i <  ali_end; i += 32) {
+        tmp = *(u8 *)i;
+    }
+
+    local_irq_disable();
+    extern void sfc_drop_cache(void *ptr, u32 len);
+    sfc_drop_cache((void *)ali_start, size);
+    local_irq_enable();
+}
+
 static void audio_config_trace(void *priv)
 {
     printf(">>Audio_Config_Trace:\n");
@@ -49,6 +69,11 @@ static void audio_config_trace(void *priv)
 #if AUD_MEM_INFO_DUMP_ENABLE
     media_mem_unfree_dump();
 #endif
+
+#if FLASH_INTERFERE_WITH_AUDIO_DEBUG
+    flash_random_read_debug(1024 * 4);
+#endif
+
 }
 
 void audio_config_trace_setup(int interval)

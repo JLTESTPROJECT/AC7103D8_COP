@@ -180,7 +180,7 @@
     *(.lhdc_dec.text.cache.L2.run)
     *(.lhdcv4_dec.text)
     *(.lhdcv4_dec.const)
-	*(.lhdcv4_dec_text.cashe.L2.run)
+	*(.lhdcv4_dec_text.cache.L2.run)
     . = ALIGN(4);
 #endif
 
@@ -190,7 +190,7 @@
     *(.lhdc_v5_dec.text.cache.L2.run)
     *(.lhdcv5_dec.text)
     *(.lhdcv5_dec.const)
-	*(.lhdcv5_dec_text.cashe.L2.run)
+	*(.lhdcv5_dec_text.cache.L2.run)
     . = ALIGN(4);
 #endif
 
@@ -254,6 +254,15 @@
 
 #if AFx_VBASS_AT_RAM
     *(.vbss.text.cache.L2.code)	
+#endif
+
+#if AFx_VBASS_PRO_AT_RAM
+    *(.virtual_bass_pro.text.cache.L2.code)
+#if !AFX_SW_EQ_AT_RAM 
+    *(.iir_filter.text.cache.L2.code)
+#endif
+    *(.drc_advance.text.cache.L2.code)
+    *(.vbss_classic.text.cache.L2.code)
 #endif
 
 #if AFx_REVERB_AT_RAM

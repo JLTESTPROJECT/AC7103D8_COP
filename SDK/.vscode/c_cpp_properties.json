@@ -200,6 +200,8 @@
                 "${workspaceFolder}/apps/common/third_party_profile/jieli/rcsp/client/rcsp_m_update",
                 "${workspaceFolder}/apps/common/third_party_profile/ximalaya_protocol",
                 "${workspaceFolder}/apps/common/third_party_profile/auracast_app",
+                "${workspaceFolder}/apps/common/third_party_profile/jieli/jl_earbox",
+                "${workspaceFolder}/interface/btstack/third_party/jl_earbox",
                 "${workspaceFolder}/apps/common/third_party_profile/bt_fmy",
                 "${workspaceFolder}/interface/btstack",
                 "${workspaceFolder}/apps/common/device/usb",

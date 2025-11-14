@@ -122,7 +122,7 @@ u32 pmalloc_get_idle_ram(void);
  * @return :void
  */
 /* ----------------------------------------------------------------------------*/
-void pmalloc_defrag_lock(void);
+// void pmalloc_defrag_lock(void);
 
 /* --------------------------------------------------------------------------*/
 /**
@@ -133,7 +133,7 @@ void pmalloc_defrag_lock(void);
  * @return :void
  */
 /* ----------------------------------------------------------------------------*/
-void pmalloc_defrag_unlock(void);
+// void pmalloc_defrag_unlock(void);
 
 #ifdef __cplusplus
 }

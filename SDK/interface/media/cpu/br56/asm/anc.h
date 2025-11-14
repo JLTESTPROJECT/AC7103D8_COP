@@ -603,6 +603,7 @@ struct anc_power_adaptive_cfg {
     audio_anc_t *param;				//ANC句柄
     void (*fade_gain_set)(u16 gain);
     void (*event_cb)(u8 lvl, enum ANC_ADAPTIVE_FADE_EVENT event);
+    void (*pow_output_cb)(int pow);
 };
 
 #define ANC_DB_HEAD_LEN		20/*ANC配置区数据头长度*/
