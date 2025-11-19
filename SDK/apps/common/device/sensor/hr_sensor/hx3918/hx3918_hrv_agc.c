@@ -15,6 +15,8 @@
 //#include "SEGGER_RTT.h"
 //#endif
 
+#if TCFG_HX3918_ENABLE
+
 #ifdef HRV_ALG_LIB
 
 extern const uint8_t  hx3918_hrs_agc_idac;
@@ -1033,3 +1035,5 @@ uint8_t hx3918_hrv_read(ppg_sensor_data_t *s_dat)
 }
 
 #endif
+
+#endif // TCFG_HX3918_ENABLE

@@ -24,7 +24,12 @@ struct reverb_update_parm { /*与REVERB_V2_PARM_SET结构关联*/
     int lowcutoff;           //lateReflect lowcut  ,0-20k
     int highcutoff;          //lateReflect highcut, 0-20k
     int late_type;        //0或1
-    int reserved0;
+
+    unsigned char Roomshape;         //范围0到99， 默认值50
+    unsigned char Reflection_lowcut;      //范围0到20000，默认值 80
+    unsigned char RoomRgain;      //范围0到99， 默认值50
+    unsigned char rbyte1;
+
     int reserved1;
 
     int lateRefbuf_factor;        //0-100    <========================>    重新申请buf

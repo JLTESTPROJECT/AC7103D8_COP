@@ -68,6 +68,24 @@
 #define LL_FEAT_CONN_SUBRATE_HOST_SUPPORT           (UINT64_C(1) << (38))   /*!< Connection subratingHost supported. */
 #define LL_FEAT_CHANNEL_CLASSIFICATION              (UINT64_C(1) << (39))   /*!< Channel classification supported. */
 
+/* --- Core Spec 5.4 --- */
+#define LL_FEAT_ADVERTISING_CODING_SELECTION                     (UINT64_C(1) << (40))
+#define LL_FEAT_ADVERTISING_CODING_SELECTION_HOST_SUPPORT        (UINT64_C(1) << (41))
+
+#define LL_FEAT_PERIODIC_ADVERTISING_WITH_RESPONSES_ADVERTISER   (UINT64_C(1) << (43))
+#define LL_FEAT_PERIODIC_ADVERTISING_WITH_RESPONSES_SCANNER      (UINT64_C(1) << (44))
+
+/* --- Core Spec 6.0 --- */
+#define UNSEGMENTED_FRAMED_MODE                     (UINT64_C(1) << (45))
+#define CHANNEL_SOUNDING                            (UINT64_C(1) << (46))
+#define CHANNEL_SOUNDING_HOST_SUPPORT               (UINT64_C(1) << (47))
+#define CHANNEL_SOUNDING_TONE_QUALITY_INDICATION    (UINT64_C(1) << (48))
+
+#define LL_EXTENDED_FEATURE_SET                     (UINT64_C(1) << (50))  //63
+#define MONITORING_ADVERTISERS                      (UINT64_C(1) << (51))  //64
+#define FRAME_SPACE_UPDATE                          (UINT64_C(1) << (52))  //65
+
+/* --- Vendor --- */
 #define LL_FEAT_VENDOR_BIG_SYNC_TRANSFER            (UINT64_C(1) << (62))   /*!< Vendor BIG sync transfer. */
 #define LL_FEAT_VENDOR_BIG_TRANSFER                 (UINT64_C(1) << (63))   /*!< Vendor BIG transfer. */
 
@@ -216,12 +234,43 @@ extern const int config_rf_oob;
 extern const int config_bb_optimized_ctrl;
 
 //config_bb_optimized_ctrl 控制变量说明
+#define LE_BB_OPT_FEAT_PKT_UNFILT		BIT(0)
+#define LE_BB_OPT_FEAT_EXT_UPLOAD_EN 	BIT(1)
+#define LE_BB_OPT_FEAT_CC_CODE_EN		BIT(2)
+#define LE_BB_OPT_FEAT_RESERVED0		BIT(3)
+#define LE_BB_OPT_FEAT_HARD_CMB_EN		BIT(4)
+#define LE_BB_OPT_FEAT_RX_LOG_EN		BIT(5) //only for big rx
+#define LE_BB_OPT_FEAT_RSSI_AFH_EN		BIT(6)
+#define LE_BB_OPT_FEAT_PWR_CTRL_EN		BIT(7)
+#define LE_BB_OPT_FEAT_RX_PRE_CLOSE		BIT(8)
+#define LE_BB_OPT_FEAT_TX_PWR_LOW_SEL	BIT(9) //only for br29
+#define LE_BB_OPT_FEAT_PER_AFH_EN		BIT(10)
+#define LE_BB_OPT_FEAT_RESERVED1		BIT(11)|BIT(12)
+#define LE_BB_OPT_FEAT_CIG_ENC_DIS		BIT(13)
+#define LE_BB_OPT_FEAT_CIG_SEVT_CLOSE	BIT(14)
+#define LE_BB_OPT_FEAT_CIG_PACK_MODE	BIT(16) //sequential or interleved
+#define LE_BB_OPT_FEAT_CODE_OPTIMIZED	BIT(17)
+#define LE_BB_OPT_FEAT_CIG_RSSI_GET_EN	BIT(18)
+#define LE_BB_OPT_FEAT_PKT_V3_EN		BIT(18)
+#define LE_BB_OPT_FEAT_PKT_V3_DYNAMIC   BIT(19) //only for rx
+#define LE_BB_OPT_FEAT_ISO_DIRECT_PUSH  BIT(21)
+#define LE_BB_OPT_FEAT_BCTRL_DISABLE    BIT(22)
+#define LE_BB_OPT_FEAT_PKT_V3_PLUS_EN   BIT(23)
+#define LE_BB_OPT_FEAT_RX_HMPR_EN   	BIT(24)
+#define LE_BB_OPT_FEAT_DUAL_BD_SWITCH   BIT(25)
+#define LE_BB_OPT_FEAT_SC_ULL           BIT(26)
+#define LE_BB_OPT_FEAT_BIG_CHMAP_EN     BIT(27)
+#define LE_BB_OPT_FEAT_DYNAMIC_RTN_EN   BIT(28)
+#define LE_BB_OPT_FEAT_MERGE_HW_EN      BIT(29)
+#define LE_BB_OPT_FEAT_WIFI_DETEC       BIT(30)
+
 #define VENDOR_BB_ISO_DIRECT_PUSH BIT(21)
 #define VENDOR_BB_DUAL_BD_SWITCH  BIT(22)
 
 #define LE_ADV_AFH_CTRL_EN()	(config_bb_optimized_ctrl & BIT(6))
 #define LE_ADV_PWR_CTRL_EN()	(config_bb_optimized_ctrl & BIT(7))
 #define LE_BIS_RX_PRE_CLOSE()	(config_bb_optimized_ctrl & BIT(8))
+#define LE_SUPPORT_LE_PER_CHECK()				(config_bb_optimized_ctrl & BIT(13))
 /*-----------------------------------------------------------*/
 
 /*

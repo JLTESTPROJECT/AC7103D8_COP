@@ -5,6 +5,7 @@
     {
 		.overlay_init
 		{
+#if !(TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
             _initcall_begin = .;
             PROVIDE(initcall_begin = .);
             KEEP(*(.initcall))
@@ -39,6 +40,7 @@
             *(.rf_init.bank1.text)
             *(.rf_init.bank1.text.const)
             *(.rf_init.bank2.text)
+#endif
         }
 		.overlay_aec
 		{
@@ -72,8 +74,6 @@
 			*(.res_code)
 			*(.res_const)
             *(.bark_const)
-			*(.fft_code)
-			*(.fft_const)
             *(.der_code)
             *(.der_const)
 #endif

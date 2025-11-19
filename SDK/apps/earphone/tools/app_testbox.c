@@ -29,6 +29,12 @@
 #include "user_cfg.h"
 #include "earphone.h"
 #include "fs/sdfile.h"
+#include "update/testbox_uart_update.h"
+
+
+#if TCFG_AUDIO_SPATIAL_EFFECT_ENABLE
+#include "spatial_effect_imu.h"
+#endif
 
 #define LOG_TAG_CONST       APP_TESTBOX
 #define LOG_TAG             "[APP_TESTBOX]"
@@ -119,9 +125,6 @@ static struct testbox_info info = {
 #define __this  (&info)
 
 extern const int config_btctler_eir_version_info_len;
-extern u8 get_jl_chip_id(void);
-extern u8 get_jl_chip_id2(void);
-extern void set_temp_link_key(u8 *linkkey);
 static u8 ex_enter_dut_flag = 0;
 static u8 ex_enter_storage_mode_flag = 0;//1 仓储模式, 0 普通模式
 static u8 local_packet[36];
@@ -283,7 +286,6 @@ static void app_testbox_sub_event_handle(u8 *data, u16 size)
     }
 }
 
-extern u8 app_testbox_enter_loader_update(void);
 static void app_testbox_update_event_handle(u8 *data, u16 size)
 {
     //如果开启了VM配置项暂存RAM功能则在每次触发升级前保存数据到vm_flash,避免丢失数据
@@ -301,7 +303,11 @@ static void app_testbox_update_event_handle(u8 *data, u16 size)
 #endif
     /* 打一个uartkey给maskrom识别 */
     chargestore_set_update_ram();
+
     /* reset之后在maskrom收loader，然后执行 */
+#if defined(CONFIG_CPU_BR52)
+    power_set_mode(PWR_LDO15);
+#endif
     cpu_reset();
 }
 
@@ -456,7 +462,6 @@ static void app_testbox_sub_cmd_handle(u8 *send_buf, u8 buf_len, u8 *buf, u8 len
 #if (defined(TCFG_AUDIO_SPATIAL_EFFECT_ENABLE) && TCFG_AUDIO_SPATIAL_EFFECT_ENABLE)
         if (buf[2] == 1) {
             __this->testbox_status = 1;
-            extern int testbox_imu_trim_run(u8 * send_buf);
             send_len =  testbox_imu_trim_run(send_buf);
             put_buf(send_buf, 36);
             send_len += 2;

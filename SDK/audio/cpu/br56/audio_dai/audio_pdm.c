@@ -1,6 +1,6 @@
 #include "audio_pdm.h"
 #include "includes.h"
-#include "asm/includes.h"
+#include "cpu/includes.h"
 #include "audio_dac.h"
 #include "audio_adc.h"
 #include "media/includes.h"

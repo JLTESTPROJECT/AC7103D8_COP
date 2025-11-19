@@ -194,6 +194,7 @@ u32 adc_value_to_voltage_for_extern_voltage(u32 adc_value, u32 extern_voltage);
 // void adc_audio_ch_select(u32 ch_sel);
 void adc_adjust_div(void);
 _INLINE_ u8 adc_get_clk_div();
+void adc_ch_power_check();
 
 //gpadc_hw_vxx.c 实现
 void adc_close();

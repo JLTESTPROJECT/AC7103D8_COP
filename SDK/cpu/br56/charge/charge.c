@@ -10,7 +10,6 @@
 #include "uart.h"
 #include "device/device.h"
 #include "asm/power_interface.h"
-#include "system/event.h"
 #include "system/init.h"
 #include "asm/efuse.h"
 #include "gpio.h"
@@ -78,6 +77,8 @@ typedef struct _CHARGE_VAR {
     const struct charge_platform_data *data;
     u8 charge_flag;
     u8 charge_poweron_en;
+    u8 cc_flag;
+    u8 cc_counter;
     u8 charge_online_flag;
     u8 charge_event_flag;
     u8 charge_full_filter_cnt;
@@ -111,6 +112,8 @@ static spinlock_t ldo5v_lock;
 #define CHARGE_CV_MODE_VOLTAGE                  (__this->full_voltage - 50)
 //跟随充退出进入恒压充电的滤波时间s
 #define CHARGE_CV_FILTER_TIMES                  (5)
+//涓流切恒流滤波/s
+#define CHARGE_TC2CC_FILTER_TIMES               4
 
 #define BIT_LDO5V_IN		BIT(0)
 #define BIT_LDO5V_OFF		BIT(1)
@@ -392,20 +395,49 @@ static void vdet_open_cfg(u8 open_en)
 
 static void charge_cc_check(void *priv)
 {
-    if (gpadc_battery_get_voltage() > CHARGE_CCVOL_V) {
-        set_charge_mA(__this->data->charge_mA);
-        usr_timer_del(__this->cc_timer);
-        __this->cc_timer = 0;
-        __this->charge_timer = sys_timer_add(NULL, charge_full_detect, 1000);
-#if SUPER_FOLLOW_CHARGE_ENABLE
-        __this->super_charge_flag = 1;
-        vdet_open_cfg(1);
-#else
-        if (__this->progi_timer == 0) {
-            __this->progi_status = 0;
-            __this->progi_timer  = sys_timer_add(NULL, constant_current_progi_volt_config, 100);
+    u8 first_entry = (u8)priv;
+    if ((adc_get_voltage_blocking(AD_CH_PMU_VBAT) * AD_CH_PMU_VBAT_DIV) > CHARGE_CCVOL_V) {
+        if (__this->cc_flag == 0) {
+            __this->cc_counter++;
         }
+        if (first_entry || ((__this->cc_flag == 0) && (__this->cc_counter > CHARGE_TC2CC_FILTER_TIMES))) {
+            __this->cc_flag = 1;
+            set_charge_mA(__this->data->charge_mA);
+            if (__this->charge_timer == 0) {
+                __this->charge_timer = sys_timer_add(NULL, charge_full_detect, 1000);
+            }
+#if SUPER_FOLLOW_CHARGE_ENABLE
+            __this->super_charge_flag = 1;
+            vdet_open_cfg(1);
+#else
+            if (__this->progi_timer == 0) {
+                __this->progi_status = 0;
+                __this->progi_timer  = sys_timer_add(NULL, constant_current_progi_volt_config, 100);
+            }
 #endif
+        }
+    } else {
+        __this->cc_counter = 0;
+        if (first_entry || (__this->cc_flag == 1)) {
+            __this->cc_flag = 0;
+            set_charge_mA(__this->data->charge_trickle_mA);
+            if (__this->charge_timer) {
+                sys_timer_del(__this->charge_timer);
+                __this->charge_timer = 0;
+            }
+#if (SUPER_FOLLOW_CHARGE_ENABLE == 0)
+            if (__this->progi_timer) {
+                sys_timer_del(__this->progi_timer);
+                __this->progi_timer = 0;
+            }
+#endif
+        }
+    }
+
+    //TC2CC or CC2TC check
+    if (first_entry && (__this->cc_timer == 0)) {
+        __this->cc_counter = 0;
+        __this->cc_timer = usr_timer_add(0, charge_cc_check, 1000, 1);
     }
 }
 
@@ -424,24 +456,8 @@ void charge_start(void)
     }
     //进入恒流充电之后,才开启充满检测
     vbat_voltage = gpadc_battery_get_voltage();
-    if (vbat_voltage > CHARGE_CCVOL_V) {
-        set_charge_mA(__this->data->charge_mA);
-        if (__this->charge_timer == 0) {
-            __this->charge_timer = sys_timer_add(NULL, charge_full_detect, 1000);
-        }
-#if (SUPER_FOLLOW_CHARGE_ENABLE == 0)
-        if (__this->progi_timer == 0) {
-            __this->progi_status = 0;
-            __this->progi_timer  = sys_timer_add(NULL, constant_current_progi_volt_config, 100);
-        }
-#endif
-    } else {
-        //涓流阶段系统不进入低功耗,防止电池电量更新过慢导致涓流切恒流时间过长
-        set_charge_mA(__this->data->charge_trickle_mA);
-        if (!__this->cc_timer) {
-            __this->cc_timer = usr_timer_add(NULL, charge_cc_check, 1000, 1);
-        }
-    }
+
+    charge_cc_check((void *)1);
 
     PMU_NVDC_EN(CHARGE_VILOOP2_ENABLE);
     CHG_VILOOP_EN(CHARGE_VILOOP1_ENABLE);

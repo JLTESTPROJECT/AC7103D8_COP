@@ -22,6 +22,7 @@
 
 bool rcsp_pc_func_set(void *priv, u8 *data, u16 len)
 {
+    r_printf("\n\n\n\nrcsp_pc_func_set\n");
     put_buf(data, len);
     u8 fun_cmd = data[1];
     u8 state = data[2];
@@ -75,5 +76,11 @@ void rcsp_pc_msg_deal(int msg)
         break;
     }
 }
+void rcsp_pc_func_stop(void)
+{
 
+#if (RCSP_MSG_DISTRIBUTION_VER != RCSP_MSG_DISTRIBUTION_VER_VISUAL_CFG_TOOL)
 #endif
+}
+#endif
+

@@ -39,6 +39,9 @@
 #include "low_latency.h"
 #include "tws_dual_share.h"
 #include "poweroff.h"
+#include "realme_protocol/realme_platform_api.h"
+#include "lib_btctrler_config.h"
+#include "local_tws.h"
 
 #if TCFG_USER_TWS_ENABLE
 #include "tws_dual_conn.h"
@@ -90,9 +93,19 @@
 #include "audio_config.h"
 #include "clock_manager/clock_manager.h"
 
+#if TCFG_MIX_RECORD_ENABLE
+#include "dev_manager.h"
+#include "mix_record_api.h"
+#endif
+
+#if THIRD_PARTY_PROTOCOLS_SEL & JL_SBOX_EN
+#include "edr_hid_user.h"
+#include "sbox_user_app.h"
+#endif
+
 #if TCFG_APP_BT_EN
 
-#if ((THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN | GFPS_EN | MMA_EN | FMNA_EN | REALME_EN | SWIFT_PAIR_EN | DMA_EN | ONLINE_DEBUG_EN | CUSTOM_DEMO_EN | XIMALAYA_EN | AURACAST_APP_EN)) || \
+#if ((THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN | GFPS_EN | MMA_EN | FMNA_EN | REALME_EN | SWIFT_PAIR_EN | DMA_EN | ONLINE_DEBUG_EN | CUSTOM_DEMO_EN | XIMALAYA_EN | AURACAST_APP_EN | MULTI_CLIENT_EN | JL_SBOX_EN)) || \
 		(TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN | LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN | LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)))
 #include "multi_protocol_main.h"
 #endif
@@ -108,8 +121,6 @@
 #define AVC_VOLUME_DOWN			0x42
 
 u16 disturb_scan_timer = 0xff;
-extern void dut_idle_run_slot(u16 slot);
-extern void clr_device_in_page_list();
 
 #if defined(CONFIG_CPU_BR28)||defined(CONFIG_CPU_BR36)/*JL700N\JL701N*/
 
@@ -362,7 +373,6 @@ void user_read_remote_name_handle(u8 status, u8 *addr, u8 *name)
     rcsp_1t2_set_edr_info(addr, name);
 #endif
 #if (THIRD_PARTY_PROTOCOLS_SEL & REALME_EN)
-    extern void realme_remote_name_callback(u8 status, u8 * addr, u8 * name);
     realme_remote_name_callback(status, addr, name);
 #endif
 }
@@ -372,7 +382,6 @@ void bt_function_select_init()
 
 #if 0//3mb set
     set_bt_data_rate_acl_3mbs_mode(1);
-    extern void bt_set_support_3M_size(u8 en);
     bt_set_support_3M_size(1);
 #endif
 #if TCFG_BT_DUAL_CONN_ENABLE
@@ -388,7 +397,9 @@ void bt_function_select_init()
 #if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN)))
     if (get_bt_le_audio_config_for_vm()) {
         log_info("le_audio en");
+#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN)))
         g_bt_hdl.bt_dual_conn_config = DUAL_CONN_SET_ONE;
+#endif
     }
 #endif
 #if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SINK_EN)
@@ -446,11 +457,20 @@ void bt_function_select_init()
 
     bt_set_sbc_cap_bitpool(TCFG_BT_SBC_BITPOOL);
 
-#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN)))
+#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN)))
     if (get_bt_le_audio_config()) {
         bt_change_hci_class_type(BD_CLASS_WEARABLE_HEADSET | LE_AUDIO_CLASS);   //经典蓝牙地址跟le audio地址一样要置上BIT(14)
 
     }
+#endif
+#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_UNICAST_SINK_EN)
+#if (LE_AUDIO_JL_DONGLE_UNICAST_WITH_PHONE_CONN_CONFIG & LE_AUDIO_JL_DONGLE_UNICAST_WITH_PHONE_CONN_PLAY_MIX)
+    set_le_audio_unicast_witch_phone_play_mix(1);
+#if TCFG_USER_TWS_ENABLE
+    tws_api_pure_monitor_enable(1);
+#endif
+
+#endif
 #endif
 #if TCFG_USER_BLE_ENABLE
     u8 tmp_ble_addr[6];
@@ -475,6 +495,13 @@ void bt_function_select_init()
     bt_tws_share_function_select_init();
 #endif
 
+#if TCFG_BT_MUSIC_INFO_ENABLE
+    bt_music_info_handle_register(user_get_bt_music_info);
+#endif
+
+#if ((TCFG_BT_SUPPORT_HID==1) && TCFG_USER_EDR_ENABLE)
+    edr_hid_config_init();
+#endif
 }
 
 
@@ -556,7 +583,7 @@ static int bt_connction_status_event_handler(struct bt_event *bt)
         }
 #endif
 
-#if ((THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN | GFPS_EN | MMA_EN | FMNA_EN | REALME_EN | SWIFT_PAIR_EN | DMA_EN | ONLINE_DEBUG_EN | CUSTOM_DEMO_EN | XIMALAYA_EN | AURACAST_APP_EN)) || \
+#if ((THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN | GFPS_EN | MMA_EN | FMNA_EN | REALME_EN | SWIFT_PAIR_EN | DMA_EN | ONLINE_DEBUG_EN | CUSTOM_DEMO_EN | XIMALAYA_EN | AURACAST_APP_EN | MULTI_CLIENT_EN | JL_SBOX_EN)) || \
 		(TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN | LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN | LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)))
         multi_protocol_bt_init();
 #endif
@@ -648,9 +675,6 @@ static void bt_hci_event_connection(struct bt_event *bt)
 static void bt_hci_event_linkkey_missing(struct bt_event *bt)
 {
 
-    extern const int config_delete_link_key;
-    extern u8 get_remote_dev_info_index();
-    extern void delete_link_key(u8 * bd_addr, u8 id);
     if (config_delete_link_key) {
         delete_link_key((u8 *)bt->args, get_remote_dev_info_index());
     }
@@ -878,12 +902,19 @@ void phone_date_and_time_feedback(u8 *data, u16 len)
     extern void ifly_vad_demo(void);
     ifly_vad_demo();
 #endif
+
+#if THIRD_PARTY_PROTOCOLS_SEL & JL_SBOX_EN
+    sbox_phone_date_and_time_feedback(data, len);
+#endif
 }
 void map_get_time_data(char *time, int status)
 {
     printf("[zwz info] func %s line %d \n", __func__, __LINE__);
     if (status == 0) {
         log_info("time：%s ", time);
+#if THIRD_PARTY_PROTOCOLS_SEL & JL_SBOX_EN
+        sbox_map_get_time_data(time);
+#endif
     } else {
         log_info(">>>map get fail\n");
         sys_timeout_add(NULL, bt_get_time_date, 100);
@@ -942,11 +973,19 @@ static void bt_no_background_exit_check(void *priv)
     if (esco_player_runing() || a2dp_player_runing()) {
         return ;
     }
+
+#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN)))
+    if (is_cig_phone_conn()) {
+        //BLE还没完全断开就往下走的话，可能会直接释放导致有些事件流程没有执行了
+        return ;
+    }
+#endif
+
 #if TCFG_USER_BLE_ENABLE
     bt_ble_exit();
 #endif
 
-#if ((THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN | GFPS_EN | MMA_EN | FMNA_EN | REALME_EN | SWIFT_PAIR_EN | DMA_EN | ONLINE_DEBUG_EN | CUSTOM_DEMO_EN | XIMALAYA_EN | AURACAST_APP_EN)) || \
+#if ((THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN | GFPS_EN | MMA_EN | FMNA_EN | REALME_EN | SWIFT_PAIR_EN | DMA_EN | ONLINE_DEBUG_EN | CUSTOM_DEMO_EN | XIMALAYA_EN | AURACAST_APP_EN | MULTI_CLIENT_EN | JL_SBOX_EN)) || \
 		(TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN | LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN)))
     multi_protocol_bt_exit();
 #endif
@@ -1013,6 +1052,8 @@ int bt_mode_init()
 {
     log_info("bt mode\n");
 
+    /* extern void set_debug_edr_info(int debug_edr_info); */
+    /* set_debug_edr_info(BIT(0)|BIT(1)); */
 #if (defined CONFIG_CPU_BR56) && (CONFIG_BT_MODE == BT_FCC || CONFIG_BT_MODE == BT_BQB || TCFG_NORMAL_SET_DUT_MODE == 1)
     u32 curr_clk = clk_get_max_frequency();
     y_printf("DUT test,set clock:%d\n", curr_clk);
@@ -1024,7 +1065,14 @@ int bt_mode_init()
 #endif  //endif TCFG_BLUETOOTH_BACK_MODE
     {
         tone_player_stop();
-        play_tone_file_callback(get_tone_files()->bt_mode, NULL, tone_bt_mode_callback);
+#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE
+        int ret = local_tws_enter_mode(get_tone_files()->bt_mode, NULL);
+        if (ret != 0)
+#endif //TCFG_LOCAL_TWS_ENABLE
+
+        {
+            play_tone_file_callback(get_tone_files()->bt_mode, NULL, tone_bt_mode_callback);
+        }
     }
 
 #if OPTIMIZATION_CONN_NOISE
@@ -1033,7 +1081,6 @@ int bt_mode_init()
         ASSERT(0, "bt_edge_TIMER use ing\n");
     }
 #else
-    extern void bt_set_rxtx_status_io(u32 tx_pin, u32 rx_pin);
     bt_set_rxtx_status_io(BT_RF_CURRENT_BALANCE_SUPPORT_ONLY_ONE_PORT ? 0xffff : RF_RXTX_STATE_PROT, RF_RXTX_STATE_PROT);
 #endif
 #endif
@@ -1043,6 +1090,7 @@ int bt_mode_init()
     g_bt_hdl.exiting = 0;
     g_bt_hdl.wait_exit = 0;
     g_bt_hdl.ignore_discon_tone = 0;
+    g_bt_hdl.control_device_type = CONTROL_ALL;
     u32 sys_clk =  clk_get("sys");
     bt_pll_para(TCFG_CLOCK_OSC_HZ, sys_clk, 0, 0);
 
@@ -1099,11 +1147,15 @@ int bt_mode_try_exit()
     }
     g_bt_hdl.wait_exit = 1;
     g_bt_hdl.exiting = 1;
-#if(TCFG_BT_BACKGROUND_ENABLE == 0) //非后台退出不播放提示音
-    g_bt_hdl.ignore_discon_tone = 1;
+#if (TCFG_BT_BACKGROUND_ENABLE == 0 || TCFG_LOCAL_TWS_ENABLE == 0) //非后台退出不播放提示音
+    g_bt_hdl.ignore_discon_tone = bt_get_total_connect_dev();
 #endif
     sys_auto_shut_down_disable();
     //only need to do once
+#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE
+    local_tws_exit_mode();
+#endif
+
 #if (TCFG_BT_BACKGROUND_ENABLE)
     bt_background_suspend();
 #else
@@ -1134,9 +1186,21 @@ int bt_mode_exit()
 int bt_app_msg_handler(int *msg)
 {
     u8 data[1];
+    u8 a2dp_addr[6];
+    u8 *bt_addr = NULL;
     if (!app_in_mode(APP_MODE_BT)) {
         return 0;
     }
+    if (a2dp_player_get_btaddr(a2dp_addr)) {
+        bt_addr = a2dp_addr;
+    }
+
+#if (LE_AUDIO_JL_DONGLE_UNICAST_WITH_PHONE_CONN_CONFIG)
+    g_bt_hdl.control_device_type = (is_cig_music_play() && !a2dp_player_runing()) ? CONTROL_CIS : CONTROL_EDR;
+    log_info("g_bt_hdl.control_device_type:%d\n", g_bt_hdl.control_device_type);
+#endif
+
+    int state = bt_get_call_status();
     switch (msg[0]) {
     case APP_MSG_VOL_UP:
         log_info("APP_MSG_VOL_UP\n");
@@ -1145,7 +1209,9 @@ int bt_app_msg_handler(int *msg)
 #else
         bt_volume_up(1);
 #endif
+#if TCFG_USER_TWS_ENABLE
         bt_tws_sync_volume();
+#endif
 #if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN)))
         data[0] = CIG_EVENT_OPID_VOLUME_UP;
         le_audio_media_control_cmd(data, 1);
@@ -1158,7 +1224,9 @@ int bt_app_msg_handler(int *msg)
 #else
         bt_volume_down(1);
 #endif
+#if TCFG_USER_TWS_ENABLE
         bt_tws_sync_volume();
+#endif
 #if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN)))
         data[0] = CIG_EVENT_OPID_VOLUME_DOWN;
         le_audio_media_control_cmd(data, 1);
@@ -1271,6 +1339,48 @@ int bt_app_msg_handler(int *msg)
     case APP_MSG_KEY_POWER_OFF:
         puts("APP_MSG_KEY_POWER_OFF\n");
         sys_enter_soft_poweroff(POWEROFF_NORMAL);
+        break;
+#endif
+    case APP_MSG_REC_PP:
+#if TCFG_MIX_RECORD_ENABLE
+        printf("\n APP_MSG_REC_PP \n");
+        if (get_mix_recorder_status()) {
+            mix_recorder_stop();
+        } else {
+            if (dev_manager_get_phy_logo(dev_manager_find_active(0))) {
+                mix_recorder_start();
+            }
+        }
+#endif
+        break;
+    case APP_MSG_DEL_ALL_REMOTE_DEV:
+        puts("APP_MSG_DEL_ALL_REMOTE_DEV\n");
+        if (bt_get_total_connect_dev()) {
+            bt_cmd_prepare(USER_CTRL_DISCONNECTION_HCI, 0, NULL);
+        }
+        bt_cmd_prepare(USER_CTRL_DEL_ALL_REMOTE_INFO, 0, NULL);
+        sys_enter_soft_poweroff(POWEROFF_NORMAL);
+        break;
+#if TCFG_LP_EARTCH_KEY_ENABLE
+    case APP_MSG_EARTCH_IN_EAR:
+        puts("APP_MSG_EARTCH_IN_EAR\n");
+        if (state != BT_CALL_HANGUP) {
+            break;
+        }
+        if (bt_share_call_a2dp(DATA_ID_SHARE_TO_SHARE_PP)) {
+            break;
+        }
+        bt_cmd_prepare_for_addr(bt_addr, USER_CTRL_AVCTP_OPID_PLAY, 0, NULL);   // 入耳播歌
+        break;
+    case APP_MSG_EARTCH_OUT_EAR:
+        puts("APP_MSG_EARTCH_OUT_EAR\n");
+        if (state != BT_CALL_HANGUP) {
+            break;
+        }
+        if (bt_share_call_a2dp(DATA_ID_SHARE_TO_SHARE_PP)) {
+            break;
+        }
+        bt_cmd_prepare_for_addr(bt_addr, USER_CTRL_AVCTP_OPID_STOP, 0, NULL);   // 出耳暂停
         break;
 #endif
     default:

@@ -10,6 +10,7 @@
 #include "app_config.h"
 #include "audio_config.h"
 #include "jlstream.h"
+#include "source_node.h"
 #include "cfg_tool.h"
 #include "volume_node.h"
 #include "effects/effects_adj.h"
@@ -521,6 +522,79 @@ static int check_eff_node_online_support(struct eff_online_packet *ep, u8 sq)
     return res;
 }
 /*
+ *工具获取设备支持的节点列表
+ * */
+static int check_audio_node_support(struct eff_online_packet *ep, u8 sq)
+{
+    extern const struct source_node_plug source_node_plug_begin[];
+    extern const struct source_node_plug source_node_plug_end[];
+    int res = ERR_ACCEPTABLE;
+    struct private_pack { //协议相关
+        int cmd;
+        u16 offset;
+        u16 node_num;
+    };
+    struct private_pack pack;
+    static u16 uuid_check_setp = 0;
+    memcpy(&pack, ep, sizeof(pack));
+    u16 *node_list = zalloc(sizeof(u16) * pack.node_num + 2);
+    if (node_list) {
+        const struct source_node_plug *p;
+        u16 offset = 0;
+        u16 list_offset = 1;
+        for (p = source_node_plug_begin; p < source_node_plug_end; p++) {
+            if (uuid_check_setp == 0) { //开始检查 plug uuid
+                if (pack.offset == offset) {
+                    node_list[list_offset++] = p->uuid;
+                    if (list_offset > pack.node_num) {
+                        break;
+                    }
+                } else {
+                    offset++;
+                }
+                if (p >= (source_node_plug_end - 1)) { //plug uuid已经检查完
+                    uuid_check_setp = 1;
+                }
+            } else {
+                offset++;
+            }
+        }
+        if (uuid_check_setp && (list_offset < pack.node_num)) {
+            const struct stream_node_adapter *adapter;
+            for_each_stream_node_adapter(adapter) {
+                if (uuid_check_setp == 1) { //plug uuid已经检查完,开始检查stream uuid
+                    node_list[list_offset++] = adapter->uuid;
+                    if (list_offset > pack.node_num) {
+                        uuid_check_setp = 2;
+                        break;
+                    }
+                } else if (uuid_check_setp == 2) { //stream uuid检查了一部分，开始检查剩余的
+                    if (pack.offset == offset) {
+                        node_list[list_offset++] = adapter->uuid;
+                        if (list_offset > pack.node_num) {
+                            break;
+                        }
+                    } else {
+                        offset++;
+                    }
+                }
+                if (adapter == (stream_node_adapter_end - 1)) { //查找完成
+                    uuid_check_setp = 0;
+                }
+            }
+        }
+        node_list[0] = list_offset - 1;  //node num
+        if (list_offset > 1) {
+            eff_node_send_packet(REPLY_TO_TOOL, sq, (u8 *)node_list, (int)(list_offset * sizeof(u16)));
+        } else {
+            res = ERR_COMM;//return "ER"
+        }
+        free(node_list);
+    }
+    return res;
+}
+
+/*
 *工具同步界面全部参数下来时，快速更新数据给节点
  * */
 static void eq_fast_update(char *name, u8 type, int start, int end, u16 uuid)
@@ -646,6 +720,9 @@ static s32 eff_online_update_base(void *packet, u32 size, u8 sq)
         break;
     case EFF_ONLINE_CMD:
         res = check_eff_node_online_support(ep, sq);
+        break;
+    case EFF_SUPPORT_NODE_CMD:
+        res = check_audio_node_support(ep, sq);
         break;
     default:
         break;

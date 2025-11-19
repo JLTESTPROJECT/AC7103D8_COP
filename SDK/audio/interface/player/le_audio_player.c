@@ -1,4 +1,3 @@
-
 #include "le_audio_player.h"
 #include "classic/tws_api.h"
 #include "media/audio_base.h"

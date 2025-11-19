@@ -15,7 +15,10 @@
 #include "app_main.h"
 #include "adc_file.h"
 #include "audio_cvp.h"
+#include "lib_h/jlsp_v3_ns.h"
+#include "lib_h/jlsp_DualMicSystem_Hybrid.h"
 
+extern float eq_db2mag(float x);
 #if 1
 extern void put_float(double fv);
 #define AEC_ONLINE_LOG	y_printf
@@ -32,7 +35,7 @@ const int const_audio_cvp_debug_online_enable = 0;
 #endif
 
 /*fb eq工具参数结构体*/
-struct dns_coeff_data_handle {
+/* struct dns_coeff_data_handle {
     u16 data_len;
     u8 mic_mode : 4;    //算法类型,1:2mic,2:3mic，暂时没有使用
     u8 eq_sel : 2;      //0:eq曲线，1:参考线
@@ -41,9 +44,28 @@ struct dns_coeff_data_handle {
     u16 fft_points;     //fft点数，256/512
     u16 sample_rate;    //采样率，8000/16000
     u8 data[0];         //参考线数据/eq数据/中心点数据
+}; */
+
+/*三代算法调音工具（兼容一代2mic-hybrid和3mic）结构体*/
+struct dns_coeff_data_handle {
+    u16 data_len;         // 数据长度 (16位)
+    u16 mic_mode : 4;     // 算法类型 (4位): 1: 2mic, 2: 3mic, 3: CVP-V3-1mic, 4: CVP-V3-2mic, 5: CVP-V3-2mic-Hybrid, 6: CVP-V3-3mic, 7: CVP-V3-3mic-ANC
+    u16 eq_sel_lsb : 2;   // 目标数据低位 (2位): 0: EQ曲线, 1: 参考线
+    u16 bypass : 2;       // 暂时未使用 (2位)
+    u16 eq_sel_msb : 3;   // 目标数据高位 (3位)
+    u16 reserved1 : 5;    // 保留字段 (5位)
+#if TCFG_AUDIO_CVP_V3_MODE
+    float eq_total_gain;    // eq总增益
+#endif
+    u16 fft_points;       // FFT点数 (256/512)
+    u16 sample_rate;      // 采样率 (8000/16000)
+    float data[];         // 参考线数据 / EQ数据 / 中心点数据
 };
 
+extern const u8 CONST_DMS_HYBRID_ONLINE_TYPE;
+
 #if (TCFG_CFG_TOOL_ENABLE)
+#define MAX_FFT_POINTS 256
 /*
 *********************************************************************
 *                  dns_coeff_param_updata
@@ -58,31 +80,126 @@ struct dns_coeff_data_handle {
 int dns_coeff_param_updata(const char *coeff_file, void *data, int len)
 {
     int coeff_len;
-    struct dns_coeff_data_handle *data_hdl = (struct dns_coeff_data_handle *)data;//zalloc(param_len);
-    printf("dns_coeff_param_updata");
-    /*在线调试的时候直接更新eq参数*/
-    if (!audio_aec_status()) {
-        printf("[error] aec is close !!!");
-        return -1;
-    }
     if (!data) {
         printf("[error] online data is NULL !!!");
         return -1;
+    }
+    struct dns_coeff_data_handle *data_hdl = (struct dns_coeff_data_handle *)data;//zalloc(param_len);
+    printf("dns_coeff_param_updata data->len : %d and len : %d", data_hdl->data_len, len);
+    /*在线调试的时候直接更新eq参数*/
+    extern u8 get_cvp_context_status();
+    if (!get_cvp_context_status()) {
+        printf("[error] aec is close !!!");
+        return 0;
     }
     if (data_hdl->data_len != len) {
         printf("[error] data_len[%d != %d] err !!!", data_hdl->data_len, len);
         return -1;
     }
+
+    u16 eq_sel = (u16)((data_hdl->eq_sel_msb << 2) | data_hdl->eq_sel_lsb);
+    printf("data_len=%d, mic_mode=%d, eq_sel_lsb=%d, eq_sel_msb=%d, eq_sel=%d, "
+           "bypass=%d, reserved1=%d, fft_points=%d, sample_rate=%d\n",
+           data_hdl->data_len,
+           data_hdl->mic_mode,
+           data_hdl->eq_sel_lsb,
+           data_hdl->eq_sel_msb,
+           eq_sel,
+           data_hdl->bypass,
+           data_hdl->reserved1,
+           data_hdl->fft_points,
+           data_hdl->sample_rate);
+    // coeff_offset + 曲线值 * (fft_points >> 1 + 1)
     coeff_len = ((data_hdl->fft_points >> 1) + 1) * sizeof(float);
     printf("coeff_len %d", coeff_len);
-    printf("mic_mode %d, eq_sel %d , bypass: %d, fft_points %d, sample_rate %d",
-           data_hdl->mic_mode, data_hdl->eq_sel, data_hdl->bypass, data_hdl->fft_points, data_hdl->sample_rate);
+#if TCFG_AUDIO_CVP_V3_MODE
+    float total_gain;
+    if (eq_sel == 2 || eq_sel == 4) {
+        /* printf("current eq_total_gain :\n");
+        put_float(data_hdl->eq_total_gain); */
+        total_gain = eq_db2mag(data_hdl->eq_total_gain);
+    }
+    static float eq_temp[MAX_FFT_POINTS + 1];
+    memcpy(eq_temp, data_hdl->data, coeff_len);
+    for (int i = 0; i < (data_hdl->fft_points >> 1) + 1; i++) {
+        eq_temp[i] = eq_db2mag(eq_temp[i]);
+    }
+    if (eq_sel >= 2 && eq_sel <= 5) {
+        static JLSP_set_wbornb_eq eq_cfg;
+        if (eq_sel >= 2 && eq_sel <= 3) {
+            eq_cfg.is_wb = 1;
+        } else {
+            eq_cfg.is_wb = 0;
+        }
+        eq_cfg.eqCoeffs = eq_temp;
+        if (eq_sel == 2 || eq_sel == 4) {
+            for (int i = 0; i < (data_hdl->fft_points >> 1) + 1; i++) {
+                eq_cfg.eqCoeffs[i] = eq_cfg.eqCoeffs[i] * total_gain;
+                /* put_float(eq_cfg.eqCoeffs[i]);
+                printf(","); */
+            }
+
+        }
+        audio_cvp_v3_ioctl(CVP_SET_EQ, 0, &eq_cfg);
+    } else if (eq_sel >= 6 && eq_sel <= 11) {
+#if CONFIG_ANC_ENABLE
+        extern u8 anc_mode_get(void);
+        u8 anc_mode = anc_mode_get();
+        printf("current anc mode: %d\n", anc_mode);
+        /*下发曲线的类型与当前ANC 模式不匹配时,需set算法内部为当前下发的模式*/
+        int update_anc_mode;
+        switch (eq_sel) {
+        case 6:
+        case 7:
+            update_anc_mode = 2;
+            break;
+        case 8:
+        case 9:
+            update_anc_mode = 1;
+            break;
+        case 10:
+        case 11:
+            update_anc_mode = 3;
+            break;
+        default:
+            update_anc_mode = 0;
+        }
+        /*通透暂时用不到*/
+        if (update_anc_mode != anc_mode) {
+            static JLSP_set_anc_state_mode anc_state_mode;
+            anc_state_mode.isAncOn = update_anc_mode;
+            anc_state_mode.ancMode = 0;
+            audio_cvp_v3_ioctl(CVP_SET_ANC_STATEMODE, 0, &anc_state_mode);
+            static JLSP_set_fb2main_eq fb2main_eq;
+            fb2main_eq.isAncon = update_anc_mode;
+            fb2main_eq.fb2main_eq = eq_temp;
+            audio_cvp_v3_ioctl(CVP_SET_EQ, 8, &fb2main_eq);
+        } else {
+            static JLSP_set_fb2main_eq fb2main_eq;
+            fb2main_eq.isAncon 	  = update_anc_mode;
+            fb2main_eq.fb2main_eq = eq_temp;
+            audio_cvp_v3_ioctl(CVP_SET_EQ, 8, &fb2main_eq);
+        }
+#endif
+    }
+#endif
 
 #if TCFG_AUDIO_CVP_DMS_HYBRID_DNS_MODE
     //在线更新fb eq曲线参数
-    /* jlsp_dms_hybrid_set_fbeq((float *)data_hdl->data, coeff_len); */
-    //在线更新talk eq曲线参数
-    /* jlsp_dms_hybrid_set_talkeq((float *)data_hdl->data, coeff_len); */
+    static float eq_temp[MAX_FFT_POINTS + 1];
+    memcpy(eq_temp, data_hdl->data, coeff_len);
+
+    for (int i = 0; i < (data_hdl->fft_points >> 1) + 1; i++) {
+        eq_temp[i] = eq_db2mag(eq_temp[i]);
+    }
+
+    //在线更新fb eq曲线参数
+    if (CONST_DMS_HYBRID_ONLINE_TYPE == 0) {
+        audio_cvp_ioctl(CVP_SET_EQ, 0, eq_temp);
+    } else if (CONST_DMS_HYBRID_ONLINE_TYPE == 1) {
+        //在线更新talk eq曲线参数
+        audio_cvp_ioctl(CVP_SET_EQ, 0, eq_temp);
+    }
 #elif TCFG_AUDIO_CVP_3MIC_MODE
     /* jlsp_tms_set_fbeq((float *)data_hdl->data, coeff_len); */
     /* jlsp_tms_set_talkeq((float *)data_hdl->data, coeff_len); */
@@ -133,17 +250,27 @@ void *read_dns_coeff_param(const char *coeff_file)
         return NULL;
     }
     resfile_close(fp);
-    printf("mic_mode %d, eq_sel %d , bypass: %d, fft_points %d, sample_rate %d",
-           data_hdl->mic_mode, data_hdl->eq_sel, data_hdl->bypass, data_hdl->fft_points, data_hdl->sample_rate);
-
     coeff_len = ((data_hdl->fft_points >> 1) + 1) * sizeof(float);
     printf("coeff_len %d", coeff_len);
     void *TransferFunc = zalloc(coeff_len);
+    /*适配三代算法调音*/
+    u16 eq_sel = (u16)((data_hdl->eq_sel_msb << 2) | data_hdl->eq_sel_lsb);
+    printf("data_len=%d, mic_mode=%d, eq_sel_lsb=%d, eq_sel_msb=%d, eq_sel=%d, "
+           "bypass=%d, reserved1=%d, fft_points=%d, sample_rate=%d\n",
+           data_hdl->data_len,
+           data_hdl->mic_mode,
+           data_hdl->eq_sel_lsb,
+           data_hdl->eq_sel_msb,
+           eq_sel,
+           data_hdl->bypass,
+           data_hdl->reserved1,
+           data_hdl->fft_points,
+           data_hdl->sample_rate);
 
-    if (data_hdl->eq_sel) {
+    if (eq_sel == 1) {
         /*参考线数据*/
         memcpy(TransferFunc, data_hdl->data, coeff_len);
-    } else {
+    } else if (eq_sel == 0) {
         /*eq曲线数据*/
         memcpy(TransferFunc, data_hdl->data + coeff_len, coeff_len);
     }

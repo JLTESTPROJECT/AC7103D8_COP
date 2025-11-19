@@ -14,10 +14,15 @@
 #include "app_testbox.h"
 #include "tws_dual_share.h"
 #include "clock_manager/clock_manager.h"
+#include "bt_background.h"
 #if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN)))
 #include "app_le_connected.h"
 #endif
 #if TCFG_APP_BT_EN
+
+#ifndef TCFG_TWS_CONN_TONE_DONT_PLAY
+#define TCFG_TWS_CONN_TONE_DONT_PLAY 0	// TWS连接提示音不播放
+#endif
 
 #define TWS_DLY_DISCONN_TIME            0//2000    //TWS超时断开，快速连接上不播提示音
 
@@ -28,6 +33,12 @@ static u16 tws_dly_discon_time = 0;
 static int tone_btstack_event_handler(int *_event)
 {
     struct bt_event *event = (struct bt_event *)_event;
+
+#if (TCFG_BT_BACKGROUND_ENABLE && TCFG_BACKGROUND_WITHOUT_EDR_CONNECT)
+    if (bt_background_active()) {   //后台不打开支持EDR连接不播放提示音
+        return 0;
+    }
+#endif
 
     switch (event->event) {
     case BT_STATUS_FIRST_CONNECTED:
@@ -132,6 +143,9 @@ static int tone_tws_event_handler(int *_event)
             tws_dly_discon_time = 0;
             break;
         }
+#if TCFG_TWS_CONN_TONE_DONT_PLAY
+        break;
+#endif
         if (role == TWS_ROLE_MASTER) {
             int state = tws_api_get_tws_state();
             if (state & (TWS_STA_SBC_OPEN | TWS_STA_ESCO_OPEN)) {
@@ -159,6 +173,10 @@ static int tone_tws_event_handler(int *_event)
             break;
         }
         g_tws_connected = 0;
+
+#if TCFG_TWS_CONN_TONE_DONT_PLAY
+        break;
+#endif
 
         if (reason == (TWS_DETACH_BY_REMOTE | TWS_DETACH_BY_POWEROFF)) {
             break;

@@ -653,6 +653,11 @@ int ll_vendor_open_latency(u16 conn_handle);
 
 int ll_vendor_close_latency(u16 conn_handle);
 
+int ll_vendor_rxmaxbuf(u16 conn_handle, u8 rxmaxbuf);
+
+int ll_vendor_leagcy_scan_priority(u16 param);
+int ll_vendor_leagcy_init_priority(u16 param);
+
 int ll_hci_encryption(u8 *key, u8 *plaintext_data);
 
 int ll_hci_get_le_rand(void);
@@ -762,4 +767,8 @@ void ll_hci_setup_iso_data_path(uint8_t *data, size_t size);
 
 void ll_hci_remove_iso_data_path(uint8_t *data, size_t size);
 uint8_t ble_vendor_priv_get_case_user();
+
+int ll_hci_vendor_send_priv_cmd(u16 conn_handle, u8 *data, u16 size); //通过hci命令发
+void ble_vendor_priv_cmd_handle_register(u16(*handle)(u16 hdl, u8 *cmd, u8 len, u8 *rsp));
+
 #endif

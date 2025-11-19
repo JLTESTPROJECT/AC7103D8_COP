@@ -24,10 +24,10 @@ static void chargestore_wakeup_callback(P33_IO_WKUP_EDGE edge)
 }
 
 static const struct _p33_io_wakeup_config port1 = {
-    .pullup_down_mode = PORT_INPUT_FLOATING,          	//配置I/O 内部上下拉是否使能
-    .edge               = FALLING_EDGE, //唤醒方式选择,可选：上升沿\下降沿
+    .pullup_down_mode   = PORT_INPUT_FLOATING,      //配置I/O 内部上下拉是否使能
+    .edge               = FALLING_EDGE,             //唤醒方式选择,可选：上升沿\下降沿
     .filter      		= PORT_FLT_1ms,
-    .gpio               = TCFG_CHARGESTORE_PORT,//唤醒口选择
+    .gpio               = TCFG_CHARGESTORE_PORT,    //唤醒口选择
     .callback			= chargestore_wakeup_callback,
 };
 

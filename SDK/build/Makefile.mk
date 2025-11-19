@@ -9,27 +9,16 @@ c_SRC_FILES := \
 	apps/common/debug/debug_uart_config.c \
 	apps/common/dev_manager/dev_manager.c \
 	apps/common/device/sensor/app_sensor.c \
-	apps/common/device/sensor/gSensor/bma580.c \
-	apps/common/device/sensor/gSensor/gSensor_manage.c \
-	apps/common/device/sensor/gSensor/stk832x.c \
-	apps/common/device/sensor/hr_sensor/hrSensor_manage.c \
-	apps/common/device/sensor/hr_sensor/hx3918/hx3918.c \
-	apps/common/device/sensor/hr_sensor/hx3918/hx3918_check_touch.c \
-	apps/common/device/sensor/hr_sensor/hx3918/hx3918_factory_test.c \
-	apps/common/device/sensor/hr_sensor/hx3918/hx3918_hrs_agc.c \
-	apps/common/device/sensor/hr_sensor/hx3918/hx3918_hrv_agc.c \
-	apps/common/device/sensor/hr_sensor/hx3918/hx3918_spo2_agc.c \
 	apps/common/device/storage_device/norflash/norflash_sfc.c \
 	apps/common/fat_nor/virfat_flash.c \
 	apps/common/temp_trim/dtemp_pll_trim.c \
-	apps/common/third_party_profile/common/3th_profile_api.c \
-	apps/common/third_party_profile/multi_protocol_main.c \
 	apps/earphone/app_main.c \
 	apps/earphone/audio/jlstream_event_handler.c \
 	apps/earphone/audio/scene_switch.c \
 	apps/earphone/audio/tone_table.c \
 	apps/earphone/audio/vol_sync.c \
 	apps/earphone/battery/battery_level.c \
+	apps/earphone/battery/battery_product_manage.c \
 	apps/earphone/battery/charge.c \
 	apps/earphone/battery/charge_clibration.c \
 	apps/earphone/battery/charge_device_handle.c \
@@ -77,13 +66,6 @@ c_SRC_FILES := \
 	apps/earphone/mode/bt/earphone.c \
 	apps/earphone/mode/bt/eartch_event_deal.c \
 	apps/earphone/mode/bt/kws_voice_event_deal.c \
-	apps/earphone/mode/bt/le_audio/big/app_le_auracast.c \
-	apps/earphone/mode/bt/le_audio/big/le_broadcast.c \
-	apps/earphone/mode/bt/le_audio/big/le_broadcast_config.c \
-	apps/earphone/mode/bt/le_audio/cig/app_le_connected.c \
-	apps/earphone/mode/bt/le_audio/cig/le_connected.c \
-	apps/earphone/mode/bt/le_audio/cig/le_connected_config.c \
-	apps/earphone/mode/bt/le_audio/le_audio_common.c \
 	apps/earphone/mode/bt/low_latency.c \
 	apps/earphone/mode/bt/phone_call.c \
 	apps/earphone/mode/bt/poweroff.c \
@@ -91,6 +73,7 @@ c_SRC_FILES := \
 	apps/earphone/mode/bt/tone.c \
 	apps/earphone/mode/bt/tws_dual_conn.c \
 	apps/earphone/mode/bt/tws_dual_share.c \
+	apps/earphone/mode/bt/tws_pair_by_chip_conn.c \
 	apps/earphone/mode/bt/tws_phone_call.c \
 	apps/earphone/mode/bt/tws_poweroff.c \
 	apps/earphone/mode/common/app_default_msg_handler.c \
@@ -161,11 +144,14 @@ LFLAGS := \
 	cpu/br56/liba/btstack.a \
 	cpu/br56/liba/bt_hash_enc.a \
 	cpu/br56/liba/rcsp_stack.a \
+	cpu/br56/liba/lib_jl_earbox.a \
 	cpu/br56/liba/btctrler.a \
 	cpu/br56/liba/aec.a \
 	cpu/br56/liba/media.a \
 	cpu/br56/liba/libdma-protocol.a \
 	cpu/br56/liba/libdma-device-ota.a \
+	cpu/br56/liba/fmna_stack.a \
+	cpu/br56/liba/lib_fmy_auth_br56.a \
 	cpu/br56/liba/google_fps.a \
 	cpu/br56/liba/swift_pair.a \
 	cpu/br56/liba/ximalaya_lib.a \
@@ -178,6 +164,7 @@ LFLAGS := \
 	cpu/br56/liba/libDualMicSystem_pi32v2_OnChip.a \
 	cpu/br56/liba/libDualMicSystem_flexible_pi32v2_OnChip.a \
 	cpu/br56/liba/libDualMicSystem_Awn.a \
+	cpu/br56/liba/libDualMicSystem_Hybrid.a \
 	cpu/br56/liba/libAdaptiveEchoSuppress_pi32v2_OnChip.a \
 	cpu/br56/liba/libOpcore_maskrom_pi32v2_OnChip.a \
 	cpu/br56/liba/lib_advaudio_plc.a \
@@ -206,6 +193,8 @@ LFLAGS := \
 	cpu/br56/liba/opus_enc_lib.a \
 	cpu/br56/liba/lib_speex_codec.a \
 	cpu/br56/liba/libjlsp.a \
+	cpu/br56/liba/lib_nn_v3.a \
+	cpu/br56/liba/lib_nn_v3_params.a \
 	cpu/br56/liba/libjlsp_kws.a \
 	cpu/br56/liba/libjlsp_kws_far_keyword.a \
 	cpu/br56/liba/libjlsp_kws_india_english.a \
@@ -234,6 +223,7 @@ LFLAGS := \
 	cpu/br56/liba/howling.a \
 	cpu/br56/liba/lib_HarmonicExciter.a \
 	cpu/br56/liba/libllns.a \
+	cpu/br56/liba/lib_llns_dns.a \
 	cpu/br56/liba/lib_icsd_common_v2.a \
 	cpu/br56/liba/lib_icsd_anc_v2.a \
 	cpu/br56/liba/lib_icsd_rt_anc.a \
@@ -266,16 +256,22 @@ LFLAGS := \
 	cpu/br56/liba/lib_frequency_compressor.a \
 	cpu/br56/liba/lib_gain_mix.a \
 	cpu/br56/liba/liblhdc_x_edge.a \
+	cpu/br56/liba/libStereoToLCR_pi32v2_OnChip.a \
+	cpu/br56/liba/sbsbrir.a \
+	cpu/br56/liba/spatial_brir.a \
+	apps/common/device/sensor/gSensor/sensor_algorithm_jl_motion.a \
+	apps/common/device/sensor/hr_sensor/hx3918/CodeBlocks_3605_spo2_20241021_v2.2.a \
+	apps/common/device/sensor/hr_sensor/hx3918/CodeBlocks_3918_hrs_bp_20250324_v2.2.a \
+	apps/common/device/sensor/hr_sensor/hx3918/CodeBlocks_3918_hrv_20241026_v2.2.a \
+	apps/common/device/sensor/hr_sensor/hx3011/CodeBlocks_3011_hrs_spo2_20250606_v2.2.a \
 	cpu/br56/liba/libFFT_pi32v2_OnChip.a \
 	cpu/br56/liba/lib_wtg_dec.a \
 	cpu/br56/liba/bfilterfun_lib.a \
 	cpu/br56/liba/lib_opusdec_rom_dec.a \
+	cpu/br56/liba/lib_bt_aac_dec_rom_ext.a \
 	cpu/br56/liba/crypto_toolbox_Osize.a \
-	apps/common/device/sensor/hr_sensor/hx3918/CodeBlocks_3605_spo2_20241021_v2.2.a \
-	apps/common/device/sensor/hr_sensor/hx3918/CodeBlocks_3918_hrs_bp_20250324_v2.2.a \
-	apps/common/device/sensor/hr_sensor/hx3918/CodeBlocks_3918_hrv_20241026_v2.2.a \
 	cpu/br56/liba/lib_dns.a \
-	apps/common/third_party_profile/tuya_protocol/sdk/lib/libtuya_lib.a \
+	cpu/br56/liba/lib_dns_v3.a \
 	cpu/br56/liba/update.a \
 	cpu/br56/liba/cbuf.a \
 	cpu/br56/liba/lbuf.a \
@@ -285,9 +281,12 @@ LFLAGS := \
 	cpu/br56/liba/ascii.a \
 	cpu/br56/liba/cfg_tool.a \
 	cpu/br56/liba/vm.a \
+	cpu/br56/liba/ftl.a \
 	cpu/br56/liba/debug_record.a \
 	cpu/br56/liba/lzma_dec.a \
 	cpu/br56/liba/chargestore.a \
+	cpu/br56/liba/math_fast_func.a \
+	cpu/br56/liba/jldtp.a \
 	cpu/br56/liba/printf.a  \
 	cpu/br56/liba/cbuf.a  \
 	cpu/br56/liba/vm.a  \

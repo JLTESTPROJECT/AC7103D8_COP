@@ -60,6 +60,7 @@ int os_hw_sem_pend(OS_SEM *sem, int timeout, const char *hw_name);
 int os_hw_sem_post(OS_SEM *sem, const char *hw_name);
 int os_get_hw_usage(const char *hw_name);
 
+TaskHandle_t task_get_current_handle(u8 cpu_id);
 /**
  * @brief 输出指定任务的运行信息，指定的任务必须是在停止运行的过程中
  *

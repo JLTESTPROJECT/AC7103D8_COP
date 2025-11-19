@@ -9,6 +9,8 @@
 #include "gpio.h"
 #include "ir_decoder.h"
 #include "app_config.h"
+#include "power/power_manage.h"
+#include "system/init.h"
 
 #if TCFG_IRKEY_ENABLE
 
@@ -92,5 +94,32 @@ REGISTER_KEY_OPS(irkey) = {
     .key_init         = irkey_init,
 };
 
+static u8 irkey_sleep_enter(void)
+{
+    //进入低功耗打开唤醒
+    p33_io_wakeup_enable(__this->port, 1);
+    return 0;
+}
+
+static u8 irkey_sleep_exit(void)
+{
+    //退出低功耗打开唤醒
+    p33_io_wakeup_enable(__this->port, 0);
+    return 0;
+}
+
+SLEEP_TARGET_REGISTER(irkey_pdown_tag) = {
+    .name = "irkey",
+    .enter = irkey_sleep_enter,
+    .exit = irkey_sleep_exit,
+};
+
+static void irkey_soff_enter(void)
+{
+    //软关机前打开唤醒使能
+    p33_io_wakeup_enable(__this->port, 1);
+}
+
+platform_uninitcall(irkey_soff_enter);
 #endif
 

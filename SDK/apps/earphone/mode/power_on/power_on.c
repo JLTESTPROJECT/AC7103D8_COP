@@ -4,7 +4,7 @@
 #include "tone_player.h"
 #include "app_tone.h"
 #include "app_default_msg_handler.h"
-
+#include "local_tws.h"
 
 #define LOG_TAG             "[APP_POWER_ON]"
 #define LOG_ERROR_ENABLE
@@ -45,6 +45,10 @@ static int poweron_tone_play_end_callback(void *priv, enum stream_event event)
 static int poweron_mode_init()
 {
     log_info("power on");
+
+#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE
+    local_tws_init();
+#endif
 
     if (app_var.play_poweron_tone) {
         int ret = play_tone_file_callback(get_tone_files()->power_on, NULL, poweron_tone_play_end_callback);

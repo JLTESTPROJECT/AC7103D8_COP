@@ -18,12 +18,14 @@
 #include "clock_manager/clock_manager.h"
 #include "audio_config_def.h"
 #include "effects/audio_vbass.h"
+#include "audio_effect_demo.h"
 #include "framework/include/decoder_node.h"
+#include "le_audio_player.h"
 #if AUDIO_EQ_LINK_VOLUME
 #include "effects/eq_config.h"
 #endif
 
-#if TCFG_MUSIC_PLAYER_ENABLE
+#if TCFG_MUSIC_PLAYER_ENABLE || TCFG_APP_RECORD_EN
 
 struct music_file_player_hdl {
     u8 player_id ;
@@ -62,7 +64,6 @@ void music_player_free(struct file_player *player)
 extern FILE *music_player_get_file_hdl(void);
 extern void music_player_remove_file_hdl(void);
 
-extern int music_player_play_auto_next(void);
 static void music_player_callback(void *_player_id, int event)
 {
     struct file_player *player;
@@ -76,6 +77,9 @@ static void music_player_callback(void *_player_id, int event)
 #endif
 #if AUDIO_EQ_LINK_VOLUME
         eq_link_volume();
+#endif
+#if AUDIO_AUTODUCK_LINK_VOLUME
+        autoduck_link_volume();
 #endif
         if (list_empty(&(g_file_player.head))) {          //先判断是否为空防止触发异常
             break;
@@ -202,10 +206,10 @@ static int music_file_close(void *file)
 
 static int music_file_get_fmt(void *file, struct stream_fmt *fmt)
 {
-    u8 name[16];
+    u8 name[12 + 1] = {0}; //8.3+\0
     struct file_player *player = (struct file_player *)file;
 
-    fget_name(player->file, name, 16);
+    fget_name(player->file, name, sizeof(name));
     struct stream_file_info info = {
         .file = player,
         .fname = (char *)name,
@@ -505,6 +509,17 @@ int music_file_ab_repeat_close(struct file_player *music_player)
 #endif /*FILE_DEC_AB_REPEAT_EN*/
 
 
+//获取解码文件的码率,采样率和解码格式
+int music_file_get_fmt_api(struct file_player *music_player, struct stream_fmt *fmt)
+{
+    if (!music_player || !fmt) {
+        return false;
+    }
+    int err = jlstream_node_ioctl(music_player->stream, NODE_UUID_DECODER, NODE_IOC_GET_PRIV_FMT, (int)fmt);
+    //printf("coding_type:%x,sample_rate:%d,bit_rate:%d kb/s\n",fmt->coding_type,fmt->sample_rate,fmt->bit_rate);
+    return err;
+}
+
 int music_file_get_breakpoints(struct audio_dec_breakpoint *bp, struct file_player *music_player)
 {
     if (music_player) {
@@ -618,6 +633,26 @@ int file_dec_set_start_play(u32 start_time, u32 coding_type)
 }
 #endif
 
+
+#if TCFG_DEC_ID3_V1_ENABLE || TCFG_DEC_ID3_V2_ENABLE
+static int file_name_match_mp3(char *file_name)
+{
+    const char *ext_name;
+    for (int i = 0; file_name[i] != '\0'; i++) {
+        if (file_name[i] == '.') {
+            ext_name = file_name + i + 1;
+            goto __match;
+        }
+    }
+    return 0;
+__match:
+    if (!strncasecmp(ext_name, "mp3", 3)) {
+        return 1;
+    }
+    return 0;
+}
+#endif
+
 /*----------------------------------------------------------------------------*/
 /**@brief    获取id3信息
    @return   true：成功
@@ -671,6 +706,18 @@ static int music_file_player_start(struct file_player *player)
 {
     int err = -EINVAL;
 
+#if TCFG_LOCAL_TWS_ENABLE
+    struct local_tws_stream_params *local_tws_fmt = {0};
+
+    struct stream_enc_fmt fmt = {
+        .channel = LOCAL_TWS_CODEC_CHANNEL,
+        .bit_width = LOCAL_TWS_CODEC_BIT_WIDTH,
+        .frame_dms = LOCAL_TWS_CODEC_FRAME_LEN,
+        .sample_rate = LOCAL_TWS_CODEC_SAMPLERATE,
+        .bit_rate = LOCAL_TWS_CODEC_BIT_RATE,
+        .coding_type = LOCAL_TWS_CODEC_TYPE,
+    };
+#endif
     u16 uuid = jlstream_event_notify(STREAM_EVENT_GET_PIPELINE_UUID, (int)"music");
 
     player->stream = jlstream_pipeline_parse(uuid, NODE_UUID_MUSIC);
@@ -721,8 +768,18 @@ static int music_file_player_start(struct file_player *player)
 #endif
     }
 #endif
+#if TCFG_LOCAL_TWS_ENABLE
+    err = jlstream_ioctl(player->stream, NODE_IOC_SET_ENC_FMT, (int)&fmt);
+    if (err == 0) {
+        err = jlstream_start(player->stream);
+    }
+#else
     err = jlstream_start(player->stream);
-
+#endif
+#if 0 //获取码率，采样率,解码格式
+    struct stream_fmt fmt;
+    music_file_get_fmt_api(player, &fmt);
+#endif
 
 #if TCFG_DEC_ID3_V1_ENABLE || TCFG_DEC_ID3_V2_ENABLE
     if (!mp3_flag) {
@@ -861,6 +918,14 @@ void music_file_player_stop()
 
     list_for_each_entry_safe(player, n, &(g_file_player.head), entry) {
         __list_del_entry(&player->entry);
+#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SOURCE_EN | LE_AUDIO_UNICAST_SINK_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))) && LEA_LOCAL_SYNC_PLAY_EN
+        if (player->le_audio) {
+            le_audio_player_close(player->le_audio);
+        }
+#endif
         if (player->stream) {
             jlstream_stop(player->stream, 50);
             jlstream_release(player->stream);
@@ -897,6 +962,42 @@ struct file_player *get_music_file_player(void) //返回第一个打开的音乐
 }
 
 
+struct midi_player *midi_ctrl_player_open()
+{
+    struct midi_player   *player = zalloc(sizeof(struct midi_player));
+    u16 uuid = jlstream_event_notify(STREAM_EVENT_GET_PIPELINE_UUID, (int)"music");
+    int err = 0;
+    player->stream = jlstream_pipeline_parse(uuid, NODE_UUID_ZERO_ACTIVE);
+    if (!player->stream) {
+        goto __exit0;
+    }
+    jlstream_set_callback(player->stream, NULL, NULL);
+    jlstream_set_scene(player->stream, STREAM_SCENE_MIDI);
+    jlstream_set_coexist(player->stream, 0);
+    err = jlstream_start(player->stream);
+
+    if (err) {
+        goto __exit1;
+    }
+    return player;
+__exit1:
+    jlstream_release(player->stream);
+__exit0:
+    free(player);
+    return NULL;
+}
+
+void midi_ctrl_player_close(struct midi_player *player)
+{
+    if (!player) {
+        return;
+    }
+    jlstream_stop(player->stream, 50);
+    jlstream_release(player->stream);
+    free(player);
+    jlstream_event_notify(STREAM_EVENT_CLOSE_PLAYER, (int)"music");
+}
+
 static int __music_player_init()
 {
     INIT_LIST_HEAD(&g_file_player.head);
@@ -905,5 +1006,120 @@ static int __music_player_init()
 }
 __initcall(__music_player_init);
 
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SOURCE_EN | LE_AUDIO_UNICAST_SINK_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
+static int le_audio_music_file_player_start(struct file_player *player)
+{
+    int err = -EINVAL;
+
+    u16 uuid = jlstream_event_notify(STREAM_EVENT_GET_PIPELINE_UUID, (int)"music_le_audio");
+    /* u16 uuid = jlstream_event_notify(STREAM_EVENT_GET_PIPELINE_UUID, (int)"music"); */
+
+    player->stream = jlstream_pipeline_parse(uuid, NODE_UUID_MUSIC);
+    if (!player->stream) {
+        goto __exit0;
+    }
+    int player_id = player->player_id;
+    jlstream_set_callback(player->stream, (void *)player_id, music_player_callback);
+    jlstream_set_scene(player->stream, player->scene);
+    jlstream_set_coexist(player->stream, player->coexist);
+    jlstream_node_ioctl(player->stream, NODE_UUID_DECODER,
+                        NODE_IOC_SET_BP, (int)player->break_point);
+    jlstream_node_ioctl(player->stream, NODE_UUID_DECODER,
+                        NODE_IOC_SET_FILE_LEN, (int)music_file_flen(player));
+    jlstream_node_ioctl(player->stream, NODE_UUID_SOURCE,
+                        NODE_IOC_SET_TASK, (int)"music_file");
+    jlstream_node_ioctl(player->stream, NODE_UUID_LE_AUDIO_SOURCE, NODE_IOC_SET_BTADDR, (int)player->le_audio);
+    jlstream_ioctl(player->stream, NODE_IOC_SET_ENC_FMT, (int)player->fmt);
+#if 0
+//时间戳使能，多设备播放才需要配置，需接入播放同步节点
+    u32 timestamp = audio_jiffies_usec() + 30 * 1000;
+    jlstream_node_ioctl(player->stream, NODE_UUID_DECODER, NODE_IOC_SET_TIME_STAMP, timestamp);
+#endif
+
+    if (player->callback) {
+        err = player->callback(player->priv, 0, STREAM_EVENT_INIT);
+        if (err) {
+            goto __exit1;
+        }
+    }
+
+    jlstream_set_dec_file(player->stream, player, &music_file_ops);
+#if TCFG_DEC_ID3_V1_ENABLE || TCFG_DEC_ID3_V2_ENABLE
+    u8 name[12 + 1] = {0}; //8.3+\0
+    fget_name(player->file, name, sizeof(name));
+    if (file_name_match_mp3((char *)name)) {
+#if TCFG_DEC_ID3_V1_ENABLE
+        if (player->p_mp3_id3_v1) {
+            id3_obj_post(&player->p_mp3_id3_v1);
+        }
+        player->p_mp3_id3_v1 = id3_v1_obj_get(player->file);
+#endif
+#if TCFG_DEC_ID3_V2_ENABLE
+        if (player->p_mp3_id3_v2) {
+            id3_obj_post(&player->p_mp3_id3_v2);
+        }
+        player->p_mp3_id3_v2 = id3_v2_obj_get(player->file);
+#endif
+    }
+#endif
+    err = jlstream_start(player->stream);
+    if (err) {
+        goto __exit1;
+    }
+
+    return 0;
+
+__exit1:
+    jlstream_release(player->stream);
+__exit0:
+    list_del(&player->entry);
+    if (player->callback) {
+        /* err = player->callback(player->priv, 0,STREAM_EVENT_NONE); */
+    }
+    music_player_free(player);
+    return err;
+}
+
+struct file_player *le_audio_music_player_add(struct file_player *player)
+{
+    os_mutex_pend(&g_file_player.mutex, 0);
+    if (list_empty(&(g_file_player.head))) {
+        int err = le_audio_music_file_player_start(player);
+        if (err) {
+            os_mutex_post(&g_file_player.mutex);
+            return NULL;
+        }
+#if LEA_LOCAL_SYNC_PLAY_EN
+        if (player->le_audio) {
+            err = le_audio_player_open(player->le_audio, NULL);
+            if (err != 0) {
+                ASSERT(0, "player open fail");
+            }
+        }
+#endif
+        player->status = FILE_PLAYER_START;
+    }
+    list_add_tail(&player->entry, &(g_file_player.head));
+    os_mutex_post(&g_file_player.mutex);
+    return player;
+}
+
+struct file_player *le_audio_music_file_play_callback(FILE *file, void *priv, music_player_cb_t callback, struct audio_dec_breakpoint *dbp, void *le_audio, void *fmt)
+{
+    struct file_player *player;
+    player = music_player_create(file, dbp);
+    if (!player) {
+        return NULL;
+    }
+    player->priv        = priv;
+    player->callback    = callback;
+    player->le_audio    = le_audio;
+    player->fmt         = fmt;
+    return le_audio_music_player_add(player);
+}
+#endif
 #endif
 

@@ -112,7 +112,7 @@ void watch_sensor_log_notify(u8 type, u8 *data, u16 data_len)
 
 int JL_rcsp_sensors_log_notify(void *priv, u8 OpCode, u8 *data, u16 len)
 {
-    return 0;
+    return -1;
 }
 
 void watch_sensor_log_notify(u8 type, u8 *data, u16 data_len)

@@ -19,6 +19,9 @@
 #include "esco_recoder.h"
 #include "clock.h"
 #include "dual_a2dp_play.h"
+#include "mix_record_api.h"
+#include "local_tws.h"
+#include "bt_tws.h"
 
 #if TCFG_AUDIO_DUT_ENABLE
 #include "test_tools/audio_dut_control.h"
@@ -26,6 +29,14 @@
 
 #if TCFG_AUDIO_ANC_ENABLE
 #include "audio_anc.h"
+#endif
+
+#if TCFG_AI_TRANSLATOR_ENABLE
+#include "ai_translator.h"
+#endif
+
+#if !TCFG_JLSTREAM_EFFICIENT_MODE
+extern const int CONFIG_EXTWS_NACK_LIMIT_INT_CNT;
 #endif
 
 #define PIPELINE_UUID_TONE_NORMAL   0x7674
@@ -38,7 +49,8 @@
 #define PIPELINE_UUID_MIC_EFFECT    0x9C2D
 #define PIPELINE_UUID_PC_AUDIO		0xDC8D
 #define PIPELINE_UUID_LE_AUDIO      0x99AA
-
+#define PIPELINE_UUID_RECODER       0x49EC
+#define PIPELINE_UUID_USER_DEFINED  0x9795
 
 
 static const struct stream_coexist_policy coexist_policy_table_rewrite[] = {
@@ -122,6 +134,15 @@ static int get_pipeline_uuid(const char *name)
         return PIPELINE_UUID_ESCO;
     }
 
+    if (!strcmp(name, "ai_rx_call")) {
+        clock_alloc("ai_rx", 48 * 1000000UL);
+        return PIPELINE_UUID_ESCO;
+    }
+    if (!strcmp(name, "ai_rx_media")) {
+        clock_alloc("ai_rx", 48 * 1000000UL);
+        return PIPELINE_UUID_A2DP;
+    }
+
     if (!strcmp(name, "a2dp")) {
         clock_alloc("a2dp", 48 * 1000000UL);
         audio_event_to_user(AUDIO_EVENT_A2DP_START);
@@ -144,7 +165,11 @@ static int get_pipeline_uuid(const char *name)
 #if TCFG_APP_PC_EN
     if (!strcmp(name, "pc_spk")) {
         clock_alloc("pc_spk", 96 * 1000000UL);
+#if TCFG_LOCAL_TWS_ENABLE
+        return PIPELINE_UUID_A2DP;
+#else
         return PIPELINE_UUID_PC_AUDIO;
+#endif
     }
     if (!strcmp(name, "pc_mic")) {
         clock_alloc("pc_mic", 96 * 1000000UL);
@@ -159,10 +184,20 @@ static int get_pipeline_uuid(const char *name)
     }
 #endif
 
+    if (!strcmp(name, "user_defined")) {
+        return PIPELINE_UUID_USER_DEFINED;
+    }
+
     if (!strcmp(name, "ai_voice")) {
         /* clock_alloc("a2dp", 24 * 1000000UL); */
         return PIPELINE_UUID_AI_VOICE;
     }
+
+#if TCFG_MIX_RECORD_ENABLE
+    if (!strcmp(name, "mix_recorder")) {
+        return PIPELINE_UUID_RECODER;
+    }
+#endif
 
     if (!strcmp(name, "dev_flow")) {
         return PIPELINE_UUID_DEV_FLOW;
@@ -192,11 +227,22 @@ static int get_pipeline_uuid(const char *name)
         clock_alloc("adda_loop", 24 * 1000000UL);
         return PIPELINE_UUID_A2DP_DUT;
     }
+
+#if TCFG_LOCAL_TWS_ENABLE
+    if (!strcmp(name, "local_tws")) {
+        clock_alloc("local_tws", 48 * 1000000UL);
+        return PIPELINE_UUID_A2DP;
+    }
+#endif
+
     return 0;
 }
 
 static void player_close_handler(const char *name)
 {
+    if (CONFIG_HEAP_MEMORY_TRACE) {
+        memory_trace_reset();
+    }
     clock_free(name);
     if (!strcmp(name, "a2dp")) {
         audio_event_to_user(AUDIO_EVENT_A2DP_STOP);
@@ -235,7 +281,9 @@ static int load_decoder_handler(struct stream_decoder_info *info)
     }
 #endif
     if (info->scene == STREAM_SCENE_A2DP) {
+#if TCFG_JLSTREAM_EFFICIENT_MODE
         info->task_name = "a2dp_dec";
+#endif
 
 #if TCFG_VIRTUAL_SURROUND_PRO_MODULE_NODE_ENABLE
         info->frame_time = 16;
@@ -244,10 +292,13 @@ static int load_decoder_handler(struct stream_decoder_info *info)
     if (info->scene == STREAM_SCENE_LEA_CALL || info->scene == STREAM_SCENE_LE_AUDIO) {
         //printf("decoder scene:LEA CALL\n");
         info->frame_time = 10;
-        info->task_name = "a2dp_dec";
+        /* info->task_name = "a2dp_dec"; */
     }
     if (info->scene == STREAM_SCENE_MUSIC) {
         info->task_name = "file_dec";
+    }
+    if (info->scene == STREAM_SCENE_AI_VOICE) {
+        info->frame_time = 10;
     }
     return 0;
 }
@@ -293,11 +344,61 @@ static int get_eff_online_parm(int arg)
 static int tws_switch_get_status()
 {
     int state = tws_api_get_tws_state();
+#if TCFG_LOCAL_TWS_ENABLE
+    struct app_mode *mode;
+    mode = app_get_current_mode();
+    if (mode == NULL) { //有可能此时处于模式切换临界情况
+        return 0;
+    }
+    if (mode->name == APP_MODE_BT || mode->name == APP_MODE_SINK || local_tws_mode_exit()) {
+        return 0;
+    } else {
+        if (state & TWS_STA_SIBLING_CONNECTED && tws_api_data_trans_connect() && (local_tws_get_role() == LOCAL_TWS_ROLE_SOURCE) && bt_tws_get_state()) {
+            return 1;
+        }
+        return 0;
+    }
+#else
     if (state & TWS_STA_SIBLING_DISCONNECTED) {
         return 0;
     }
     return 1;
+#endif
 }
+
+#if TCFG_AI_TRANSLATOR_ENABLE
+static int esco_trans_switch_get_status()
+{
+    int trans = 0; //获取翻译状态
+    struct ai_trans_mode minfo;
+    ai_translator_get_mode_info(&minfo);
+    if (minfo.mode == AI_TRANSLATOR_MODE_CALL_TRANSLATION) {
+        trans = 1;
+    }
+    return trans;
+}
+
+static int esco_switch_get_status()
+{
+    return !esco_trans_switch_get_status();
+}
+
+static int media_trans_switch_get_status()
+{
+    int trans = 0;//获取翻译状态
+    struct ai_trans_mode minfo;
+    ai_translator_get_mode_info(&minfo);
+    if (minfo.mode == AI_TRANSLATOR_MODE_A2DP_TRANSLATION) {
+        trans = 1;
+    }
+    return trans;
+}
+
+static int media_switch_get_status()
+{
+    return !media_trans_switch_get_status();
+}
+#endif
 
 static int get_switch_node_callback(const char *arg)
 {
@@ -310,6 +411,40 @@ static int get_switch_node_callback(const char *arg)
         return (int)get_audio_sidetone_state;
     }
 #endif
+
+#if TCFG_LOCAL_TWS_ENABLE
+    if (!strncmp(arg, "Switch1", strlen("Switch1"))) {
+        return (int)tws_switch_get_status;
+    }
+#endif
+
+#if TCFG_AI_TRANSLATOR_ENABLE
+    if (!strcmp(arg, "ESCO_Switch")) {
+        return (int)esco_switch_get_status;
+    }
+    if (!strcmp(arg, "ESCO_Trans")) {
+        return (int)esco_trans_switch_get_status;
+    }
+    if (!strcmp(arg, "ESCO_MIC_Switch")) {
+        return (int)esco_switch_get_status;
+    }
+    if (!strcmp(arg, "ESCO_MIC_Trans")) {
+        return (int)esco_trans_switch_get_status;
+    }
+    if (!strcmp(arg, "Media_Switch")) {
+        return (int)media_switch_get_status;
+    }
+    if (!strcmp(arg, "Media_Trans")) {
+        return (int)media_trans_switch_get_status;
+    }
+#endif
+
+#if TCFG_MIX_RECORD_ENABLE
+    if (!strncmp(arg, "SW_Rec", strlen("SW_Rec"))) {
+        return (int)get_mix_recorder_status;
+    }
+#endif // TCFG_MIX_RECORD_ENABLE
+
     return 0;
 }
 
@@ -344,6 +479,21 @@ static int get_merge_node_callback(const char *arg)
 static int get_spatial_adv_node_callback(const char *arg)
 {
     return (int)tws_get_output_channel;
+}
+
+static int get_output_node_delay(int arg)
+{
+#if !TCFG_JLSTREAM_EFFICIENT_MODE
+    if (arg == STREAM_SCENE_A2DP && CONFIG_EXTWS_NACK_LIMIT_INT_CNT < 63) {
+#ifdef TCFG_HI_RES_AUDIO_ENEBALE
+        return 50/*ms*/;
+#else
+        /*A2DP模式下，DAC或输出设备在监听+转发的机制下最大延时约束为30ms，其他延时补偿到蓝牙缓冲预留转发时间*/
+        return 30/*ms*/;
+#endif
+    }
+#endif
+    return 0;
 }
 
 int jlstream_event_notify(enum stream_event event, int arg)
@@ -410,6 +560,11 @@ int jlstream_event_notify(enum stream_event event, int arg)
 #if TCFG_NOISEGATE_NODE_ENABLE
     case STREAM_EVENT_GET_NOISEGATE_CALLBACK:
         ret = get_noisegate_node_callback((const char *)arg);
+        break;
+#endif
+#if !TCFG_JLSTREAM_EFFICIENT_MODE
+    case STREAM_EVENT_GET_OUTPUT_NODE_DELAY:
+        ret = get_output_node_delay(arg);
         break;
 #endif
     default:

@@ -117,5 +117,17 @@ u16 tone_player_get_fname_uuid(const char *fname);
 
 int common_dec_repeat_set(struct jlstream *stream, struct fixphase_repair_obj *repair_buf); //设置对应数据流无缝循环播放
 
+
+//指定需要关闭的文件播放器
+void fileplay_close(struct tone_player *player);
+//关闭所有文件播放器
+void fileplay_close_all();
+//多文件提示音播放接口,提示音节点名命名规则："FilePlayX", X:0/1/2/3/4/5/6/7, index就X
+struct tone_player *play_fileplay_file(const char *file_name, u8 index);
+//状态获取
+int fileplay_runing();
+
+
+
 #endif
 

@@ -714,7 +714,11 @@ u32 uac_host_open_spk(usb_dev usb_id, u32 ch, u32 sample_freq, u32 bit_res)
 
     usb_h_set_ep_isr(host_dev, host_ep, uac_tx_isr, NULL);
 #ifdef USB_HW_20
+#if USB_HUB
+    usb_hub_txreg_set(usb_id, host_ep, as_cfg->target_ep, &(host_dev->private_data.hub_info));
+#else
     usb_write_txfuncaddr(usb_id, host_ep, host_dev->private_data.devnum);
+#endif
 #endif
     usb_h_ep_config(usb_id, host_ep, USB_ENDPOINT_XFER_ISOC, 1, as_cfg->interval, ep_out_dma_buf, spk_frame_len);
     uac_tx_isr(NULL, host_ep);
@@ -899,7 +903,11 @@ u32 uac_host_open_mic(usb_dev usb_id, u32 ch, u32 sample_freq, u32 bit_res)
     //uac_set_volume(host_dev, mic_info->ctrl_intr_num, mic_info->feature_id, vol_convert(100));
     usb_h_set_ep_isr(host_dev, host_ep | USB_DIR_IN, uac_rx_isr, NULL);
 #ifdef USB_HW_20
+#if USB_HUB
+    usb_hub_rxreg_set(id, host_ep, as_cfg->target_ep, &(host_dev->private_data.hub_info));
+#else
     usb_write_rxfuncaddr(usb_id, host_ep, host_dev->private_data.devnum);
+#endif
 #endif
     usb_h_ep_config(usb_id, host_ep | USB_DIR_IN, USB_ENDPOINT_XFER_ISOC, 1, as_cfg->interval, ep_in_dma_buf, mic_frame_len);
     usb_h_ep_read_async(usb_id, host_ep, as_cfg->target_ep, NULL, 0, USB_ENDPOINT_XFER_ISOC, 1);

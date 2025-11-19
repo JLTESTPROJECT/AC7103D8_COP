@@ -2,7 +2,7 @@
 #include "big.h"
 #include "wireless_trans_manager.h"
 
-#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)))
+#if (BT_AI_SEL_PROTOCOL & (LE_AUDIO_BIS_TX_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN))
 
 static int big_tx_init(void *priv)
 {
@@ -47,11 +47,11 @@ static int big_tx_ioctrl(int op, ...)
         break;
 
     case WIRELESS_DEV_OP_SET_SYNC:
-        big_tx_ops.sync_set(va_arg(argptr, uint16_t), va_arg(argptr, uint8_t));
+        big_tx_ops.sync_set((uint16_t)va_arg(argptr, int), (uint8_t)va_arg(argptr, int));
         break;
 
     case WIRELESS_DEV_OP_GET_SYNC:
-        big_tx_ops.sync_get(va_arg(argptr, uint16_t), (uint16_t *)va_arg(argptr, int), (uint32_t *)va_arg(argptr, int), (uint32_t *)va_arg(argptr, int));
+        big_tx_ops.sync_get((uint16_t)va_arg(argptr, int), (uint16_t *)va_arg(argptr, int), (uint32_t *)va_arg(argptr, int), (uint32_t *)va_arg(argptr, int));
         break;
 
     case WIRELESS_DEV_OP_STATUS_SYNC:
@@ -61,11 +61,19 @@ static int big_tx_ioctrl(int op, ...)
         break;
 
     case WIRELESS_DEV_OP_ENTER_PAIR:
-        big_tx_ops.enter_pair(va_arg(argptr, uint8_t), (pair_callback_t *)va_arg(argptr, int), va_arg(argptr, uint32_t));
+        big_tx_ops.enter_pair((uint8_t)va_arg(argptr, int), (pair_callback_t *)va_arg(argptr, int), va_arg(argptr, uint32_t));
         break;
 
     case WIRELESS_DEV_OP_EXIT_PAIR:
-        big_tx_ops.exit_pair(va_arg(argptr, uint8_t));
+        big_tx_ops.exit_pair((uint8_t)va_arg(argptr, int));
+        break;
+
+    case WIRELESS_DEV_OP_GET_PAIR_CODE:
+        big_tx_ops.get_pair_code((uint8_t *)va_arg(argptr, int), (uint8_t)va_arg(argptr, int));
+        break;
+
+    case WIRELESS_DEV_OP_SET_PAIR_CODE:
+        big_tx_ops.set_pair_code((uint8_t *)va_arg(argptr, int));
         break;
 
     default :
@@ -85,10 +93,10 @@ REGISTER_WIRELESS_DEV(big_tx_op) = {
     .close          = big_tx_close,
     .ioctrl         = big_tx_ioctrl,
 };
-#endif
+#endif /* (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_BIS_TX_EN|LE_AUDIO_JL_AURACAST_SINK_EN) */
 
 
-#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN)))
+#if (BT_AI_SEL_PROTOCOL & (LE_AUDIO_BIS_RX_EN | LE_AUDIO_JL_AURACAST_SINK_EN))
 
 static int big_rx_init(void *priv)
 {
@@ -120,8 +128,12 @@ static int big_rx_ioctrl(int op, ...)
     va_start(argptr, op);
 
     switch (op) {
+    case WIRELESS_DEV_OP_SEND_PACKET:
+        res = big_rx_ops.send_packet((const uint8_t *)va_arg(argptr, int), va_arg(argptr, int), (big_stream_param_t *)va_arg(argptr, int));
+        break;
+
     case WIRELESS_DEV_OP_SET_SYNC:
-        //big_rx_ops.sync_set(va_arg(argptr, uint16_t), va_arg(argptr, uint8_t));
+        big_rx_ops.sync_set((uint16_t)va_arg(argptr, int), (uint8_t)va_arg(argptr, int));
         break;
 
     case WIRELESS_DEV_OP_GET_BLE_CLK:
@@ -129,15 +141,27 @@ static int big_rx_ioctrl(int op, ...)
         break;
 
     case WIRELESS_DEV_OP_GET_SYNC:
-        //big_rx_ops.sync_get(va_arg(argptr, uint16_t), (uint16_t *)va_arg(argptr, int), (uint32_t *)va_arg(argptr, int), (uint32_t *)va_arg(argptr, int));
+        big_rx_ops.sync_get((uint16_t)va_arg(argptr, int), (uint16_t *)va_arg(argptr, int), (uint32_t *)va_arg(argptr, int), (uint32_t *)va_arg(argptr, int));
         break;
 
     case WIRELESS_DEV_OP_ENTER_PAIR:
-        //big_rx_ops.enter_pair(va_arg(argptr, uint8_t), (pair_callback_t *)va_arg(argptr, int), va_arg(argptr, uint32_t));
+        big_rx_ops.enter_pair((uint8_t)va_arg(argptr, int), (pair_callback_t *)va_arg(argptr, int), va_arg(argptr, uint32_t));
         break;
 
     case WIRELESS_DEV_OP_EXIT_PAIR:
-        //big_rx_ops.exit_pair(va_arg(argptr, uint8_t));
+        big_rx_ops.exit_pair((uint8_t)va_arg(argptr, int));
+        break;
+
+    case WIRELESS_DEV_OP_GET_PAIR_CODE:
+        big_rx_ops.get_pair_code((uint8_t *)va_arg(argptr, int), (uint8_t)va_arg(argptr, int));
+        break;
+
+    case WIRELESS_DEV_OP_SET_PAIR_CODE:
+        big_rx_ops.set_pair_code((uint8_t *)va_arg(argptr, int));
+        break;
+
+    case WIRELESS_DEV_OP_GET_RSSI:
+        res = big_rx_ops.get_rssi((uint16_t)va_arg(argptr, int));
         break;
 
     default :
@@ -157,5 +181,6 @@ REGISTER_WIRELESS_DEV(big_rx_op) = {
     .close          = big_rx_close,
     .ioctrl         = big_rx_ioctrl,
 };
-#endif
+#endif /* (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_BIS_RX_EN) */
+
 

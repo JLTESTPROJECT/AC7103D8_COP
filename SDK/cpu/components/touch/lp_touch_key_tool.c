@@ -71,6 +71,12 @@ enum {
     TOUCH_CH_VOL_CFG_UPDATE                 = 0x3001,
     TOUCH_CH_CFG_CONFIRM                    = 0x3100,
     TOUCH_CH_GET_VOL_CFG                    = 0x3101,
+
+    TOUCH_CH_TRIM_OUT_START                 = 0x3102,
+    TOUCH_CH_TRIM_IN_START                  = 0x3103,
+    TOUCH_CH_TRIM_CLEAR                     = 0x3104,
+    TOUCH_CH_TRIM_ENABLE                    = 0x3105,
+    TOUCH_CH_TRIM_DISABLE                   = 0x3106,
 };
 
 enum {
@@ -129,23 +135,293 @@ int lp_touch_key_online_debug_key_event_handle(u32 ch, u32 event)
     }
 
     if ((lp_key_online.state == LP_KEY_ONLINE_ST_CH_KEY_DEBUG_CONFIRM) ||
-        (lp_key_online.state <= LP_KEY_ONLINE_ST_READY)) {
+        (lp_key_online.state <= LP_KEY_ONLINE_ST_READY) ||
+        (lp_key_online.current_record_ch == LPCTMU_CHANNEL_SIZE)
+       ) {
         return 0;
     }
 
     return 1;
 }
 
-int lp_touch_key_online_debug_send(u32 ch, u16 val)
+enum {
+    TLV_TYPE_EVENT_MASK   = 0x40,
+    TLV_TYPE_EVENT_TOUCH  = TLV_TYPE_EVENT_MASK + 0,
+    TLV_TYPE_EVENT_EAR    = TLV_TYPE_EVENT_MASK + 1,
+    TLV_TYPE_EVENT_IR     = TLV_TYPE_EVENT_MASK + 2,
+    TLV_TYPE_EVENT_STATUS = TLV_TYPE_EVENT_MASK + 3,
+    TLV_TYPE_DATA_MASK   = 0x80,
+    TLV_TYPE_DATA_RES    = TLV_TYPE_DATA_MASK + 0,
+    TLV_TYPE_DATA_DC     = TLV_TYPE_DATA_MASK + 1,
+    TLV_TYPE_DATA_DIFF   = TLV_TYPE_DATA_MASK + 2,
+    TLV_TYPE_DATA_NTC    = TLV_TYPE_DATA_MASK + 3,
+};
+
+enum {
+    TLV_DATA_TYPE_S8_LEFT       = 0x00,
+    TLV_DATA_TYPE_S8_RIGHT      = 0x80,
+    TLV_DATA_TYPE_U8_LEFT       = 0x01,
+    TLV_DATA_TYPE_U8_RIGHT      = 0x81,
+    TLV_DATA_TYPE_S16_LEFT      = 0x02,
+    TLV_DATA_TYPE_S16_RIGHT     = 0x82,
+    TLV_DATA_TYPE_U16_LEFT      = 0x03,
+    TLV_DATA_TYPE_U16_RIGHT     = 0x83,
+    TLV_DATA_TYPE_S32_LEFT      = 0x04,
+    TLV_DATA_TYPE_S32_RIGHT     = 0x84,
+    TLV_DATA_TYPE_U32_LEFT      = 0x05,
+    TLV_DATA_TYPE_U32_RIGHT     = 0x85,
+    TLV_DATA_TYPE_FLOAT_LEFT    = 0x06,
+    TLV_DATA_TYPE_FLOAT_RIGHT   = 0x86
+};
+
+struct tlv_data_item {
+    void *data;
+    u8 len;
+};
+
+typedef struct {
+    u8 type;
+    u8 data_type;
+    struct tlv_data_item *(*get_data)(u8 tlv_type, u16 *res_buf);
+} lp_touch_key_app_debug_packet_t;
+
+
+static struct tlv_data_item *online_db_get_ch_res(u8 tlv_type, u16 *res_buf)
+{
+    static struct tlv_data_item item = {0};
+    item.data = res_buf;
+    item.len =  LPCTMU_CHANNEL_SIZE * sizeof(u16);
+    return &item;
+}
+
+#if TCFG_LP_EARTCH_KEY_ENABLE
+static struct tlv_data_item *online_db_get_ch_dc(u8 tlv_type, u16 *res_buf)
+{
+    static u16 trim_dc[LPCTMU_CHANNEL_SIZE] = {0};
+    static struct tlv_data_item item = {0};
+    if (lp_touch_key_eartch_trim_get_all_chs_dc(trim_dc)) {
+        memset(trim_dc, 0, sizeof(trim_dc));
+    }
+    item.data = trim_dc;
+    item.len  = LPCTMU_CHANNEL_SIZE * sizeof(u16);
+    return &item;
+}
+
+static struct tlv_data_item *online_db_get_diff(u8 tlv_type, u16 *res_buf)
+{
+    static struct tlv_data_item item = {0};
+    static s16 diff[2] = {0};
+    u16 trim_dc[LPCTMU_CHANNEL_SIZE] = {0};
+    lp_touch_key_eartch_trim_get_all_chs_dc(trim_dc);
+    u8 wear0_ch = lp_touch_key_get_wear_ch(0);
+    u8 wear0_ref_ch = lp_touch_key_get_wear_ref_ch(0);
+    u8 wear1_ch = lp_touch_key_get_wear_ch(1);
+    u8 wear1_ref_ch = lp_touch_key_get_wear_ref_ch(1);
+    diff[0] = (res_buf[wear0_ch] - trim_dc[wear0_ch]) - (res_buf[wear0_ref_ch] - trim_dc[wear0_ref_ch]);
+    diff[1] = (res_buf[wear1_ch] - trim_dc[wear1_ch]) - (res_buf[wear1_ref_ch] - trim_dc[wear1_ref_ch]);
+    item.data = diff;
+    item.len = sizeof(diff);
+    return &item;
+}
+
+static struct tlv_data_item *online_db_get_ear_status(u8 tlv_type, u16 *res_buf)
+{
+    static u8 ear_event = 0x00;
+    static struct tlv_data_item item = {0};
+    ear_event = lp_touch_key_eartch_state_is_out_ear() ? 0 : 1;
+    item.data = &ear_event;
+    item.len = sizeof(ear_event);
+    return &item;
+}
+#endif
+
+static struct tlv_data_item *online_db_get_touch_status(u8 tlv_type, u16 *res_buf)
+{
+    static u8 touch_status = 0;
+    static struct tlv_data_item item = {0};
+    u32 key_event = lp_touch_key_get_last_key_action();
+    switch (key_event) {
+    case KEY_ACTION_CLICK:
+        touch_status = 0x01;
+        break;
+    case KEY_ACTION_DOUBLE_CLICK:
+        touch_status = 0x02;
+        break;
+    case KEY_ACTION_TRIPLE_CLICK:
+        touch_status = 0x03;
+        break;
+    case KEY_ACTION_FOURTH_CLICK:
+        touch_status = 0x04;
+        break;
+    case KEY_ACTION_FIRTH_CLICK:
+        touch_status = 0x05;
+        break;
+    case KEY_ACTION_LONG:
+        touch_status = 0x10;
+        break;
+    default:
+        touch_status = 0;
+    }
+    item.data = &touch_status;
+    item.len  = sizeof(touch_status);
+    return &item;
+}
+
+#if TCFG_LP_EARTCH_KEY_ENABLE
+static struct tlv_data_item *online_db_get_algo_status(u8 tlv_type, u16 *res_buf)
+{
+    static u8 algo_status = 0;
+    static struct tlv_data_item item = {0};
+    u32 trim_valid = 0;
+    trim_valid = lp_touch_key_eartch_trim_get_valid();
+    if (trim_valid) {
+        algo_status |= BIT(0);
+    } else {
+        algo_status &= ~BIT(0);
+    }
+    if (lp_touch_key_eartch_get_trim_dc_flag()) {
+        algo_status |= BIT(1);
+    } else {
+        algo_status	&= ~BIT(1);
+    }
+    item.data = &algo_status;
+    item.len  = sizeof(algo_status);
+    return &item;
+}
+#endif
+
+lp_touch_key_app_debug_packet_t app_debug_packet_tabel[] = {
+    {TLV_TYPE_DATA_RES, TLV_DATA_TYPE_U16_LEFT,  online_db_get_ch_res},
+#if TCFG_LP_EARTCH_KEY_ENABLE
+    {TLV_TYPE_DATA_DC,     TLV_DATA_TYPE_U16_LEFT,  online_db_get_ch_dc},
+    {TLV_TYPE_DATA_DIFF, TLV_DATA_TYPE_S16_RIGHT, online_db_get_diff},
+#endif
+    {TLV_TYPE_EVENT_TOUCH, TLV_DATA_TYPE_U8_LEFT,  online_db_get_touch_status},
+#if TCFG_LP_EARTCH_KEY_ENABLE
+    {TLV_TYPE_EVENT_EAR, TLV_DATA_TYPE_U8_LEFT,  online_db_get_ear_status},
+    {TLV_TYPE_EVENT_STATUS, TLV_DATA_TYPE_U8_LEFT,  online_db_get_algo_status},
+#endif
+};
+
+
+#define DATA_HEAD_SIZE 3
+#define PACKET_HEAD_TAIL_SIZE 4
+static u16 single_item_size = 0; // lazy static
+static void calculate_single_item_size(void)
+{
+    u16 tmp[LPCTMU_CHANNEL_SIZE] = {0};
+    struct tlv_data_item *item = NULL;
+    single_item_size = 0;
+    u32 packet_num = sizeof(app_debug_packet_tabel) / sizeof(lp_touch_key_app_debug_packet_t);
+    for (int i = 0; i < packet_num; i++) {
+        single_item_size += DATA_HEAD_SIZE;
+        item = app_debug_packet_tabel[i].get_data(app_debug_packet_tabel[i].type, tmp);
+        if (item) {
+            single_item_size += item->len;
+        }
+    }
+    single_item_size += PACKET_HEAD_TAIL_SIZE;
+}
+
+
+int append_tlv_data_packet(u8 *data_buf, u32 tlv_type, u32 tlv_data_type, struct tlv_data_item *value)
+{
+    int ret = 0;
+    if (data_buf == NULL) {
+        return 0;
+    }
+    if (value == NULL) {
+        return 0;
+    }
+
+    data_buf[ret++] = tlv_type;
+    data_buf[ret++] = tlv_data_type;
+    data_buf[ret++] = value->len;
+
+    memcpy(data_buf + ret, value->data, value->len);
+    ret += value->len;
+    return ret;
+}
+
+u32 lp_touch_key_debug_send_table(u8 *send_buf, u16 *res_buf, lp_touch_key_app_debug_packet_t *packet_table, int table_item_num)
+{
+    if (res_buf == NULL) {
+        return 0;
+    }
+    if (packet_table == NULL) {
+        return 0;
+    }
+    int offset = 2;
+    send_buf[0] = 0x5A;
+    send_buf[1] = 0xA5;
+    for (int i = 0; i < table_item_num; i++) {
+        offset += append_tlv_data_packet(send_buf + offset,
+                                         packet_table[i].type,
+                                         packet_table[i].data_type,
+                                         packet_table[i].get_data(packet_table[i].type, res_buf));
+    }
+    send_buf[offset] = 0xA5;
+    send_buf[offset + 1] = 0x5A;
+    offset += 2;
+    return offset;
+}
+
+
+
+static u8 *online_db_buf = NULL;
+#define TLV_DATA_ITEM_NUM_PER_PACKET  5
+static void lp_touch_key_online_debug_send_qcallback(u32 ch, u16 *res_buf)
+{
+    static int offset = 0;
+    static int packet_num_stored = 0;
+
+    if (online_db_buf == NULL) {
+        online_db_buf = malloc(single_item_size * TLV_DATA_ITEM_NUM_PER_PACKET);
+        offset = 0;
+        packet_num_stored = 0;
+        // log_debug("alloc online_db_buf :%08X\n", (u32)online_db_buf );
+        if (online_db_buf == NULL) {
+            return ;
+        }
+    }
+    if (res_buf == NULL) {
+        free(online_db_buf);
+        online_db_buf = NULL;
+        return;
+    }
+
+    u32 packet_num = sizeof(app_debug_packet_tabel) / sizeof(lp_touch_key_app_debug_packet_t);
+    offset += lp_touch_key_debug_send_table(online_db_buf + offset, res_buf, app_debug_packet_tabel, packet_num);
+    // log_debug("offset:%d\n", offset);
+    packet_num_stored += 1;
+    if (packet_num_stored >= TLV_DATA_ITEM_NUM_PER_PACKET) {
+        app_online_db_send(DB_PKT_TYPE_DAT_CH0, (u8 *)online_db_buf, (offset + 1) & 0xfffffffe);
+        free(online_db_buf);
+        online_db_buf = NULL;
+        // log_debug("free online_db_buf \n");
+    }
+    free(res_buf);
+    // log_debug("free res_buf clone\n");
+}
+
+int lp_touch_key_online_debug_send(u32 ch, u16 *res_buf)
 {
     int err = 0;
     putchar('s');
     if ((lp_key_online.state == LP_KEY_ONLINE_ST_CH_RES_DEBUG_START) && ((lp_key_online.current_record_ch == ch) || (lp_key_online.current_record_ch == LPCTMU_CHANNEL_SIZE))) {
         if (lp_key_online.current_record_ch == LPCTMU_CHANNEL_SIZE) {
-            val += (ch * 10000);
+            int msg[4] ;
+            u16 *res_buf_clone = malloc(sizeof(u16) * LPCTMU_CHANNEL_SIZE);
+            memcpy(res_buf_clone, res_buf, sizeof(u16) * LPCTMU_CHANNEL_SIZE);
+            msg[0] = (int)lp_touch_key_online_debug_send_qcallback;
+            msg[1] = 2;
+            msg[2] = ch;
+            msg[3] = (int)res_buf_clone;
+            os_taskq_post_type("app_core", Q_CALLBACK, 4, msg);
+        } else {
+            lp_key_online.res_packet = res_buf[ch];
+            err = app_online_db_send(DB_PKT_TYPE_DAT_CH0, (u8 *)(&(lp_key_online.res_packet)), 2);
         }
-        lp_key_online.res_packet = val;
-        err = app_online_db_send(DB_PKT_TYPE_DAT_CH0, (u8 *)(&(lp_key_online.res_packet)), 2);
     }
     return err;
 }
@@ -159,6 +435,10 @@ static int lp_touch_key_online_debug_parse(u8 *packet, u8 size, u8 *ext_data, u1
     struct ch_ana_cfg *ana_cfg;
 
     struct lp_key_ver_info ver_info = {0};
+    //log_debug("Packet:\n");
+    //put_buf(packet, size);
+    //log_debug("ext_data:\n");
+    //put_buf(ext_data, ext_size);
 
 
     log_debug("%s", __func__);
@@ -277,7 +557,42 @@ static int lp_touch_key_online_debug_parse(u8 *packet, u8 size, u8 *ext_data, u1
         log_debug("TOUCH_RECORD_STOP");
         app_online_db_ack(parse_seq, (u8 *)"OK", 1); //该命令随便ack一个byte即可
         lp_key_online.state = LP_KEY_ONLINE_ST_CH_RES_DEBUG_STOP;
+        int msg[4] ;
+        msg[0] = (int)lp_touch_key_online_debug_send_qcallback;
+        msg[1] = 2;
+        msg[2] = 0;
+        msg[3] = (int)NULL;
+        os_taskq_post_type("app_core", Q_CALLBACK, 4, msg);
         break;
+
+
+#if TCFG_LP_EARTCH_KEY_ENABLE
+    /**
+      Trim完,enable disable, clear都需要写VM，读VM，更新cfg1，复位算法
+      */
+    case TOUCH_CH_TRIM_OUT_START:
+        log_debug("TOUCH_CH_TRIM_OUT_START");
+        app_online_db_ack(parse_seq, (u8 *)"OK", 1); //该命令随便ack一个byte即可
+        lp_touch_eartch_trim_dc_start(1);
+        break;
+    case TOUCH_CH_TRIM_IN_START:
+        log_debug("TOUCH_CH_TRIM_IN_START");
+        app_online_db_ack(parse_seq, (u8 *)"OK", 1); //该命令随便ack一个byte即可
+        lp_touch_eartch_trim_dc_start(0);
+        break;
+    case TOUCH_CH_TRIM_ENABLE:
+        app_online_db_ack(parse_seq, (u8 *)"OK", 1); //该命令随便ack一个byte即可
+        lp_touch_eartch_set_trim_valid(1);
+        break;
+    case TOUCH_CH_TRIM_DISABLE:
+        app_online_db_ack(parse_seq, (u8 *)"OK", 1); //该命令随便ack一个byte即可
+        lp_touch_eartch_set_trim_valid(0);
+        break;
+    case TOUCH_CH_TRIM_CLEAR:
+        app_online_db_ack(parse_seq, (u8 *)"OK", 1); //该命令随便ack一个byte即可
+        lp_touch_eartch_trim_dc_clear();
+        break;
+#endif
 
     default:
         break;
@@ -285,13 +600,16 @@ static int lp_touch_key_online_debug_parse(u8 *packet, u8 size, u8 *ext_data, u1
 
 #ifdef TOUCH_KEY_IDENTIFY_ALGO_IN_MSYS
 #else
-    if (touch_cmd->cmd_id == TOUCH_RECORD_START) {
+    log_debug("cmd_id:%04X", touch_cmd->cmd_id);
+    if (touch_cmd->cmd_id == TOUCH_RECORD_START || ((touch_cmd->cmd_id >= TOUCH_CH_TRIM_OUT_START) && (touch_cmd->cmd_id <= TOUCH_CH_TRIM_DISABLE))) {
+        log_debug("active debug");
         if (lp_key_online.current_record_ch < LPCTMU_CHANNEL_SIZE) {
             M2P_CTMU_CH_DEBUG |= BIT(lp_key_online.current_record_ch);
         } else {
             M2P_CTMU_CH_DEBUG = 0xff;
         }
     } else {
+        log_debug("close debug");
         M2P_CTMU_CH_DEBUG = 0;
     }
 #endif
@@ -302,6 +620,8 @@ static int lp_touch_key_online_debug_parse(u8 *packet, u8 size, u8 *ext_data, u1
 int lp_touch_key_online_debug_init(void)
 {
     log_debug("%s", __func__);
+
+    calculate_single_item_size();
 
     memset((u8 *)&lp_key_online, 0, sizeof(struct lp_touch_key_online));
 

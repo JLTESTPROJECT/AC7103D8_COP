@@ -215,7 +215,7 @@ int realme_check_upgrade_area(int update)
 {
     u32 realme_breakpoint;
     if (update) {
-        dual_bank_erase_other_bank();
+        dual_bank_erase_other_bank(0);
     } else {
         realme_ota_breakpoint_init();
         realme_breakpoint = realme_ota_breakpoint_read();

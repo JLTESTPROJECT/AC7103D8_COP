@@ -76,7 +76,6 @@ struct cvp_cfg_t {
 //------------------stream.bin CVP参数文件解析结构-END---------------//
 
 struct cvp_node_hdl {
-    char name[16];
     enum stream_scene scene;
     AEC_CONFIG online_cfg;
     struct stream_frame *frame[3];	//输入frame存储，算法输入缓存使用
@@ -86,6 +85,8 @@ struct cvp_node_hdl {
     u32 ref_sr;
     u16 source_uuid; //源节点uuid
     u8 talk_mic_ch;					//通话MIC
+    void (*lock)(void);
+    void (*unlock)(void);
     struct CVP_REF_MIC_CONFIG ref_mic;
     u8 ref_mic_num; //回采mic个数
 };
@@ -209,7 +210,7 @@ int cvp_sms_param_cfg_read(void)
 
 u8 cvp_get_talk_mic_ch(void)
 {
-    u8 talk_mic_ch = audio_adc_file_get_mic_en_map();;
+    u8 talk_mic_ch = audio_adc_file_get_mic_en_map();
 
     if (global_cvp_cfg.ref_mic.en) { //参考数据硬回采
         u8 ref_mic_ch = global_cvp_cfg.ref_mic.ref_mic_ch;
@@ -271,8 +272,7 @@ int cvp_sms_node_param_cfg_read(void *priv, u8 ignore_subid, u16 algo_uuid)
      * */
     if (config_audio_cfg_online_enable) {
         if (g_cvp_hdl) {
-            memcpy(g_cvp_hdl->name, ncfg.name, sizeof(ncfg.name));
-            if (jlstream_read_effects_online_param(hdl_node(g_cvp_hdl)->uuid, g_cvp_hdl->name, &cfg, sizeof(cfg))) {
+            if (jlstream_read_effects_online_param(hdl_node(g_cvp_hdl)->uuid, ncfg.name, &cfg, sizeof(cfg))) {
                 printf("get cvp online param\n");
             }
         }
@@ -312,7 +312,7 @@ static void cvp_handle_frame(struct stream_iport *iport, struct stream_note *not
             if (++hdl->buf_cnt > ((CVP_INPUT_SIZE / 256) - 1)) {
                 hdl->buf_cnt = 0;
             }
-
+            hdl->lock();
             /*查找对应mic的数据index*/
             u8 mic_cnt = 0, ref_cnt = 0;
             for (int i = 0; i < AUDIO_ADC_MIC_MAX_NUM; i++) {
@@ -344,6 +344,7 @@ static void cvp_handle_frame(struct stream_iport *iport, struct stream_note *not
             }
             audio_aec_refbuf(ref_buf, NULL, wlen << hdl->ref_mic_num);
             audio_aec_inbuf(mic_buf, wlen << 1);
+            hdl->unlock();
         } else {//参考数据软回采
             dat = hdl->buf + (in_frame->len / 2 * hdl->buf_cnt);
             //模仿ADCbuff的存储方法
@@ -357,11 +358,44 @@ static void cvp_handle_frame(struct stream_iport *iport, struct stream_note *not
     }
 }
 
+static int cvp_sms_lock_init(struct cvp_node_hdl *hdl)
+{
+    int ret = false;
+    u16 node_uuid = hdl_node(hdl)->uuid;
+    if (hdl) {
+        switch (node_uuid) {
+#if (TCFG_AUDIO_CVP_SMS_ANS_MODE)
+        case NODE_UUID_CVP_SMS_ANS:
+            if (TCFG_AUDIO_SMS_SEL == SMS_TDE) { // TDE
+                hdl->lock   = audio_cvp_sms_tde_lock;
+                hdl->unlock = audio_cvp_sms_tde_unlock;
+            } else { // DEFAULT
+                hdl->lock   = audio_cvp_sms_lock;
+                hdl->unlock = audio_cvp_sms_unlock;
+            }
+#endif
+            break;
+#if (TCFG_AUDIO_CVP_SMS_DNS_MODE)
+        case NODE_UUID_CVP_SMS_DNS:
+            hdl->lock   = audio_cvp_sms_lock;
+            hdl->unlock = audio_cvp_sms_unlock;
+#endif
+            break;
+        default:
+            ASSERT(0, "cvp_sms_lock_init: unknown node UUID\n");
+            break;
+        }
+        ret = true;
+    }
+    return ret;
+}
+
 /*节点预处理-在ioctl之前*/
 static int cvp_adapter_bind(struct stream_node *node, u16 uuid)
 {
     struct cvp_node_hdl *hdl = (struct cvp_node_hdl *)node->private_data;
-
+    /*初始化spinlock*/
+    cvp_sms_lock_init(hdl);
     node->type = NODE_TYPE_ASYNC;
     g_cvp_hdl = hdl;
     /*先读取节点需要用的参数*/
@@ -373,7 +407,6 @@ static int cvp_adapter_bind(struct stream_node *node, u16 uuid)
 /*打开改节点输入接口*/
 static void cvp_ioc_open_iport(struct stream_iport *iport)
 {
-    iport->handle_frame = cvp_handle_frame;				//注册输出回调
 }
 
 /*节点参数协商*/
@@ -431,7 +464,7 @@ static void cvp_ioc_start(struct cvp_node_hdl *hdl)
     u8 mic_num; //算法需要使用的MIC个数
 
 #if TCFG_AUDIO_CVP_OUTPUT_WAY_IIS_ENABLE && (defined TCFG_IIS_NODE_ENABLE)
-    audio_cvp_ref_src_open(hdl->scene, audio_iis_get_sample_rate(iis_hdl[0]), fmt->sample_rate, 2);
+    audio_cvp_ref_src_open(hdl->scene, audio_iis_get_sample_rate(audio_cvp_ref_iis_hdl_get()), fmt->sample_rate, 2);
 #endif
 
     audio_aec_init(&init_param);
@@ -476,7 +509,11 @@ static int cvp_ioc_update_parm(struct cvp_node_hdl *hdl, int parm)
     struct cvp_cfg_t *cfg = (struct cvp_cfg_t *)parm;
     if (hdl) {
         cvp_sms_node_param_cfg_update(cfg, &hdl->online_cfg);
+#if (TCFG_AUDIO_SMS_SEL == SMS_DEFAULT)
         aec_cfg_update(&hdl->online_cfg);
+#elif (TCFG_AUDIO_SMS_SEL == SMS_TDE)
+        sms_tde_cfg_update(&hdl->online_cfg);
+#endif
         ret = true;
     }
     return ret;
@@ -511,11 +548,6 @@ static int cvp_adapter_ioctl(struct stream_iport *iport, int cmd, int arg)
     case NODE_IOC_SUSPEND:
     case NODE_IOC_STOP:
         cvp_ioc_stop(hdl);
-        break;
-    case NODE_IOC_NAME_MATCH:
-        if (!strcmp((const char *)arg, hdl->name)) {
-            ret = 1;
-        }
         break;
     case NODE_IOC_SET_PARAM:
 #if (TCFG_CFG_TOOL_ENABLE || TCFG_AEC_TOOL_ONLINE_ENABLE)
@@ -554,6 +586,7 @@ REGISTER_STREAM_NODE_ADAPTER(cvp_node_adapter) = {
     .bind       = cvp_adapter_bind,
     .ioctl      = cvp_adapter_ioctl,
     .release    = cvp_adapter_release,
+    .handle_frame = cvp_handle_frame,				//注册输出回调
     .hdl_size   = sizeof(struct cvp_node_hdl),
     .ability_channel_convert = 1, //支持声道转换
 };
@@ -568,3 +601,17 @@ REGISTER_ONLINE_ADJUST_TARGET(cvp_sms) = {
 };
 
 #endif/*TCFG_AUDIO_CVP_SMS_ANS_MODE || TCFG_AUDIO_CVP_SMS_DNS_MODE*/
+
+__attribute__((used))
+int sms_dns_version_1_0_0(void)
+{
+    return 0x100;
+}
+
+__attribute__((used))
+int sms_ans_version_1_0_0(void)
+{
+    return 0x100;
+}
+
+

@@ -3,6 +3,9 @@
 
 #include <asm/cpu.h>
 
+u8 get_jl_chip_id(void);
+u8 get_jl_chip_id2(void);
+
 __attribute__((always_inline))
 static inline u32 ucPortCountLeadingZeros(u32 ulBitmap)
 {
@@ -12,8 +15,9 @@ static inline u32 ucPortCountLeadingZeros(u32 ulBitmap)
 }
 
 extern const int config_asser;
-extern void cpu_assert(char *file, int line, bool condition, char *cond_str);
-extern void cpu_assert_debug();
+
+void cpu_assert(char *file, int line, bool condition, char *cond_str);
+void cpu_assert_debug();
 
 /* extern u32 rets_log[100];                               */
 /* extern u32 g_rets_idx;                                  */

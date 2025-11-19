@@ -29,7 +29,6 @@ extern anc_debug_t *anc_dbg;
 void anc_uart_init(int (*uart_write_hdl)(u8 *buf, u8 len));
 int anc_intlog(u32 int_para, u8 log_more);
 int anc_strlog(char *str, u8 log_more);
-void anc_uart_ctl();
 int anc_uart_process(u8 *dat, int len);
 
 #endif/*_ANC_DEBUG_H_*/

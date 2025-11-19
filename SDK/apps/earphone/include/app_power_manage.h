@@ -2,7 +2,6 @@
 #define APP_POWER_MANAGE_H
 
 #include "typedef.h"
-#include "system/event.h"
 
 #define LOW_POWER_WARN_TIME   	(60 * 1000)  //低电提醒时间
 
@@ -24,8 +23,10 @@ u8 get_tws_sibling_bat_level(void);
 u8 get_tws_sibling_bat_persent(void);
 bool get_vbat_need_shutdown(void);
 u8  get_self_battery_level(void);
+u8 battery_value_to_phone_level(void);
 
 void app_power_set_tws_sibling_bat_level(u8 vbat, u8 percent);
 void update_vbat_full_voltage(void);
+u16 get_vbat_voltage(void);
 #endif
 

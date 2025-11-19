@@ -1,3 +1,4 @@
+
 #ifdef SUPPORT_MS_EXTENSIONS
 #pragma bss_seg(".audio_cvp_develop.data.bss")
 #pragma data_seg(".audio_cvp_develop.data")
@@ -26,7 +27,6 @@
 #include "circular_buf.h"
 #include "overlay_code.h"
 #include "audio_config.h"
-#include "debug.h"
 #include "cvp_node.h"
 #include "sdk_config.h"
 
@@ -38,6 +38,14 @@
 #endif/*TCFG_AUDIO_DUT_ENABLE*/
 
 #if defined(TCFG_CVP_DEVELOP_ENABLE) && (TCFG_CVP_DEVELOP_ENABLE == CVP_CFG_USER_DEFINED)
+
+#define LOG_TAG_CONST       AEC_USER
+#define LOG_TAG             "[AEC_USER]"
+#define LOG_ERROR_ENABLE
+#define LOG_DEBUG_ENABLE
+#define LOG_INFO_ENABLE
+#include "debug.h"
+
 
 #define AEC_CLK				(160 * 1000000L)	/*模块运行时钟(MaxFre:160MHz)*/
 #define AEC_FRAME_POINTS	256					/*AEC处理帧长，跟mic采样长度关联*/
@@ -76,6 +84,7 @@ struct audio_cvp_dev {
     s16 *mic;				/*主mic数据地址*/
     s16 *mic_ref;			/*参考mic数据地址*/
     s16 *mic_ref_1;         /*参考mic数据地址*/
+    s16 *mic_ref_2;         /*参考mic数据地址*/
     s16 *pFar;			/*参考数据地址*/
     s16 *free_ram;			/*当前可用内存*/
     /* s16 spk_ref[AEC_FRAME_POINTS];	#<{(|扬声器参考数据|)}># */
@@ -86,10 +95,12 @@ struct audio_cvp_dev {
     struct mic_bulk in_bulk[MIC_BULK_MAX];
     struct mic_bulk inref_bulk[MIC_BULK_MAX];
     struct mic_bulk inref_1_bulk[MIC_BULK_MAX];
+    struct mic_bulk inref_2_bulk[MIC_BULK_MAX];
     struct mic_bulk ref0_bulk[MIC_BULK_MAX];
     struct list_head in_head;
     struct list_head inref_head;
     struct list_head inref_1_head;
+    struct list_head inref_2_head;
     struct list_head ref0_head;
     u8 output_way;
     u8 fm_tx_start;
@@ -101,6 +112,7 @@ struct audio_cvp_dev {
 };
 struct audio_cvp_dev *cvp_dev = NULL;
 
+static spinlock_t cvp_lock;
 #define AEC_REF_CBUF_SIZE         (AEC_FRAME_POINTS * 6)
 #define AEC_REF_CBUF_DOOR_SIZE    (AEC_REF_CBUF_SIZE / 2)
 static cbuffer_t *aec_ref_cbuf = NULL;
@@ -189,7 +201,7 @@ static void sys_memory_trace(void)
 #include "Resample_api.h"
 static RS_STUCT_API *sw_src_api = NULL;
 static unsigned int *sw_src_buf = NULL;
-#include "asm/audio_src.h"
+#include "audio_src.h"
 static struct audio_src_handle *ref_hw_src = NULL;;
 static u16 ref_hw_src_len = 0;
 
@@ -300,7 +312,7 @@ static void sw_src_exit(void)
 * Note(s)    : 在这里实现AEC_core
 *********************************************************************
 */
-static int audio_aec_run(s16 *in, s16 *inref, s16 *inref1, s16 *ref, s16 *out, u16 points)
+static int audio_aec_run(s16 *in, s16 *inref, s16 *inref1, s16 *inref2, s16 *ref, s16 *out, u16 points)
 {
     int out_size = 0;
     putchar('.');
@@ -356,6 +368,7 @@ static void audio_aec_task(void *priv)
     struct mic_bulk *bulk = NULL;
     struct mic_bulk *bulk_ref = NULL;
     struct mic_bulk *bulk_ref_1 = NULL;
+    struct mic_bulk *bulk_ref_2 = NULL;
     struct mic_bulk *ref0_bulk = NULL;
     u8 pend = 1;
     while (1) {
@@ -393,7 +406,12 @@ static void audio_aec_task(void *priv)
                     list_del(&bulk_ref_1->entry);
                     cvp_dev->mic_ref_1 = bulk_ref_1->addr;
                 }
-                /*获取参考数据*/
+                if (cvp_dev->mic_num >= 4) {
+                    /*获取参考数据*/
+                    bulk_ref_2 = list_first_entry(&cvp_dev->inref_2_head, struct mic_bulk, entry);
+                    list_del(&bulk_ref_2->entry);
+                    cvp_dev->mic_ref_2 = bulk_ref_2->addr;
+                }
                 cvp_dev->pFar = cvp_dev->spk_ref;
                 if (cvp_dev->output_way == 0) {
                     ref0_bulk = list_first_entry(&cvp_dev->ref0_head, struct mic_bulk, entry);
@@ -416,16 +434,16 @@ static void audio_aec_task(void *priv)
                     rlen = sw_src_run(cvp_dev->pFar, cvp_dev->pFar, rlen);
                 }
                 /*4.算法处理*/
-                int out_len = audio_aec_run(cvp_dev->mic, cvp_dev->mic_ref, cvp_dev->mic_ref_1, cvp_dev->pFar, cvp_dev->out, AEC_FRAME_POINTS);
+                int out_len = audio_aec_run(cvp_dev->mic, cvp_dev->mic_ref, cvp_dev->mic_ref_1, cvp_dev->mic_ref_2, cvp_dev->pFar, cvp_dev->out, AEC_FRAME_POINTS);
 
                 /*5.结果输出*/
                 cvp_dev->output_handle(cvp_dev->out, out_len);
 
                 /*6.数据导出*/
                 if (CONST_AEC_EXPORT) {
-                    aec_uart_fill(0, cvp_dev->mic, 512);            //主mic数据
+                    aec_uart_fill(0, cvp_dev->mic, 512);                //主mic数据
                     if (cvp_dev->mic_num == 1) {
-                        aec_uart_fill(1, cvp_dev->pFar, 512);       //扬声器数据
+                        aec_uart_fill(1, cvp_dev->pFar, 512);           //扬声器数据
                         aec_uart_fill(2, cvp_dev->out, out_len);        //算法运算结果
                     } else if (cvp_dev->mic_num == 2) {
                         if (CONST_AEC_EXPORT == 3) {
@@ -433,17 +451,22 @@ static void audio_aec_task(void *priv)
                         } else {
                             aec_uart_fill(1, cvp_dev->mic_ref, 512);
                         }
-
                         if (CONST_AEC_EXPORT == 1) {
                             aec_uart_fill(2, cvp_dev->pFar, 512);
                         } else {
                             aec_uart_fill(2, cvp_dev->out, out_len);
                         }
-                    } else {
+                    } else if (cvp_dev->mic_num == 3) {
                         aec_uart_fill(1, cvp_dev->mic_ref, 512);    //副mic数据
                         aec_uart_fill(2, cvp_dev->mic_ref_1, 512);  //扬声器数据
                         aec_uart_fill(3, cvp_dev->pFar, 512);       //扬声器数据
                         aec_uart_fill(4, cvp_dev->out, out_len);    //算法运算结果
+                    } else {
+                        aec_uart_fill(1, cvp_dev->mic_ref, 512);    //ff mic数据
+                        aec_uart_fill(2, cvp_dev->mic_ref_1, 512);  //fb mic数据
+                        aec_uart_fill(3, cvp_dev->mic_ref_2, 512);  //vpu mic数据
+                        aec_uart_fill(4, cvp_dev->pFar, 512);       //扬声器数据
+                        aec_uart_fill(5, cvp_dev->out, out_len);    //算法运算结
                     }
                     aec_uart_write();
                 }
@@ -454,6 +477,9 @@ static void audio_aec_task(void *priv)
                 }
                 if (cvp_dev->mic_num >= 3) {
                     bulk_ref_1->used = 0;
+                }
+                if (cvp_dev->mic_num >= 4) {
+                    bulk_ref_2->used = 0;
                 }
                 if (cvp_dev->output_way == 0) {
                     ref0_bulk->used = 0;
@@ -496,6 +522,7 @@ int audio_aec_open(struct audio_aec_init_param_t *init_param, s16 enablebit, int
     printf("cvp_dev size:%ld\n", sizeof(struct audio_cvp_dev));
     /* clk_set("sys", AEC_CLK); */
 
+    spin_lock_init(&cvp_lock);
     cvp_dev->mic_num = init_param->mic_num;
 
     cvp_dev->dump_packet = CVP_OUT_DUMP_PACKET;
@@ -550,6 +577,8 @@ int audio_aec_open(struct audio_aec_init_param_t *init_param, s16 enablebit, int
     INIT_LIST_HEAD(&cvp_dev->in_head);
     INIT_LIST_HEAD(&cvp_dev->inref_head);
     INIT_LIST_HEAD(&cvp_dev->inref_1_head);
+    INIT_LIST_HEAD(&cvp_dev->inref_2_head);
+
     if (cvp_dev->output_way == 0) {
         INIT_LIST_HEAD(&cvp_dev->ref0_head);
     }
@@ -582,7 +611,9 @@ int audio_aec_open(struct audio_aec_init_param_t *init_param, s16 enablebit, int
     task_create(audio_aec_task, NULL, "aec");
 
     if (CONST_AEC_EXPORT) {
-        if (cvp_dev->mic_num == 3) {
+        if (cvp_dev->mic_num == 4) {
+            aec_uart_open(6, 512);
+        } else if (cvp_dev->mic_num == 3) {
             aec_uart_open(5, 512);
         } else {
             aec_uart_open(3, 512);
@@ -695,7 +726,7 @@ u8 audio_aec_status(void)
     return 0;
 }
 
-int cvp_develop_read_ref_data(void)
+int cvp_develop_read_ref_data_base(void)
 {
     u16 rlen = -1;
     u8 i;
@@ -736,6 +767,32 @@ int cvp_develop_read_ref_data(void)
     return rlen;
 }
 
+int cvp_develop_read_ref_data(void)
+{
+    spin_lock(&cvp_lock);
+    int ret = cvp_develop_read_ref_data_base();
+    spin_unlock(&cvp_lock);
+    return ret;
+}
+/*
+*********************************************************************
+*                  Audio spinlock
+* Description: None
+* Arguments  : None
+*
+* Return	 : None.
+* Note(s)    : None
+*********************************************************************
+*/
+void audio_cvp_develop_lock()
+{
+    spin_lock(&cvp_lock);
+}
+
+void audio_cvp_develop_unlock()
+{
+    spin_unlock(&cvp_lock);
+}
 /*
 *********************************************************************
 *                  Audio AEC Input
@@ -782,6 +839,32 @@ void audio_aec_inbuf(s16 *buf, u16 len)
                 bulk->used = 0;
                 __list_del_entry(&bulk->entry);
             }
+            if (cvp_dev->mic_num == 2) {
+                list_for_each_entry(bulk, &cvp_dev->inref_head, entry) {
+                    bulk->used = 0;
+                    __list_del_entry(&bulk->entry);
+                }
+            }
+            if (cvp_dev->mic_num == 3) {
+                list_for_each_entry(bulk, &cvp_dev->inref_1_head, entry) {
+                    bulk->used = 0;
+                    __list_del_entry(&bulk->entry);
+                }
+            }
+            if (cvp_dev->mic_num == 4) {
+                list_for_each_entry(bulk, &cvp_dev->inref_2_head, entry) {
+                    bulk->used = 0;
+                    __list_del_entry(&bulk->entry);
+                }
+            }
+            if (cvp_dev->adc_ref_en == 1) {
+                list_for_each_entry(bulk, &cvp_dev->ref0_head, entry) {
+                    bulk->used = 0;
+                    __list_del_entry(&bulk->entry);
+                }
+
+            }
+
             return;
         }
         os_sem_set(&cvp_dev->sem, 0);
@@ -876,6 +959,52 @@ void audio_aec_inbuf_ref_1(s16 *buf, u16 len)
             /*align reset*/
             struct mic_bulk *bulk;
             list_for_each_entry(bulk, &cvp_dev->inref_1_head, entry) {
+                bulk->used = 0;
+                __list_del_entry(&bulk->entry);
+            }
+            return;
+        }
+    }
+}
+
+/*
+*********************************************************************
+*                  Audio AEC Input Reference
+* Description: AEC源参考数据输入
+* Arguments  : buf	输入源数据地址
+*			   len	输入源数据长度
+* Return	 : None.
+* Note(s)    : 双mic ENC的参考mic数据输入,单mic的无须调用该接口
+*********************************************************************
+*/
+void audio_aec_inbuf_ref_2(s16 *buf, u16 len)
+{
+    if (cvp_dev && cvp_dev->start) {
+        if (cvp_dev->output_way == 1) {
+            if ((cvp_dev->ref_ok == 0) || (cvp_dev->fm_tx_start == 0)) {
+                if (cvp_dev->ref_ok && !cvp_dev->fm_tx_start) {
+                    printf("[aec]fm_tx_start == 0\n");
+                }
+                return;
+            }
+        }
+
+        int i = 0;
+        for (i = 0; i < MIC_BULK_MAX; i++) {
+            if (cvp_dev->inref_2_bulk[i].used == 0) {
+                break;
+            }
+        }
+        if (i < MIC_BULK_MAX) {
+            cvp_dev->inref_2_bulk[i].addr = buf;
+            cvp_dev->inref_2_bulk[i].used = 0x55;
+            cvp_dev->inref_2_bulk[i].len = len;
+            list_add_tail(&cvp_dev->inref_2_bulk[i].entry, &cvp_dev->inref_2_head);
+        } else {
+            printf(">>>aec_inref_2_full\n");
+            /*align reset*/
+            struct mic_bulk *bulk;
+            list_for_each_entry(bulk, &cvp_dev->inref_2_head, entry) {
                 bulk->used = 0;
                 __list_del_entry(&bulk->entry);
             }

@@ -12,6 +12,7 @@
 #include "syscfg_id.h"
 #include "system/includes.h"
 
+#include "dtemp_pll_trim.h"
 
 //*******************************************
 // ****************dtemp pll trim************
@@ -91,6 +92,17 @@ int trim_timer_add()
 }
 __initcall(trim_timer_add);
 
+int trim_timer_del(void)
+{
+    if (config_bt_temperature_pll_trim) {
+        if (trim_timer_handle) {
+            task_kill("trim_task");
+            sys_s_hi_timer_del(trim_timer_handle);
+            trim_timer_handle = 0;
+        }
+    }
+    return 0;
+}
 
 static u8 pll_trim_idle_query(void)
 {

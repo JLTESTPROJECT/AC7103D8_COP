@@ -272,7 +272,7 @@ static void ci_uart_putbyte(char a)
 void ci_uart_write(u8 *buf, u16 len)
 {
     if (__this->udev != -1) {
-        uart_send_bytes(__this->udev, buf, len);
+        uart_send_blocking(__this->udev, buf, len, 0);
     }
 }
 

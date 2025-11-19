@@ -16,12 +16,26 @@ mixer_node_adapter
 dac_node_adapter
 #endif
 
-#if TCFG_APP_PC_EN || TCFG_APP_LINEIN_EN
+
+#if TCFG_DECODER_NODE_ENABLE
+decoder_node_adapter
+#endif
+
+#if TCFG_ENCODER_NODE_ENABLE
+encoder_node_adapter
+#endif
+
+#if TCFG_SRC_NODE_ENABLE
+resample_node_adapter
+#endif
+
+#if TCFG_BT_AUDIO_SYNC_NODE_ENABLE
+bt_audio_sync_node_adapter
+#endif
+
+#if TCFG_CLK_SYNC_NODE_ENABLE
 clk_sync_node_adapter
 #endif
-decoder_node_adapter
-resample_node_adapter
-bt_audio_sync_node_adapter
 
 #if TCFG_ADC_NODE_ENABLE
 adc_file_plug
@@ -36,24 +50,51 @@ ring_file_plug
 #if TCFG_KEY_TONE_NODE_ENABLE
 key_tone_file_plug
 #endif
-msbc_decoder_plug
 
+#ifndef TCFG_DEC_SBC_ENABLE
+#define TCFG_DEC_SBC_ENABLE 1
+#endif
+
+#ifndef TCFG_DEC_MSBC_ENABLE
+#define TCFG_DEC_MSBC_ENABLE 1
+#endif
+
+#ifndef TCFG_ENC_MSBC_ENABLE
+#define TCFG_ENC_MSBC_ENABLE 1
+#endif
+
+
+#if TCFG_TONE_SBC_ENABLE || TCFG_DEC_SBC_ENABLE || TCFG_TONE_MSBC_ENABLE || TCFG_DEC_MSBC_ENABLE || TCFG_ENC_MSBC_ENABLE
+sbc_hwaccel
+#endif
+
+#if TCFG_TONE_SBC_ENABLE || TCFG_DEC_SBC_ENABLE
 #if 0
 sbc_decoder_sw_plug
 #else
-sbc_hwaccel
 sbc_decoder_hw_plug
 #endif
+#endif
+
+#if TCFG_TONE_MSBC_ENABLE || TCFG_DEC_MSBC_ENABLE
+msbc_decoder_hw_plug
+#endif
+
 
 #if TCFG_PDM_NODE_ENABLE
 pdm_mic_file_plug
 #endif
 
-#if TCFG_BT_DONGLE_ENABLE
-msbc_encoder_soft_plug
-#else
-msbc_encoder_hw_plug
+#if TCFG_ENC_MSBC_ENABLE
+msbc_encoder_plug
 #endif
+
+
+#if TCFG_ENC_SBC_ENABLE
+sbc_encoder_soft_plug
+#endif
+
+
 
 #if TCFG_BT_SUPPORT_AAC || TCFG_DEC_AAC_ENABLE || TCFG_TONE_AAC_ENABLE
 aac_dec_plug
@@ -73,11 +114,20 @@ lc3_dec_plug
 capture_sync_adapter
 #endif
 
+#if TCFG_DEC_JLA_V2_ENABLE
+jla_v2_dec_plug
+#endif
+#if TCFG_ENC_JLA_V2_ENABLE
+jla_v2_enc_plug
+#endif
+
 #if TCFG_BT_SUPPORT_LDAC
 ldac_dec_plug
 #endif
 
+#if TCFG_TONE_SIN_ENABLE
 sine_dec_plug
+#endif
 cvsd_encoder_plug
 cvsd_decoder_plug
 #if TCFG_APP_PC_EN || TCFG_APP_LINEIN_EN
@@ -175,8 +225,20 @@ noisegate_node_adapter
 ns_node_adapter
 #endif
 
+#if TCFG_NS_NODE_LITE_ENABLE
+ns_node_lite_adapter
+#endif
+
 #if TCFG_DNS_NODE_ENABLE
 dns_node_adapter
+#endif
+
+#if TCFG_AUDIO_CVP_V3_MODE
+cvp_v3_node_adapter
+#endif
+
+#if TCFG_AUDIO_CVP_SMS_VF_MODE
+cvp_sms_vf_node_adapter
 #endif
 
 #if TCFG_DEC_WTG_ENABLE || TCFG_TONE_WTG_ENABLE
@@ -230,6 +292,10 @@ m4a_dec_plug
 
 #if TCFG_DEC_APE_ENABLE
 ape_dec_plug
+#endif
+
+#if TCFG_ENC_MP3_ENABLE
+mp3_encoder_plug
 #endif
 
 #if CONFIG_FATFS_ENABLE
@@ -329,6 +395,14 @@ sink_dev3_adapter
 sink_dev4_adapter
 #endif
 
+#if TCFG_FILE_PACKAGE_NODE_ENABLE
+packager_adapter
+#endif
+
+#if TCFG_WRITE_FILE_NODE_ENABLE
+write_file_adapter
+#endif
+
 #if TCFG_AGC_NODE_ENABLE
 agc_node_adapter
 #endif
@@ -385,6 +459,10 @@ indicator_node_adapter
 llns_node_adapter
 #endif
 
+#if TCFG_LLNS_DNS_NODE_ENABLE
+llns_dns_node_adapter
+#endif
+
 #if TCFG_VOICE_CHANGER_ADV_NODE_ENABLE
 voice_changer_adv_node_adapter
 #endif
@@ -403,6 +481,10 @@ vocal_track_separation_node_adapter
 
 #if TCFG_SWITCH_NODE_ENABLE
 switch_node_adapter
+#endif
+
+#if (defined TCFG_LOCAL_TWS_ENABLE) && TCFG_LOCAL_TWS_ENABLE
+local_tws_file_plug
 #endif
 
 #if TCFG_SURROUND_NODE_ENABLE
@@ -473,6 +555,10 @@ debug_task_record
 
 #if TCFG_SIGNAL_GENERATOR_NODE_ENABLE
 signal_generator_file_plug
+#endif
+
+#if TCFG_ZERO_ACTIVE_NODE_ENABLE
+zero_file_plug
 #endif
 
 #if TCFG_REPLACE_NODE_ENABLE
@@ -552,5 +638,17 @@ lhdc_x_node_adapter
 
 #if TCFG_MUTE_NODE_ENABLE
 mute_node_adapter
+#endif
+
+#if TCFG_VIRTUAL_SURROUND_HP_NODE_ENABLE
+virtual_surround_hp_node_adapter
+#endif
+
+#if TCFG_JL_VOCODER_DEC_ENABLE
+jl_vocoder_dec_plug
+#endif
+
+#if TCFG_JL_VOCODER_ENC_ENABLE
+jl_vocoder_encoder_plug
 #endif
 

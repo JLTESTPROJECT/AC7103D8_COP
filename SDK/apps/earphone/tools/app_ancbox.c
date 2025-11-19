@@ -176,6 +176,9 @@ struct _ancbox_info {
     int audio_dut_len;
     u8 *audio_dut_buffer;
 #endif
+    u8 *last_data;		//最后一包数据
+    u32 last_offset;	//最后一包数据的偏移量
+    u32 last_data_len;	//最后一包数据长度
 };
 
 #define DEFAULT_BAUDRATE            9600
@@ -263,11 +266,6 @@ enum {
 
 static struct _ancbox_info *ancbox_info;
 #define __this  ancbox_info
-extern void set_temp_link_key(u8 *linkkey);
-extern void chargestore_set_baudrate(u32 baudrate);
-extern int anc_mode_change_tool(u8 dat);
-extern void sys_auto_shut_down_disable(void);
-extern void sys_auto_shut_down_enable(void);
 
 static void ancbox_callback(u8 mode, u8 command)
 {
@@ -451,9 +449,15 @@ static void anc_read_file_data(u8 *cmd, u32 offset, u32 data_len)
     cmd[0] = CMD_ANC_MODULE;
     cmd[1] = CMD_ANC_READ_FILE_DATA;
     if (__this->file_hdl == NULL) {
-        cmd[1] = CMD_ANC_FAIL;
-        chargestore_api_write(cmd, 2);
-        return;
+        //若offset等于上次的offset, 则表示数据重发，发送最后一包数据
+        if ((__this->last_offset == offset) && __this->last_data && __this->last_data_len) {
+            memcpy(&cmd[2], __this->last_data, __this->last_data_len);
+            chargestore_api_write(cmd, data_len + 2);
+        } else {
+            cmd[1] = CMD_ANC_FAIL;
+            chargestore_api_write(cmd, 2);
+            return;
+        }
     }
 
     //读文件限制拦截
@@ -471,11 +475,21 @@ static void anc_read_file_data(u8 *cmd, u32 offset, u32 data_len)
     }
 
     //拆包读取数据
+    __this->last_offset = offset;
     memcpy(&cmd[2], __this->file_hdl + offset, data_len);
     chargestore_api_write(cmd, data_len + 2);
 
     //-----读文件结束:释放资源-----
     if (__this->file_len == offset + data_len) {
+
+        //记录最后一包数据缓存，支持最后一包数据重发
+        __this->last_data_len = data_len;
+        if (__this->last_data) {
+            free(__this->last_data)	;
+        }
+        __this->last_data = malloc(data_len);
+        memcpy(__this->last_data, __this->file_hdl + offset, data_len);
+
         switch (__this->file_id) {
         case FILE_ID_MIC_SPK:
             anc_debug_ctr(1);
@@ -561,17 +575,15 @@ static void anc_write_file_start(u8 *cmd, u32 id, u32 data_len)
 
 static void anc_write_file_data(u8 *cmd, u32 offset, u8 *data, u32 data_len)
 {
-    if (__this->file_id) {
-        if (__this->file_hdl == NULL || ((offset + data_len) > __this->file_len)) {
-            cmd[0] = CMD_ANC_MODULE;
-            cmd[1] = CMD_ANC_FAIL;
-            chargestore_api_write(cmd, 2);
-        } else {
-            memcpy(__this->file_hdl + offset, data, data_len);
-            cmd[0] = CMD_ANC_MODULE;
-            cmd[1] = CMD_ANC_WRITE_FILE_DATA;
-            chargestore_api_write(cmd, 2);
-        }
+    if (__this->file_hdl == NULL || ((offset + data_len) > __this->file_len)) {
+        cmd[0] = CMD_ANC_MODULE;
+        cmd[1] = CMD_ANC_FAIL;
+        chargestore_api_write(cmd, 2);
+    } else {
+        memcpy(__this->file_hdl + offset, data, data_len);
+        cmd[0] = CMD_ANC_MODULE;
+        cmd[1] = CMD_ANC_WRITE_FILE_DATA;
+        chargestore_api_write(cmd, 2);
     }
 }
 

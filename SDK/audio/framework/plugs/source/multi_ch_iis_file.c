@@ -274,6 +274,7 @@ static void iis_rx_init(struct iis_file_hdl *hdl)
         aparams.dma_size   = audio_iis_fix_dma_len(hdl->module_idx, TCFG_AUDIO_DAC_BUFFER_TIME_MS, AUDIO_IIS_IRQ_POINTS, hdl->bit_width, IIS_CH_NUM, AUDIO_DAC_MAX_SAMPLE_RATE);
         aparams.sr         = hdl->sample_rate;
         aparams.bit_width  = hdl->bit_width;
+        aparams.clk_close = TCFG_AUDIO_IIS_CLOCK_CLOSE;
         iis_hdl[hdl->module_idx] = audio_iis_init(aparams);
     }
     if (!iis_hdl[hdl->module_idx]) {
@@ -319,6 +320,10 @@ static void iis_ioc_get_fmt(struct iis_file_hdl *hdl, struct stream_fmt *fmt)
         }
         hdl->channel_mode   = AUDIO_CH_MIX;
         break;
+
+    case STREAM_SCENE_WIRELESS_MIC:
+        hdl->channel_mode   = (LE_AUDIO_CODEC_CHANNEL == 2 ?  AUDIO_CH_LR : AUDIO_CH_MIX);
+        break;
     case STREAM_SCENE_MIC_EFFECT:
         hdl->channel_mode   = AUDIO_CH_MIX;
         break;
@@ -356,6 +361,7 @@ static void iis_file_start(struct iis_file_hdl *hdl)
                 struct iis_rx_ch *ch = &hdl->ch[i];
                 ch->dump_cnt = 0;
                 ch->value = 0;
+                audio_iis_check_hw_cfg_status(hdl->module_idx, i, ALINK_DIR_RX);
             }
         }
     }

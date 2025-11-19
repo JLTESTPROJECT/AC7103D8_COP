@@ -32,7 +32,6 @@
 #endif
 
 struct volume_hdl {
-    char name[16];                  //节点名称
     enum stream_scene scene;
     u8 state;
     u8 online_update_disable;       //是否支持在线音量更新
@@ -75,7 +74,6 @@ static int volume_bind(struct stream_node *node, u16 uuid)
 
 static void volume_open_iport(struct stream_iport *iport)
 {
-    iport->handle_frame = volume_handle_frame;
 }
 
 
@@ -89,10 +87,11 @@ static void volume_ioc_start(struct volume_hdl *hdl)
     /*
      * 获取配置文件内的参数,及名字
      */
+    char name[16];                  //节点名称
+    int ret = jlstream_read_node_info_data(hdl_node(hdl)->uuid, hdl_node(hdl)->subid,
+                                           name, &info);
     if (hdl->read_cfg == 0) {
         hdl->read_cfg = 1;
-        int ret = jlstream_read_node_info_data(hdl_node(hdl)->uuid, hdl_node(hdl)->subid,
-                                               hdl->name, &info);
         if (ret) {
             vol_cfg = zalloc(info.size);
             if (vol_cfg) {
@@ -104,8 +103,8 @@ static void volume_ioc_start(struct volume_hdl *hdl)
                     audio_digital_vol_db_2_gain(vol_cfg->vol_table, vol_cfg->cfg_level_max,
                                                 hdl->vol_table);
                 }
+                free(vol_cfg);
             }
-            free(vol_cfg);
         }
     }
     vol_cfg = &hdl->vol_cfg;
@@ -119,7 +118,7 @@ static void volume_ioc_start(struct volume_hdl *hdl)
     if (config_audio_cfg_online_enable) {
         u32 online_cfg_len = sizeof(struct volume_cfg) + DIGITAL_VOLUME_LEVEL_MAX * sizeof(float);
         struct volume_cfg *online_vol_cfg = zalloc(online_cfg_len);
-        if (jlstream_read_effects_online_param(hdl_node(hdl)->uuid, hdl->name,
+        if (jlstream_read_effects_online_param(hdl_node(hdl)->uuid, name,
                                                online_vol_cfg, online_cfg_len)) {
             /* printf("cfg_level_max = %d\n", online_vol_cfg->cfg_level_max); */
             /* printf("cfg_vol_min = %d\n", online_vol_cfg->cfg_vol_min); */
@@ -141,6 +140,7 @@ static void volume_ioc_start(struct volume_hdl *hdl)
     }
 
     switch (hdl->scene) {
+#if TCFG_TONE_NODE_ENABLE
     case STREAM_SCENE_TONE:
         hdl->state          = APP_AUDIO_STATE_WTONE;
         params.fade_step    = TONE_DVOL_FS;
@@ -148,6 +148,8 @@ static void volume_ioc_start(struct volume_hdl *hdl)
         audio_digital_vol_bg_fade(1);
 #endif
         break;
+#endif
+#if TCFG_RING_TONE_NODE_ENABLE
     case STREAM_SCENE_RING:
         hdl->state          = APP_AUDIO_STATE_RING;
         params.fade_step    = TONE_DVOL_FS;
@@ -155,6 +157,8 @@ static void volume_ioc_start(struct volume_hdl *hdl)
         audio_digital_vol_bg_fade(1);
 #endif
         break;
+#endif
+#if TCFG_KEY_TONE_NODE_ENABLE
     case STREAM_SCENE_KEY_TONE:
         hdl->state          = APP_AUDIO_STATE_KTONE;
         params.fade_step    = TONE_DVOL_FS;
@@ -162,11 +166,26 @@ static void volume_ioc_start(struct volume_hdl *hdl)
         audio_digital_vol_bg_fade(1);
 #endif
         break;
+#endif
+#if TCFG_AI_PLAYER_ENABLE
+    case STREAM_SCENE_AI_VOICE:
+        hdl->state = APP_AUDIO_STATE_MUSIC;
+        params.fade_step  = MUSIC_DVOL_FS;
+        break;
+#endif
     case STREAM_SCENE_LEA_CALL:
     case STREAM_SCENE_ESCO:
         hdl->state          = APP_AUDIO_STATE_CALL;
         params.fade_step    = CALL_DVOL_FS;
         break;
+#if TCFG_AUDIO_HEARING_AID_ENABLE
+    case STREAM_SCENE_HEARING_AID:
+        vol_cfg->cfg_level_max = app_audio_get_max_volume();
+        /* puts("STREAM_SCENE_HEARING_AID , max_vol:%d\n", vol_cfg->cfg_level_max); */
+        hdl->state          = APP_AUDIO_STATE_MUSIC;
+        params.fade_step    = MUSIC_DVOL_FS;
+        break;
+#endif
     default:
         hdl->state          = APP_AUDIO_STATE_MUSIC;
         params.fade_step    = MUSIC_DVOL_FS;
@@ -196,7 +215,7 @@ static void volume_ioc_start(struct volume_hdl *hdl)
 
 #ifdef DVOL_2P1_CH_DVOL_ADJUST_NODE
 #if (DVOL_2P1_CH_DVOL_ADJUST_NODE == DVOL_2P1_CH_DVOL_ADJUST_LR)
-    char *substr = strstr(hdl->name, "Music");
+    char *substr = strstr(name, "Music");
     if (!strcmp(substr, "Music") || !strcmp(substr, "Music2")) { //找到默认初始化为最大音量的节点
         //printf("enter volume_node.c %d,%p,%s\n", __LINE__, hdl->dvol_hdl, substr);
         audio_digital_vol_set(hdl->dvol_hdl, vol_cfg->cfg_level_max);
@@ -207,7 +226,7 @@ static void volume_ioc_start(struct volume_hdl *hdl)
         app_audio_state_switch(hdl->state, vol_cfg->cfg_level_max, hdl->dvol_hdl);
     }
 #elif (DVOL_2P1_CH_DVOL_ADJUST_NODE == DVOL_2P1_CH_DVOL_ADJUST_SW)
-    char *substr = strstr(hdl->name, "Music");
+    char *substr = strstr(name, "Music");
     if (!strcmp(substr, "Music") || !strcmp(substr, "Music1")) { //找到默认初始化为最大音量的节点
         // printf("enter volume_node.c %d,%p,%s\n", __LINE__, hdl->dvol_hdl, substr);
         audio_digital_vol_set(hdl->dvol_hdl, vol_cfg->cfg_level_max);
@@ -218,7 +237,7 @@ static void volume_ioc_start(struct volume_hdl *hdl)
         app_audio_state_switch(hdl->state, vol_cfg->cfg_level_max, hdl->dvol_hdl);
     }
 #else
-    if (memchr(hdl->name, '1', 16) || memchr(hdl->name, '2', 16)) { //找到默认初始化为最大音量的节点
+    if (memchr(name, '1', 16) || memchr(name, '2', 16)) { //找到默认初始化为最大音量的节点
         //printf("enter volume_node.c %d,%p\n", __LINE__, hdl->dvol_hdl);
         audio_digital_vol_set(hdl->dvol_hdl, vol_cfg->cfg_level_max);
         audio_digital_vol_set_mute(hdl->dvol_hdl, 0);
@@ -404,12 +423,6 @@ static int volume_ioctl(struct stream_iport *iport, int cmd, int arg)
     case NODE_IOC_SUSPEND:
         volume_ioc_stop(hdl);
         break;
-    case NODE_IOC_NAME_MATCH:
-        /* printf("volume_node name match :%s,%s\n", hdl->name, (const char *)arg); */
-        if (!strcmp((const char *)arg, hdl->name)) {
-            ret = 1;
-        }
-        break;
     case NODE_IOC_SET_PARAM:
         ret = volume_ioc_update_parm(hdl, arg);
         break;
@@ -438,10 +451,21 @@ REGISTER_STREAM_NODE_ADAPTER(volume_node_adapter) = {
     .bind       = volume_bind,
     .ioctl      = volume_ioctl,
     .release    = volume_release,
+    .handle_frame = volume_handle_frame,
     .hdl_size   = sizeof(struct volume_hdl),
+    .ability_channel_in = 1 | 2 | 4,
+    .ability_channel_out = 1 | 2 | 4,
 };
 
 REGISTER_ONLINE_ADJUST_TARGET(volume) = {
     .uuid = NODE_UUID_VOLUME_CTRLER,
 };
+
+__attribute__((used))
+int volume_version_1_0_0(void)
+{
+    return 0x100;
+}
+
+
 

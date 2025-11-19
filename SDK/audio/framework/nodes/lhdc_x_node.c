@@ -22,7 +22,6 @@
 #endif
 
 struct lhdc_x_node_hdl {
-    char name[16];
     struct stream_iport *iport;
     struct jlstream_fade fade;
     void *lhdc_x_buf;   //算法buf
@@ -103,7 +102,6 @@ static int lhdc_x_adapter_bind(struct stream_node *node, u16 uuid)
 /*打开改节点输入接口*/
 static void lhdc_x_ioc_open_iport(struct stream_iport *iport)
 {
-    iport->handle_frame = lhdc_x_handle_frame;				//注册输出回调
 }
 
 
@@ -120,7 +118,8 @@ static void lhdc_x_ioc_start(struct lhdc_x_node_hdl *hdl)
     /*
      *获取配置文件内的参数,及名字
      * */
-    int len = jlstream_read_node_data_new(hdl_node(hdl)->uuid, hdl_node(hdl)->subid, (void *)&cfg, hdl->name);
+    char name[16];
+    int len = jlstream_read_node_data_new(hdl_node(hdl)->uuid, hdl_node(hdl)->subid, (void *)&cfg, name);
     if (!len) {
         log_error("%s, read node data err\n", __FUNCTION__);
         hdl->is_bypass = 1;
@@ -131,7 +130,7 @@ static void lhdc_x_ioc_start(struct lhdc_x_node_hdl *hdl)
      *获取在线调试的临时参数
      * */
     if (config_audio_cfg_online_enable) {
-        if (jlstream_read_effects_online_param(hdl_node(hdl)->uuid, hdl->name, &cfg, sizeof(cfg))) {
+        if (jlstream_read_effects_online_param(hdl_node(hdl)->uuid, name, &cfg, sizeof(cfg))) {
             log_debug("get echo online param\n");
         }
     }
@@ -182,12 +181,6 @@ static int lhdc_x_adapter_ioctl(struct stream_iport *iport, int cmd, int arg)
     case NODE_IOC_STOP:
         lhdc_x_ioc_stop(hdl);
         break;
-    case NODE_IOC_NAME_MATCH:
-        if (!strcmp((const char *)arg, hdl->name)) {
-            ret = 1;
-        }
-        break;
-
     case NODE_IOC_SET_PARAM:
         ret = lhdc_x_ioc_update_parm(hdl, arg);
         break;
@@ -209,6 +202,7 @@ REGISTER_STREAM_NODE_ADAPTER(lhdc_x_node_adapter) = {
     .bind       = lhdc_x_adapter_bind,
     .ioctl      = lhdc_x_adapter_ioctl,
     .release    = lhdc_x_adapter_release,
+    .handle_frame = lhdc_x_handle_frame,				//注册输出回调
     .hdl_size   = sizeof(struct lhdc_x_node_hdl),
     .ability_channel_in = 2,
     .ability_channel_out = 2,

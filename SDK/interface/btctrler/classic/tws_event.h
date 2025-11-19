@@ -40,6 +40,7 @@ enum tws_detach_reason {
     TWS_DETACH_BY_TESTBOX_CON   = 0x20,
     TWS_DETACH_SUSS             = 0x40,
     TWS_DETACH_BY_FORCE         = 0x80,
+    TWS_DETACH_BY_USER          = 0x100,
 };
 
 

@@ -8,11 +8,30 @@
 #include "os/os_api.h"
 #include "system/init.h"
 #include "app_config.h"
+#include "audio_dac.h"
+#include "audio_decoder.h"
 
 static struct tone_player *g_ring_player = NULL;
 static OS_MUTEX g_ring_mutex;
+static struct audio_repeat_mode_param rep = {0};//设置循环播放的参数
 
 extern const struct stream_file_ops tone_file_ops;
+
+static int ring_dec_repeat_cb(void *priv)
+{
+    return 0; //return 0继续循环,return 1停止循环
+}
+
+int ring_set_repeat_en(struct jlstream *stream)
+{
+    if (stream) {
+        rep.flag = 1; //使能
+        rep.callback_priv = NULL;
+        rep.repeat_callback = ring_dec_repeat_cb;
+        return jlstream_node_ioctl(stream, NODE_UUID_DECODER, NODE_IOC_DECODER_REPEAT, (int)&rep);
+    };
+    return -EPERM;
+}
 
 static void ring_player_callback(void *_player_id, int event)
 {
@@ -24,6 +43,9 @@ static void ring_player_callback(void *_player_id, int event)
         if (player && player->player_id == (u8)_player_id) {
             if (player->callback) {
                 player->callback(player->priv,  STREAM_EVENT_START);
+            }
+            if (player->coding_type == AUDIO_CODING_MTY) {//铃声循环播放
+                ring_set_repeat_en(player->stream);
             }
         }
         os_mutex_post(&g_ring_mutex);
@@ -41,6 +63,7 @@ static void ring_player_callback(void *_player_id, int event)
         jlstream_release(player->stream);
         os_mutex_post(&g_ring_mutex);
 
+        DAC_NOISEGATE_ON();
         tone_player_free(player);
         break;
     }
@@ -74,6 +97,7 @@ int ring_player_start(struct tone_player *player)
     }
     jlstream_set_dec_file(player->stream, player, &tone_file_ops);
 
+    DAC_NOISEGATE_OFF();
     err = jlstream_start(player->stream);
     if (err) {
         goto __exit;
@@ -87,6 +111,7 @@ __exit:
         jlstream_release(player->stream);
     }
 
+    DAC_NOISEGATE_ON();
     tone_player_free(player);
     return err;
 }
@@ -171,6 +196,7 @@ void ring_player_stop()
         if (player->stream) {
             jlstream_stop(player->stream, 50);
             jlstream_release(player->stream);
+            DAC_NOISEGATE_ON();
         }
         g_ring_player = NULL;
     }
@@ -181,6 +207,7 @@ void ring_player_stop()
     }
 }
 
+#if TCFG_RING_TONE_NODE_ENABLE
 __INITCALL_BANK_CODE
 static int __ring_player_init()
 {
@@ -188,4 +215,4 @@ static int __ring_player_init()
     return 0;
 }
 __initcall(__ring_player_init);
-
+#endif

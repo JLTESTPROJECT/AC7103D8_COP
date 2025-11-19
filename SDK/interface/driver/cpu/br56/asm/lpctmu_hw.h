@@ -101,6 +101,22 @@ struct lpctmu_config_data {
     u8 ch_en;
     u8 ch_wkp_en;
     u8 softoff_wakeup_cfg;
+
+    u8 ch_key_num;
+    u8 ch_key_en;
+    u8 ch_ear_en;
+    volatile u8 sample_cnt;
+    u8 sample_cnt_max;
+    volatile u8 ear_sample_dis;
+    volatile u8 ear_sample_cnt;
+    u8 ear_sample_cnt_max;
+    volatile u8 ear_group_cnt;
+    u8 ear_group_cnt_max;
+    u8 ear_ch_list[2][2];
+    u8 ear_ref_io_mode[2];
+    s16 ch_p_res[LPCTMU_CHANNEL_SIZE + 2];
+    s16 ch_pp_res[LPCTMU_CHANNEL_SIZE + 2];
+
     u16 lim_l[LPCTMU_CHANNEL_SIZE];
     u16 lim_h[LPCTMU_CHANNEL_SIZE];
     u16 lim_span_max[LPCTMU_CHANNEL_SIZE];
@@ -168,6 +184,9 @@ void lpctmu_lowpower_enter(u32 lowpwr_mode);
 
 void lpctmu_lowpower_exit(u32 lowpwr_mode);
 
+void lpctmu_eartch_enable(void);
+
+void lpctmu_eartch_disable(void);
 
 
 #endif

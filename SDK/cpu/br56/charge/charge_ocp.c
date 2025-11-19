@@ -17,12 +17,12 @@
 #define OCP_CH    AD_CH_OCP
 #define CHARGE_OCP_TRIM_VDDIOM  3000 //ocp_trim 的vddiom档位对应的电压
 #define CHARGE_OCP_TRIM_VALUE_TIMES  10 //ocp_trim_value 采样 N 次之和
-#define CHARGE_OCP_CURRENT_MAX  100 //电流最大值,过流推关机消息 单位:mA
+#define CHARGE_OCP_CURRENT_MAX  200 //电流最大值,过流推关机消息 单位:mA
 
 extern const u8 adc_data_res; //adc 采样精度
 struct trim_data_item {
-    u32 k: 12;
-    u32 offset: 20;
+    u32 k;
+    u32 offset;
 };
 struct charge_ocp_info {
     struct trim_data_item trim;
@@ -38,8 +38,8 @@ u32 charge_ocp_init()
     log_info("func:%s()\n", __func__);
     struct trim_data_item item_fuse;
     extern u32 syscfg_read_otp(u32 id, u8 * buf, u32 len);
-    int len = syscfg_read_otp(0x401, (u8 *)&item_fuse, 4);
-    ASSERT(len == 4, "func:%s(), line:%d, len = %d, get_ocp_trim fail!\n", __func__, __LINE__, len);
+    int len = syscfg_read_otp(0x401, (u8 *)&item_fuse, sizeof(struct trim_data_item));
+    ASSERT(len == sizeof(struct trim_data_item), "func:%s(), line:%d, len = %d, get_ocp_trim fail!\n", __func__, __LINE__, len);
     /* void dump_otp_info(); */
     /* dump_otp_info(); */
 

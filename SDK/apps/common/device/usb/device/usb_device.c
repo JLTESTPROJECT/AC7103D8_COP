@@ -15,6 +15,7 @@
 #include "usb/device/custom_hid.h"
 #include "usb/device/uac_audio.h"
 #include "usb/device/cdc.h"
+#include "usb/device/iap.h"
 #include "usb/device/midi.h"
 #include "usb/device/printer.h"
 #include "irq.h"
@@ -85,6 +86,10 @@ int usb_device_mode(const usb_dev usb_id, const u32 class)
         msd_release(usb_id);
 #endif
 
+#if TCFG_USB_APPLE_DOCK_EN
+        iap_release(usb_id);
+#endif
+
 #if TCFG_USB_SLAVE_AUDIO_SPK_ENABLE
         uac_spk_release(usb_id);
 #endif
@@ -139,6 +144,14 @@ int usb_device_mode(const usb_dev usb_id, const u32 class)
         log_info("add desc msd");
         usb_add_desc_config(usb_id, class_index++, msd_desc_config);
         msd_register(usb_id);
+    }
+#endif
+
+#if TCFG_USB_APPLE_DOCK_EN
+    if ((class & IAP_CLASS) == IAP_CLASS) {
+        log_info("add desc iap");
+        usb_add_desc_config(usb_id, class_index++, iap_desc_config);
+        iap_register(usb_id);
     }
 #endif
 

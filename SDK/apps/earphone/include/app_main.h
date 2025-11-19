@@ -48,7 +48,6 @@ typedef struct _APP_VAR {
     u8 remote_dev_company;
     u8 siri_stu;
     u8 cycle_mode;
-    u8 have_mass_storage;
     u8 poweron_reason;
     u8 poweroff_reason;
     u8 update_tone_end_flag;//升级完成后提示音播放结束标志位
@@ -100,7 +99,9 @@ struct bt_mode_var {
     u8 wait_exit; //蓝牙等待退出
     u8 ignore_discon_tone;  // 1-退出蓝牙模式， 不响应discon提示音
     u8 bt_dual_conn_config;
+    u8 control_device_type;  //用于区分1T2场景想要控制哪个连接类型的设备
     background_var background;  //蓝牙后台相关变量
+    u16 get_music_player_timer;
 };
 
 typedef struct _BT_USER_COMM_VAR {
@@ -116,6 +117,7 @@ enum app_mode_t {
     APP_MODE_MUSIC,
     APP_MODE_LINEIN,
     APP_MODE_PC,
+    APP_MODE_SINK,
 };
 
 enum app_mode_index {
@@ -123,6 +125,13 @@ enum app_mode_index {
     APP_MODE_MUSIC_INDEX,
     APP_MODE_LINEIN_INDEX,
     APP_MODE_PC_INDEX,
+};
+
+enum {
+    CONTROL_ALL,  //不限制连接类型进行控制
+    CONTROL_EDR,  //控制edr设备
+    CONTROL_CIS,
+    CONTROL_BIS,
 };
 
 #define earphone (&bt_user_priv_var)

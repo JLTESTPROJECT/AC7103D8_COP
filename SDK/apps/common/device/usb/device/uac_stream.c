@@ -33,6 +33,9 @@
 #include "debug.h"
 
 
+#define UAC_SPEAKER_STREAM_DETECT_INTERVAL  2
+#define UAC_SPEAKER_STREAM_DETECT_COUNT     5
+
 static volatile u8 speaker_stream_is_open = 0;
 static volatile u8 mic_stream_is_open = 0;
 
@@ -40,10 +43,13 @@ struct uac_speaker_handle {
     cbuffer_t cbuf;
     volatile u8 need_resume;
     u8 channel;
+    u8 stream_state;
     u32 samplerate;
     u32 bitwidth;
     u32 timestamp;
     //void (*rx_handler)(int, void *, int);
+    u16 timer_id;
+    u16 stream_halt_cnt;
 };
 
 static void (*uac_rx_handler)(int, void *, int) = NULL;
@@ -74,6 +80,23 @@ void set_uac_speaker_rx_handler(void *priv, void (*rx_handler)(int, void *, int)
 //这里起中断往后面推数
 void uac_speaker_stream_write(const u8 *obuf, u32 len)
 {
+
+    if (!uac_speaker) {
+        return;
+    }
+
+    uac_speaker->stream_halt_cnt = 0;
+    if (speaker_stream_is_open) {
+        if (uac_speaker->stream_state == 0) {
+            /* g_printf("-APP_MSG_PC_AUDIO_PLAY_OPEN-"); */
+            app_send_message(APP_MSG_PC_AUDIO_PLAY_OPEN,
+                             (int)(((uac_speaker->bitwidth == 24 ? 1 : 0) << 28) |
+                                   (uac_speaker->channel << 24) |
+                                   uac_speaker->samplerate));
+            uac_speaker->stream_state = 1;
+        }
+    }
+
 #if 0  //multiple channel test
     if (uac_speaker) {
         if (uac_speaker->channel == 4) {
@@ -111,6 +134,21 @@ void uac_speaker_stream_write(const u8 *obuf, u32 len)
 #endif
 }
 
+static void uac_speaker_stream_halt_detect(void *priv)
+{
+    if (!uac_speaker) {
+        return;
+    }
+    if (uac_speaker->stream_halt_cnt >= UAC_SPEAKER_STREAM_DETECT_COUNT) {
+        if (uac_speaker->stream_state) {
+            /* g_printf("-APP_MSG_PC_AUDIO_PLAY_CLOSE-"); */
+            app_send_message(APP_MSG_PC_AUDIO_PLAY_CLOSE, 0);
+            uac_speaker->stream_state = 0;
+        }
+    }
+    uac_speaker->stream_halt_cnt++;
+}
+
 void uac_speaker_stream_get_volume(u16 *l_vol, u16 *r_vol)
 {
     uac_get_cur_vol(0, l_vol, r_vol);
@@ -141,7 +179,15 @@ void uac_speaker_stream_open(u32 samplerate, u32 ch, u32 bitwidth)
             uac_speaker->bitwidth = bitwidth;
 #if TCFG_USB_SLAVE_AUDIO_SPK_ENABLE
             pc_spk_set_fmt(ch, bitwidth, samplerate);
-            pcspk_restart_player_by_taskq();
+            //快速切换位宽 or 采样率 or 声道数时，如果数据流运行中
+            //（stream_state = 1），立即响应切换
+            if (uac_speaker->stream_state) {
+                app_send_message(APP_MSG_PC_AUDIO_PLAY_CLOSE, 0);
+                app_send_message(APP_MSG_PC_AUDIO_PLAY_OPEN,
+                                 (int)(((bitwidth == 24 ? 1 : 0) << 28) |
+                                       (ch << 24) |
+                                       samplerate));
+            }
 #endif
         }
         uac_speaker->timestamp = jiffies;
@@ -169,14 +215,14 @@ void uac_speaker_stream_open(u32 samplerate, u32 ch, u32 bitwidth)
 
 #if TCFG_USB_SLAVE_AUDIO_SPK_ENABLE
     log_info(">> Case : USB_AUDIO_PLAY_OPEN\n");
-#if TCFG_USER_EMITTER_ENABLE
-    app_send_message(APP_MSG_PC_AUDIO_PLAY_OPEN, (int)((ch << 24) | samplerate));
-#endif
     pc_spk_set_fmt(ch, bitwidth, samplerate);
-    pcspk_open_player_by_taskq();
+    //不在这里打开了，在数据流中断处打开，检测到有数据才打开
+    //pcspk_open_player_by_taskq();
+    //app_send_message(APP_MSG_PC_AUDIO_PLAY_OPEN, (int)((ch << 24) | samplerate));
 #endif
 
     uac_speaker->timestamp = jiffies;
+    uac_speaker->timer_id = sys_hi_timer_add(NULL, uac_speaker_stream_halt_detect, UAC_SPEAKER_STREAM_DETECT_INTERVAL);
 }
 
 void uac_speaker_stream_close_delay(void *priv)
@@ -191,23 +237,26 @@ void uac_speaker_stream_close_delay(void *priv)
     speaker_stream_is_open = 0;
 
     if (uac_speaker) {
+        if (uac_speaker->timer_id) {
+            sys_hi_timer_del(uac_speaker->timer_id);
+            uac_speaker->timer_id = 0;
+        }
+        if (uac_speaker->stream_state) {
+#if TCFG_USB_SLAVE_AUDIO_SPK_ENABLE
+            log_info(">> Case : USB_AUDIO_PLAY_CLOSE\n");
+            if (release) {
+                pc_spk_player_close();
+            } else {
+                pcspk_close_player_by_taskq();
+            }
+            app_send_message(APP_MSG_PC_AUDIO_PLAY_CLOSE, 0);
+#endif
+        }
 #if USB_MALLOC_ENABLE
         free(uac_speaker);
 #endif
         uac_speaker = NULL;
     }
-#if TCFG_USB_SLAVE_AUDIO_SPK_ENABLE
-    log_info(">> Case : USB_AUDIO_PLAY_CLOSE\n");
-    if (release) {
-        pc_spk_player_close();
-    } else {
-        pcspk_close_player_by_taskq();
-    }
-
-#if TCFG_USER_EMITTER_ENABLE
-    app_send_message(APP_MSG_PC_AUDIO_PLAY_CLOSE, 0);
-#endif
-#endif
 }
 
 void uac_speaker_stream_close(int release)
@@ -259,12 +308,14 @@ void uac_mute_volume(u32 type, u32 l_vol, u32 r_vol)
             return;
         }
         last_mic_vol = l_vol;
+#if TCFG_USB_SLAVE_AUDIO_MIC_ENABLE
         pc_mic_set_volume_by_taskq(l_vol);
+#endif
         break;
     case SPK_FEATURE_UNIT_ID: //SPK
-        if (speaker_stream_is_open == 0) {
-            return;
-        }
+        /* if (speaker_stream_is_open == 0) { */
+        /*     return; */
+        /* } */
         if (l_vol == last_spk_l_vol && r_vol == last_spk_r_vol) {
             return;
         }
@@ -273,7 +324,7 @@ void uac_mute_volume(u32 type, u32 l_vol, u32 r_vol)
 
         //TODO
 #if TCFG_USB_SLAVE_AUDIO_SPK_ENABLE
-        printf(">> PC, r_vol:%d, l_vol:%d\n", r_vol, l_vol);
+        log_info(">> PC, r_vol:%d, l_vol:%d\n", r_vol, l_vol);
         /* app_audio_set_volume(APP_AUDIO_STATE_MUSIC, (r_vol + l_vol) / 2, 1); */
         pcspk_set_volume_by_taskq();
 #endif
@@ -419,6 +470,11 @@ u32 uac_mic_stream_open(u32 samplerate, u32 ch, u32 bitwidth)
 #if TCFG_USB_SLAVE_AUDIO_MIC_ENABLE
             //重启mic recorder
             pc_mic_recoder_restart_by_taskq();
+            app_send_message(APP_MSG_PC_AUDIO_MIC_CLOSE, 0);
+            app_send_message(APP_MSG_PC_AUDIO_MIC_OPEN,
+                             (int)(((bitwidth == 24 ? 1 : 0) << 28) |
+                                   (ch << 24) |
+                                   samplerate));
 #endif
         }
         mic_timestamp = jiffies;
@@ -436,10 +492,11 @@ u32 uac_mic_stream_open(u32 samplerate, u32 ch, u32 bitwidth)
 
 #if TCFG_USB_SLAVE_AUDIO_MIC_ENABLE
     log_info("## Func:%s, Line:%d, Open Mic!!\n", __func__, __LINE__);
-#if TCFG_USER_EMITTER_ENABLE
-    app_send_message(APP_MSG_PC_AUDIO_MIC_OPEN, (int)((ch << 24) | samplerate));
-#endif
     pc_mic_recoder_open_by_taskq();
+    app_send_message(APP_MSG_PC_AUDIO_MIC_OPEN,
+                     (int)(((bitwidth == 24 ? 1 : 0) << 28) |
+                           (ch << 24) |
+                           samplerate));
 #endif
 
     mic_timestamp = jiffies;
@@ -460,9 +517,7 @@ static void uac_mic_stream_close_delay(void *priv)
     } else {
         pc_mic_recoder_close_by_taskq();
     }
-#if TCFG_USER_EMITTER_ENABLE
     app_send_message(APP_MSG_PC_AUDIO_MIC_CLOSE, 0);
-#endif
 #endif
 }
 

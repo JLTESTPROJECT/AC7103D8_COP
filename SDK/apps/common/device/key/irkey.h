@@ -30,5 +30,6 @@ u8 ir_get_key_value(void);
 int irkey_init(void);
 
 int get_irkey_io();
+const struct irkey_platform_data *get_irkey_platform_data();
 #endif
 

@@ -12,7 +12,9 @@
 #include "os/os_api.h"
 #include "classic/tws_api.h"
 
-#if (defined(TCFG_AUDIO_SPATIAL_EFFECT_ENABLE) && TCFG_AUDIO_SPATIAL_EFFECT_ENABLE && TCFG_SPATIAL_EFFECT_ONLINE_ENABLE)
+#if ((defined(TCFG_AUDIO_SPATIAL_EFFECT_ENABLE) && TCFG_AUDIO_SPATIAL_EFFECT_ENABLE && TCFG_SPATIAL_EFFECT_ONLINE_ENABLE) || \
+        (TCFG_AUDIO_SOMATOSENSORY_ENABLE && (TCFG_SENSOR_DATA_EXPORT_ENABLE == SENSOR_DATA_EXPORT_USE_SPP)))
+//头部姿态检测借用空间音效的手机app陀螺仪校准流程
 
 #define IMU_DATA_SEND_INTERVAL  100
 // 配置参数
@@ -112,16 +114,19 @@ int spatial_effect_online_parse(u8 *packet, u8 size, u8 *ext_data, u16 ext_size)
     switch (cmd) {
     case SPATIAL_EFFECT_REVERB_INFO_QUERY:
         printf("SPATIAL_EFFECT_REVERB_INFO_QUERY\n");
+#if TCFG_AUDIO_SPATIAL_EFFECT_ENABLE
         int len = spatial_effects_node_param_cfg_read(&parmK, sizeof(parmK));
         if (len != sizeof(parmK)) {
             printf("spatial effects use default parmK");
             get_spatial_effect_reverb_params(&parmK);
         }
         err = app_online_db_ack(parse_seq, (u8 *)&parmK, sizeof(parmK));
+#endif
         break;
 
     case SPATIAL_EFFECT_REVERB_PARAM:
         printf("SPATIAL_EFFECT_REVERB_PARAM\n");
+#if TCFG_AUDIO_SPATIAL_EFFECT_ENABLE
         memcpy(&parmK, data, sizeof(parmK));
 
         spatial_effect_online_updata(&parmK);
@@ -129,6 +134,7 @@ int spatial_effect_online_parse(u8 *packet, u8 size, u8 *ext_data, u16 ext_size)
         printf("%s\n trackKIND:%d, ReverbKIND:%d, reverbance:%d, dampingval:%d\n", __func__,
                parmK.trackKIND, parmK.ReverbKIND, parmK.reverbance, parmK.dampingval);
         err = app_online_db_ack(parse_seq, (u8 *)"OK", 2);
+#endif
         break;
     case SPATIAL_EFFECT_IMU_TRIM:
         printf("SPATIAL_EFFECT_IMU_TRIM\n");

@@ -186,7 +186,12 @@ struct somatosensory_hdl *audio_somatosensory_open()
     cbuf_init(&hdl->cbuf, hdl->cbuf_data, SENSOR_BUF_LEN * 2);
     hdl->task_state = 1;
     hdl->task_busy = 0;
+#if TCFG_SENSOR_DATA_EXPORT_ENABLE
+    //使能数据导出，抬高时钟
+    clock_alloc("SOMATOSENSORY", 192 * 1000000);
+#else
     clock_alloc("SOMATOSENSORY", 30 * 1000000);
+#endif
     int err = task_create(audio_somatosensory_task, hdl, SOMATOSENSORY_TASK_NAME);
     if (err != OS_NO_ERR) {
         ASSERT(0, "audio_somatosensory_task create err!!! %x\n", err);

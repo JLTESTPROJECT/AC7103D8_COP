@@ -81,7 +81,6 @@ static int sink_dev3_bind(struct stream_node *node, u16 uuid)
 
 static void sink_dev3_open_iport(struct stream_iport *iport)
 {
-    iport->handle_frame = sink_dev3_handle_frame;
 }
 
 /*
@@ -170,6 +169,7 @@ REGISTER_STREAM_NODE_ADAPTER(sink_dev3_adapter) = {
     .bind       = sink_dev3_bind,
     .ioctl      = sink_dev3_ioctl,
     .release    = sink_dev3_release,
+    .handle_frame = sink_dev3_handle_frame,
     .hdl_size   = sizeof(struct sink_dev3_hdl),
 };
 

@@ -94,7 +94,6 @@ static int surround_demo_adapter_bind(struct stream_node *node, u16 uuid)
 /*打开改节点输入接口*/
 static void surround_demo_ioc_open_iport(struct stream_iport *iport)
 {
-    iport->handle_frame = surround_demo_handle_frame;
 }
 
 /*节点参数协商*/
@@ -167,6 +166,7 @@ REGISTER_STREAM_NODE_ADAPTER(surround_demo_node_adapter) = {
     .bind       = surround_demo_adapter_bind,
     .ioctl      = surround_demo_adapter_ioctl,
     .release    = surround_demo_adapter_release,
+    .handle_frame = surround_demo_handle_frame,
     .hdl_size   = sizeof(struct surround_demo_node_hdl),
 };
 

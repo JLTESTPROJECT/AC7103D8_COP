@@ -11,7 +11,7 @@ u16 cfg_tool_cdc_rx_max_mtu();
 /**
  *	@brief 获取cdc的配置/调音工具相关数据
  */
-void cfg_tool_data_from_cdc(u8 *buf, u32 rlen);
+void cfg_tool_data_from_cdc(u8 *buf, u32 rlen, u8 id);
 
 #endif
 

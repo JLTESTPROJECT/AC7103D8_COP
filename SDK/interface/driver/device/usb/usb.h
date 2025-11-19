@@ -16,6 +16,14 @@
 
 
 
+struct usb_hub_info {
+    u8 parent_devnum;
+    u8 child_devnum;
+    u8 speed;
+    u8 port;
+    u8 protocol;
+};
+
 
 struct usb_ep_addr_t {
     u32 ep0_addr;
@@ -132,6 +140,13 @@ void usb_write_rxinterval(const usb_dev id, const u32 ep, u32 value);
 void usb_write_txinterval(const usb_dev id, const u32 ep, u32 value);
 void usb_write_txfuncaddr(const usb_dev id, const u32 ep, const u32 devnum);
 void usb_write_rxfuncaddr(const usb_dev id, const u32 ep, const u32 devnum);
+void usb_write_txhubaddr(const usb_dev id, const u32 ep, const u32 devnum);
+void usb_write_rxhubaddr(const usb_dev id, const u32 ep, const u32 devnum);
+void usb_write_txhubport(const usb_dev id, const u32 ep, const u32 port);
+void usb_write_rxhubport(const usb_dev id, const u32 ep, const u32 port);
+void usb_hub_txreg_set(const usb_dev id, const u32 host_ep, const u32 target_ep, const struct usb_hub_info *info);
+void usb_hub_rxreg_set(const usb_dev id, const u32 ep, const u32 target_ep, const struct usb_hub_info *info);
+u32 usb_h_get_ep_speed(const usb_dev id, u32 host_ep);
 void usb_h_force_reset(const usb_dev usb_id);
 void usb_lowpower_enter_sleep(void);
 void usb_lowpower_exit_sleep(void);

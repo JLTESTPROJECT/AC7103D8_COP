@@ -38,6 +38,7 @@ struct local_tws_switch_params {
 #define SAMPLE_RATE_44100   1
 #define SAMPLE_RATE_48000   2
 #define SAMPLE_RATE_64000   3
+#define SAMPLE_RATE_96000   4
 
 #define FRAME_DURATION_2_5_MS   0
 #define FRAME_DURATION_5_MS     1
@@ -51,7 +52,7 @@ struct local_tws_switch_params {
 static inline int jl_tws_sample_rate(u8 sample_rate)
 {
     int sample_rate_table[] = {
-        32000, 44100, 48000, 64000,
+        32000, 44100, 48000, 64000, 96000,
     };
 
     return sample_rate_table[sample_rate];
@@ -63,11 +64,11 @@ static inline int jl_tws_sample_rate(u8 sample_rate)
 static inline u8 jl_tws_match_sample_rate(int sample_rate)
 {
     int sample_rate_table[] = {
-        32000, 44100, 48000, 64000,
+        32000, 44100, 48000, 64000, 96000,
     };
 
     int i = 0;
-    for (i = 0; i < SAMPLE_RATE_64000; i++) {
+    for (i = 0; i <= SAMPLE_RATE_96000; i++) {
         if (sample_rate == sample_rate_table[i]) {
             return i;
         }
@@ -83,6 +84,8 @@ static inline int jl_tws_coding_type(u8 codec_type)
     u32 coding_type_table[] = {
         AUDIO_CODING_JLA,
         AUDIO_CODING_SBC,
+        AUDIO_CODING_JLA_V2,
+        AUDIO_CODING_LDAC,
     };
 
     return coding_type_table[codec_type];
@@ -96,6 +99,8 @@ static inline int jl_tws_coding_type_id(u32 coding_type)
     u32 coding_type_table[] = {
         AUDIO_CODING_JLA,
         AUDIO_CODING_SBC,
+        AUDIO_CODING_JLA_V2,
+        AUDIO_CODING_LDAC,
     };
     int i = 0;
     for (i = 0; i < sizeof(coding_type_table) / 4; i++) {

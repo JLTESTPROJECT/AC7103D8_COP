@@ -12,7 +12,6 @@
 #include "app_charge.h"
 #include "user_cfg.h"
 #include "app_chargestore.h"
-#include "app_testbox.h"
 #include "device/vm.h"
 #include "btstack/avctp_user.h"
 #include "app_action.h"

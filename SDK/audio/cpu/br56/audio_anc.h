@@ -212,6 +212,10 @@ enum {
 #error "JL710N doesn't support HEADSET ANC HYBRID"
 #endif
 
+#if (TCFG_AUDIO_ANC_TRAIN_MODE == ANC_FF_EN) && (TCFG_AUDIO_ANC_CH == (ANC_L_CH | ANC_R_CH))
+#error "JL710N doesn't support HEADSET ANC FF"
+#endif
+
 /*ANC记忆信息*/
 typedef struct {
     u8 mode;		/*当前模式*/
@@ -284,11 +288,6 @@ void anc_mode_switch_lock_clean(void);
 
 /*获取anc记录的最新的目标ANC模式*/
 u8 anc_new_target_mode_get(void);
-
-#define ANC_DAC_CH_L	0
-#define ANC_DAC_CH_R	1
-/*获取anc模式，dac左右声道的增益*/
-u8 anc_dac_gain_get(u8 ch);
 
 /*获取anc模式，ref_mic的增益*/
 u8 anc_mic_gain_get(void);

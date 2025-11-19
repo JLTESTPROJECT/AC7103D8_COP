@@ -68,6 +68,9 @@ static const char scan_parm[] = "-t"
 #if (TCFG_DEC_AIFF_ENABLE)
                                 "AIFAIFFAIFC"
 #endif
+#if (MIDI_CTRL_DEC_ENABLE || MIDI_FILE_DEC_ENABLE)
+                                "MFAMDB"
+#endif
                                 " -sn -r"
 #if (TCFG_RECORD_FOLDER_DEV_ENABLE)
                                 " -m"
@@ -277,7 +280,19 @@ int music_player_decode_start(struct music_player *player_hd, FILE *file, struct
             dbp->len = 0;
         }
     }
+
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_AURACAST_SINK_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SOURCE_EN | LE_AUDIO_UNICAST_SINK_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_BIS_TX_EN | LE_AUDIO_JL_BIS_RX_EN)) || \
+    (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_CIS_CENTRAL_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
+    if (get_music_le_audio_flag()) {
+        file_player = le_audio_music_file_play_callback(file, (void *)player_hd, music_player_decode_event_callback, dbp, (void *)player_hd->le_audio, (void *)&player_hd->fmt);
+    } else {
+        file_player = music_file_play_callback(file, (void *)player_hd, music_player_decode_event_callback, dbp);
+    }
+#else
     file_player = music_file_play_callback(file, (void *)player_hd, music_player_decode_event_callback, dbp);
+#endif
     if (!file_player) {
         return MUSIC_PLAYER_ERR_DECODE_FAIL;
     }
@@ -705,6 +720,9 @@ int music_player_play_prev_cycle_single_dev(struct music_player *player_hd)
 int music_player_play_prev(struct music_player *player_hd)
 {
     int err;
+    if (!player_hd || !player_hd->fsn) {
+        return MUSIC_PLAYER_ERR_FILE_NOFOUND;
+    }
 #if (MUSIC_PLAYER_CYCLE_ALL_DEV_EN)
     if (player_hd->fsn == NULL) {
         r_printf("player_hd->fsn == NULL!\n");
@@ -761,6 +779,9 @@ int music_player_play_next_cycle_single_dev(struct music_player *player_hd)
 int music_player_play_next(struct music_player *player_hd)
 {
     int err;
+    if (!player_hd || !player_hd->fsn) {
+        return MUSIC_PLAYER_ERR_FILE_NOFOUND;
+    }
 #if (MUSIC_PLAYER_CYCLE_ALL_DEV_EN)
     if (player_hd->fsn == NULL) {
         r_printf("player_hd->fsn == NULL!\n");

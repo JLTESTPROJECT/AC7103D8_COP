@@ -29,7 +29,6 @@
 #include "circular_buf.h"
 #include "overlay_code.h"
 #include "audio_config.h"
-#include "debug.h"
 #include "cvp_node.h"
 #include "sdk_config.h"
 #ifdef CONFIG_BOARD_AISPEECH_NR
@@ -43,6 +42,14 @@
 #endif/*TCFG_AUDIO_DUT_ENABLE*/
 
 #if defined(TCFG_CVP_DEVELOP_ENABLE) && (TCFG_CVP_DEVELOP_ENABLE == CVP_CFG_AIS_3MIC)
+
+#define LOG_TAG_CONST       AEC_USER
+#define LOG_TAG             "[AEC_USER]"
+#define LOG_ERROR_ENABLE
+#define LOG_DEBUG_ENABLE
+#define LOG_INFO_ENABLE
+#include "debug.h"
+
 
 #define AEC_CLK				(160 * 1000000L)	/*模块运行时钟(MaxFre:160MHz)*/
 #define AEC_FRAME_POINTS	256					/*AEC处理帧长，跟mic采样长度关联*/

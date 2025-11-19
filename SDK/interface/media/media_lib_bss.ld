@@ -33,12 +33,28 @@
 	*(.bt_audioplc_bss)
 	*(.lc3_dec.data.bss)
 	*(.lc3_enc.data.bss)
-    *(.lc3_decoder_bss)
 #if (TCFG_ENC_LC3_ENABLE || TCFG_DEC_LC3_ENABLE)
-	*(.lc3_codec_ari_c_bss)
 	*(.lc3_codec_c_bss)
 #endif
+	*(.jla_codec_c_bss)
+	*(.jl_codec_c_bss)
+	*(.jla_lw_codec_bss)
+	*(.jla_lw.bss)
+	*(.jla_ll.bss)
 
+	*(.jla_codec_c_bss)
+	*(.jl_codec_c_bss)
+
+	*(.jla_lw_codec_bss)
+	*(.jla_lw.bss)
+	*(.jla_ll.bss)
+
+	*(.jla_v2_dec_bss)
+	*(.jla_v2_enc_bss)
+	*(.jla_v2_codec_c_bss)
+	*(.jla_v2_codec_ari_c_bss)
+
+	
 	*(.mp3_dec.data.bss)
 	*(.mp3.data.bss)
 	*(.mp3tsy.data.bss)
@@ -70,6 +86,7 @@
 	*(.m4a_dec.data.bss)
 	*(.m4a.data.bss)
 	*(.alac.data.bss)
+	*(.llns_dns.bss)
 
 	*(.audio_track_bss)
 

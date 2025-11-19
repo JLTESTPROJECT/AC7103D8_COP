@@ -135,6 +135,7 @@ enum EXT_ARG_TYPE {
     EXT_SD_IO_INFO, //gpio不对应时，sd卡初始化脚由字符串传入
     EXT_BT_WLA_INFO,
     EXT_MUTIL_UPDATE_NAME,
+    EXT_NAND_PARM = 0x11,
     EXT_TYPE_MAX = 0xff,
 };
 
@@ -176,6 +177,7 @@ typedef enum _UPDATE_STATE_T {
     UPDATE_CH_INIT,
     UPDATE_CH_SUCESS_REPORT,
     UPDATE_CH_EXIT,
+    UPDATE_CH_SAME,
 } UPDATE_STATE_T;
 
 struct update_target {

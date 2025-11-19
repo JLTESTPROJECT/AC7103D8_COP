@@ -45,6 +45,7 @@ enum { //format_check 格式检查返回值, FORMAT_OK可继续调run,
     FORMAT_OK_UNSUPPORTED_NCH,  //不支持的声道数.
     FORMAT_OK_UNSUPPORTED_BLK,  //不支持的块长度.
     M4A_MEMORY_NOT_ENOUGH = 0x10,
+    FORMAT_CHECK_BREAKPOINT_ERR = 0x20,  //断点信息错误
 };
 
 //编解码器错误的返回值

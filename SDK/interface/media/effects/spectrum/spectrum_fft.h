@@ -9,6 +9,8 @@ typedef struct _spectrumEffect_TOOL_SET {
     int  mode;
     float attackFactor;
     float releaseFactor;
+    int center_freq_max;//输出中心截止频率的范围的最大值
+    int center_freq_min;//输出中心截止频率的范围的最小值
 } spectrum_effect_param_tool_set;
 
 struct spectrum_parm {

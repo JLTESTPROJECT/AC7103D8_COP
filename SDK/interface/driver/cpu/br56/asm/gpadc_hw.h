@@ -6,6 +6,7 @@
 #include "gpio.h"
 #include "clock.h"
 #include "asm/power_interface.h"
+#include "lib_driver_config.h"
 
 #define ADC_CH_MASK_TYPE_SEL	0xffff0000
 #define ADC_CH_MASK_CH_SEL	    0x000000ff
@@ -178,10 +179,6 @@ enum AD_CH {
 #define     ADC_VBG_DATA_WIDTH    0
 #define     ADC_EXTERN_VOLTAGE_TRIM_EN  0
 
-//防编译报错
-extern const u8 gpadc_battery_mode;
-extern const u32 gpadc_ch_power;
-extern const u8 gpadc_ch_power_div;
 #define AD_CH_PMU_VBG   AD_CH_PMU_MBG08
 #define AD_CH_LDOREF    AD_CH_PMU_VBG
 #define AD_CH_LPCTMU    AD_CH_LPCTM

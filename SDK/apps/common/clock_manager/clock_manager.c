@@ -66,7 +66,7 @@ static u8 cpu_usage_limit[] = {50, 55, 60};
 #endif
 
 
-#if 0
+#if 1
 #define CLOCK_MANAGER_INIT_CRITICAL()
 #define CLOCK_MANAGER_ENTER_CRITICAL()      local_irq_disable()
 #define CLOCK_MANAGER_EXIT_CRITICAL()       local_irq_enable()
@@ -111,12 +111,10 @@ int clock_alloc(const char *name, u32 clk)
 
     it->name = hash;
     it->freq = clk;
-
     list_add_tail(&it->entry, &clk_mgr_head);
+    CLOCK_MANAGER_EXIT_CRITICAL();
 
     clock_refurbish();
-
-    CLOCK_MANAGER_EXIT_CRITICAL();
 
     return 0;
 }
@@ -146,43 +144,13 @@ int clock_free(const char *name)
         }
     }
 
-    clock_refurbish();
-
     CLOCK_MANAGER_EXIT_CRITICAL();
+
+    clock_refurbish();
 
     return 0;
 }
 
-
-/* --------------------------------------------------------------------------*/
-/**
- * @brief clock_manager_dump
- */
-/* ----------------------------------------------------------------------------*/
-static u32 clock_list_sum(void)
-{
-    clock_manager_item *p;
-    u32 total = 0;
-
-#if 1
-    list_for_each_entry(p, &clk_mgr_head, entry) {
-        if (total < p->freq) {
-            total = p->freq;
-        }
-    }
-#else
-    list_for_each_entry(p, &clk_mgr_head, entry) {
-        /*log_info("%s : %dHz", p->name, p->freq);*/
-        total += p->freq;
-    }
-#endif
-    if (total < CLOCK_MINIMUM_FREQ) {
-        total = CLOCK_MINIMUM_FREQ;
-    }
-    /*log_info("%s : %dHz", "total", total);*/
-
-    return total;
-}
 
 
 /* --------------------------------------------------------------------------*/
@@ -230,23 +198,16 @@ int clock_lock(const char *name, u32 clk)
     u32 hash = JBHash((u8 *)name, strlen(name));
 
     CLOCK_MANAGER_ENTER_CRITICAL();
-
     if (clk_locker.freq) {
-        //has been locked, lock fail
         CLOCK_MANAGER_EXIT_CRITICAL();
+        log_error("clock_lock: %s, %s\n", clk_locker.name, name);
         return -1;
     }
-
     clk_locker.freq = clk;
     clk_locker.name = hash;
-
-#if (defined TCFG_FIX_CLOCK_FREQ  && TCFG_FIX_CLOCK_FREQ)
-    clk_set_api("sys", TCFG_FIX_CLOCK_FREQ);
-#else
-    clk_set_api("sys", clk);
-#endif
-
     CLOCK_MANAGER_EXIT_CRITICAL();
+
+    clock_refurbish();
 
     return 0;
 }
@@ -266,39 +227,44 @@ int clock_unlock(char *name)
     u32 hash = JBHash((u8 *)name, strlen(name));
 
     log_info("%s", __func__);
+    clock_lock_dump();
 
     CLOCK_MANAGER_ENTER_CRITICAL();
 
-    clock_lock_dump();
-
     if (clk_locker.freq == 0) {
-        //has been locked
-        /* ASSERT(0, "please lock it befor unlock"); */
         CLOCK_MANAGER_EXIT_CRITICAL();
         return -1;
     }
-
     if (clk_locker.name != hash) {
-        /* ASSERT(0, "locker owner is %s", clk_locker.name); */
         CLOCK_MANAGER_EXIT_CRITICAL();
         return -2;
     }
-
     clk_locker.freq = 0;
-
-    //refurbish clock after unlock succ
-    clock_refurbish();
-
     CLOCK_MANAGER_EXIT_CRITICAL();
+
+    clock_refurbish();
 
     return 0;
 }
 
-/* --------------------------------------------------------------------------*/
-/**
- * @brief clock_manager_reflash
- */
-/* ----------------------------------------------------------------------------*/
+static u32 clock_list_sum(void)
+{
+    clock_manager_item *p;
+    u32 total = 0;
+
+    list_for_each_entry(p, &clk_mgr_head, entry) {
+        if (total < p->freq) {
+            total = p->freq;
+        }
+    }
+    if (total < CLOCK_MINIMUM_FREQ) {
+        total = CLOCK_MINIMUM_FREQ;
+    }
+    /*log_info("%s : %dHz", "total", total);*/
+
+    return total;
+}
+
 
 /* --------------------------------------------------------------------------*/
 /**
@@ -319,15 +285,20 @@ static void clk_ref_cal(void)
         return;
     }
     int usage_max = MAX(usage[0], usage[1]);
-#if 1
     usage[2] = jlstream_get_cpu_usage();
     if (usage_max < usage[2]) {
         usage_max = usage[2];
     }
-#endif
 
     int curr_clk = clk_get("sys");
     int dest_clk = curr_clk;
+
+#if (defined TCFG_FIX_CLOCK_FREQ  && TCFG_FIX_CLOCK_FREQ)
+    //固定时钟只进行效率统计
+    r_printf("cpu: %d %d  clk:%d\n", usage[0], usage[1], curr_clk);
+    return;
+#endif
+
 __again:
     switch (clk_adjust_step) {
     case 0:
@@ -383,7 +354,6 @@ static void clk_ref_fun(void *p)
 {
     CLOCK_MANAGER_ENTER_CRITICAL();
     if (ref_cnt < CLOCK_DETECT_COUNTER) {
-        /* log_info("CLOCK_DETECT_COUNTER:%d\n", ref_cnt); */
         ref_cnt++;
         clk_ref_cal();
     } else {
@@ -400,24 +370,31 @@ static void clk_ref_fun(void *p)
 /* ----------------------------------------------------------------------------*/
 void clock_refurbish(void)
 {
-    if (cpu_in_irq() || cpu_irq_disabled()) {
+    if (cpu_in_irq() || cpu_irq_disabled() || strcmp(os_current_task(), "app_core")) {
         //以上情况，需要改为在APP任务上设置
         int msg[3];
         msg[0] = (int)clock_refurbish;
         msg[1] = 1;
         msg[2] = 0;
         os_taskq_post_type("app_core", Q_CALLBACK, 3, msg);
-        /* sys_timeout_add(NULL, (void *)clock_refurbish, 1); */
         return;
     }
 
-    CLOCK_MANAGER_ENTER_CRITICAL();
-
     //clk driver 需要提供每个芯片可以设置的最高挡位
 #if (defined TCFG_FIX_CLOCK_FREQ  && TCFG_FIX_CLOCK_FREQ)
-    clk_set_api("sys", TCFG_FIX_CLOCK_FREQ);
+#ifdef CONFIG_WIRELESS_MIC_CASE_ENABLE
+    int min_clk = clock_list_sum();
+    clk_set_api("sys", min_clk);
 #else
-    clk_set_api("sys", CLOCK_MAXIMUM_FREQ);
+    clk_set_api("sys", TCFG_FIX_CLOCK_FREQ);
+#endif
+#else
+    if (clk_locker.freq) {
+        clk_set_api("sys", clk_locker.freq);
+    } else {
+        clk_set_api("sys", CLOCK_MAXIMUM_FREQ);
+    }
+#endif
     ref_cnt = 0;
     clk_adjust_step = 0;
 
@@ -430,62 +407,5 @@ void clock_refurbish(void)
     ASSERT(clk_ref_timer);
 
     task_info_reset();
-
-#endif
-    CLOCK_MANAGER_EXIT_CRITICAL();
 }
 
-_NOINLINE_
-int clk_set_unused(const char *name, int clk)
-{
-    return 0;
-}
-
-
-/* --------------------------------------------------------------------------*/
-/**
- * @brief init
- */
-/* ----------------------------------------------------------------------------*/
-__INITCALL_BANK_CODE
-static int clock_manager_init(void)
-{
-    CLOCK_MANAGER_INIT_CRITICAL();
-    return 0;
-}
-early_initcall(clock_manager_init);
-
-/* --------------------------------------------------------------------------*/
-/**
- * @brief clock_manager_test
- */
-/* ----------------------------------------------------------------------------*/
-#if 0   //test code
-static void clk_test2_tmr_fun(void *p)
-{
-    clk_set_api("sys", CLOCK_MAXIMUM_FREQ);
-
-    clock_refurbish();
-}
-void clock_manager_test2(void)
-{
-    sys_timer_add(NULL, clk_test2_tmr_fun, 60 * 1000);
-}
-static void clk_test3_tmr_fun(void *p)
-{
-    /* int ret; */
-    clock_unlock("test");
-    /* ASSERT(ret == 0); */
-}
-void clock_manager_test3(void)
-{
-    int ret;
-    ret = clock_lock("test", 128 * 1000000U);
-    ASSERT(ret == 0);
-    sys_timeout_add(NULL, clk_test3_tmr_fun, 30 * 1000);
-
-    /* void mpu_set(int idx, u32 begin, u32 end, u32 inv, const char *format, ...); */
-    /* u32 addr = (u32)(&clk_locker.freq); */
-    /* mpu_set(2, addr, addr+3, 0, "Cr"); */
-}
-#endif

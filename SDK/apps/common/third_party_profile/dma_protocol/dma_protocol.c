@@ -2,7 +2,6 @@
 #include "media/includes.h"
 #include "app_config.h"
 #include "app_msg.h"
-#include "earphone.h"
 #include "bt_tws.h"
 #include "app_main.h"
 #include "battery_manager.h"
@@ -706,7 +705,10 @@ static u8 app_protocal_get_bat_by_type(u8 type)
     u8 value = 0;
     extern u8 get_tws_sibling_bat_persent(void);
     u8 sibling_val = 0xff;
+#if TCFG_USER_TWS_ENABLE
+    extern u8 get_tws_sibling_bat_persent(void);
     sibling_val = get_tws_sibling_bat_persent();
+#endif
 #if TCFG_CHARGESTORE_ENABLE
     if (sibling_val == 0xff) {
         sibling_val = chargestore_get_sibling_power_level();

@@ -8,23 +8,20 @@
 *
 */
 /*************************************************************************************************/
+#include "app_config.h"
 #include "jlstream.h"
 #include "sync/audio_syncts.h"
 #include "le_audio_stream.h"
 #include "app_config.h"
+#include "effects/effects_adj.h"
+#include "tech_lib/jla_ll_codec_api.h"
 
 #if LE_AUDIO_STREAM_ENABLE
 
 #define LE_AUDIO_TX_SOURCE      0
 #define LE_AUDIO_LOCAL_SOURCE   1
 
-void dev_list_add(void *_dev, void *hdl, void *ch, int (*get_delay)(void *hdl, void *ch));
-void dev_list_del(void *_dev);
 static int get_le_audio_source_buffer_delay_time(void *iport, void *ch);
-
-struct master_dev {
-    struct list_head entry;
-};
 
 struct le_audio_source_syncts {
     u8 start;
@@ -35,7 +32,6 @@ struct le_audio_source_syncts {
 };
 
 struct le_audio_source_context {
-    u8 diff_coding_type;
     void *tx_stream;
     void *rx_stream;
     void *le_audio;
@@ -45,7 +41,9 @@ struct le_audio_source_context {
     spinlock_t lock;
     u32 le_audio_start_usec;
     u32 local_start_usec;
-    struct master_dev dev;
+    u32 local_time;
+    u32 le_audio_time;
+    char name[16];
 };
 
 struct le_audio_source_iport {
@@ -57,8 +55,6 @@ struct le_audio_source_iport {
     u16 frame_dms;
     u16 frame_len;
     u8 bit_width;
-
-    struct stream_frame *frame;
 };
 
 static int le_audio_source_bind(struct stream_node *node, u16 uuid)
@@ -71,9 +67,19 @@ static int le_audio_source_bind(struct stream_node *node, u16 uuid)
 
     spin_lock_init(&ctx->lock);
     INIT_LIST_HEAD(&ctx->syncts_list);
+    /*
+     *获取配置文件内的参数,及名字
+     * */
+    int len = jlstream_read_node_data_new(hdl_node(ctx)->uuid, hdl_node(ctx)->subid, NULL, ctx->name);
+    if (!len) {
+        printf("%s, read node data err !\n", __FUNCTION__);
+        return 0 ;
+    }
+    printf("%s, read node cfg succ :%s, %d \n", __FUNCTION__, ctx->name, len);
     return 0;
 }
 
+extern uint32_t bb_le_clk_get_time_us(void);
 static int le_audio_source_frame_timestamp_handler(struct le_audio_source_context *ctx, struct stream_frame *frame)
 {
     if (!(frame->flags & FRAME_FLAG_TIMESTAMP_ENABLE)) {
@@ -90,68 +96,58 @@ static int le_audio_source_frame_timestamp_handler(struct le_audio_source_contex
         time_diff = frame->timestamp - node->timestamp;
         if (time_diff >= 0) {
             sound_pcm_syncts_latch_trigger(node->syncts);
-            printf("--le audio tx syncts start : %u, %u--\n", frame->timestamp, node->timestamp);
             node->start = 1;
+            int frame_latency = frame->timestamp - (audio_jiffies_usec() * TIMESTAMP_US_DENOMINATOR);
+            u32 start_time = (bb_le_clk_get_time_us() + (frame_latency / TIMESTAMP_US_DENOMINATOR)) & 0xfffffff;
+            le_audio_stream_set_start_time(ctx->le_audio, start_time);
+            printf("--le audio tx syncts start : %u, %u, %d, %u--\n", frame->timestamp, node->timestamp, frame_latency / TIMESTAMP_US_DENOMINATOR, start_time);
         }
     }
     spin_unlock(&ctx->lock);
 
     return 0;
 }
-
 static void le_audio_source_handle_frame(struct stream_iport *iport, struct stream_note *note)
 {
     struct le_audio_source_iport *hdl = (struct le_audio_source_iport *)iport->private_data;
     struct le_audio_source_context *ctx = (struct le_audio_source_context *)iport->node->private_data;
     struct stream_frame *frame;
+    int wlen;
 
     while (1) {
-        frame = hdl->frame;
+        frame = jlstream_pull_frame(iport, note);
         if (!frame) {
-            frame = jlstream_pull_frame(iport, note);
-            if (!frame) {
-                break;
-            }
-            hdl->frame = frame;
+            break;
         }
 
         if (hdl->attribute == LE_AUDIO_TX_SOURCE) {
             le_audio_source_frame_timestamp_handler(ctx, frame);
-            int wlen = le_audio_stream_tx_write(ctx->tx_stream, frame->data, frame->len);
-            if (wlen < frame->len) {
-                break;
-            }
+            wlen = le_audio_stream_tx_write(ctx->tx_stream, frame->data, frame->len);
         } else {
+#if LEA_LOCAL_SYNC_PLAY_EN
             le_audio_source_frame_timestamp_handler(ctx, frame);
-            le_audio_stream_rx_write(ctx->rx_stream, frame->data, frame->len);
+            wlen = le_audio_stream_rx_write(ctx->rx_stream, frame->data, frame->len);
+#else
+            wlen = frame->len;
+#endif
+        }
+        if (wlen < frame->len) {
+            jlstream_return_frame(iport, frame);
+            note->state |= NODE_STA_OUTPUT_BLOCKED;
+            break;
         }
 
         jlstream_free_frame(frame);
-        hdl->frame = NULL;
     }
 }
 
-extern uint32_t bb_le_clk_get_time_us(void);
-static u32 le_audio_usec_to_local_usec(struct le_audio_source_context *ctx, u32 usec)
+static void le_audio_usec_to_local_usec(struct le_audio_source_context *ctx)
 {
-    u32 local_usec;
-
-    int time_diff = (usec - ctx->le_audio_start_usec) & 0xfffffff;
-
-    local_usec = ctx->local_start_usec + time_diff;
-
-    ctx->le_audio_start_usec = usec;
-    ctx->local_start_usec = local_usec;
-
-    return local_usec;
-}
-
-static void le_audio_to_local_usec_init(struct le_audio_source_context *ctx)
-{
-    spin_lock(&ctx->lock);
-    ctx->le_audio_start_usec = bb_le_clk_get_time_us();
-    ctx->local_start_usec = audio_jiffies_usec();
-    spin_unlock(&ctx->lock);
+    local_irq_disable();
+    ctx->local_time = audio_jiffies_usec();
+    ctx->le_audio_time = bb_le_clk_get_time_us();
+    local_irq_enable();
+    /*printf("local le audio switch init : %d, %d\n", ctx->local_time, ctx->le_audio_time);*/
 }
 
 static int le_audio_tx_tick_handler(void *priv, int period, u32 send_timestamp)
@@ -159,32 +155,29 @@ static int le_audio_tx_tick_handler(void *priv, int period, u32 send_timestamp)
     struct le_audio_source_context *ctx = (struct le_audio_source_context *)priv;
 
     int pcm_frames = period * ctx->sample_rate / 1000000;
-    u32 buffered_time = 0;
-    u32 buffered_frames = 0;
-    u32 local_time_usec = 0;
+    u32 tx_timestamp = ctx->local_time + ((send_timestamp - ctx->le_audio_time) & 0xfffffff);
+    ctx->local_time = tx_timestamp;
+    ctx->le_audio_time = send_timestamp;
 
     struct le_audio_source_syncts *node;
     spin_lock(&ctx->lock);
-    local_time_usec = le_audio_usec_to_local_usec(ctx, send_timestamp);
     list_for_each_entry(node, &ctx->syncts_list, entry) {
         if (!node->start) {
             continue;
         }
-        sound_pcm_update_frame_num_and_time(node->syncts, pcm_frames, local_time_usec, pcm_frames);
+        sound_pcm_update_frame_num_and_time(node->syncts, pcm_frames, tx_timestamp, pcm_frames);
     }
     spin_unlock(&ctx->lock);
 
-    /*printf("out : %d, %u, %lu\n", pcm_frames, local_time_usec, audio_jiffies_usec()); */
     return 0;
 }
 
 static void le_audio_source_open_iport(struct stream_iport *iport)
 {
-    struct le_audio_source_context *ctx = (struct le_audio_source_context *)iport->node->private_data;
+}
 
-    iport->handle_frame = le_audio_source_handle_frame;
-
-    le_audio_to_local_usec_init(ctx);
+static void le_audio_source_close_iport(struct stream_iport *iport)
+{
 }
 
 static void le_audio_source_set_bt_addr(struct stream_iport *iport, int arg)
@@ -192,6 +185,13 @@ static void le_audio_source_set_bt_addr(struct stream_iport *iport, int arg)
     struct le_audio_source_context *ctx = (struct le_audio_source_context *)iport->node->private_data;
 
     ctx->le_audio = (void *)arg;
+
+#if LEA_LOCAL_SYNC_PLAY_EN //本地播放的音频流提前打开，避免在发送的音频流挂起或暂时没有数据的时候，本地播放的流程开启出现获取不到参数的问题
+    if (!ctx->rx_stream) {
+        ctx->rx_stream = le_audio_stream_rx_open(ctx->le_audio, AUDIO_CODING_PCM);
+    }
+#endif
+
 }
 
 static int le_audio_source_ioc_start(struct stream_iport *iport)
@@ -208,35 +208,45 @@ static int le_audio_source_ioc_start(struct stream_iport *iport)
         le_audio_stream_set_bit_width(ctx->le_audio, hdl->bit_width);
     }
 
-    if (!ctx->diff_coding_type) { /*两个iport非相同格式，说明一个为PCM格式的本地播放源和一个压缩格式的转发源*/
-        if (hdl->coding_type == AUDIO_CODING_PCM) {
-            if (ctx->rx_stream) {
-                return 0;
-            }
-            ctx->rx_stream = le_audio_stream_rx_open(ctx->le_audio, hdl->coding_type);
-            hdl->attribute = LE_AUDIO_LOCAL_SOURCE;
-        } else {
-            if (ctx->tx_stream) {
-                return 0;
-            }
-            ctx->tx_stream = le_audio_stream_tx_open(ctx->le_audio, hdl->coding_type, NULL, NULL);
-            le_audio_stream_set_tx_tick_handler(ctx->le_audio, ctx, le_audio_tx_tick_handler);
-            hdl->attribute = LE_AUDIO_TX_SOURCE;
-        }
+#if LEA_DUAL_STREAM_MERGE_TRANS_MODE
+    if (ctx->rx_stream) {
         return 0;
     }
+    if (!hdl) {
+        return 0;
+    }
+    int frame_size = le_audio_get_encoder_len(hdl->coding_type, hdl->frame_dms, hdl->bit_rate);
 
-    /*两个iport的格式相同，说明本地播放源和转发源为相同格式，需要区分一个为发送一个为本地存储*/
+    int ch = strcmp(ctx->name, "LEA_Source_CH1") ? 0 : 1;
+    ctx->tx_stream = le_audio_dual_stream_tx_open(ctx->le_audio, hdl->coding_type, frame_size, ch);
+    le_audio_stream_set_tx_tick_handler(ctx->le_audio, ctx, le_audio_tx_tick_handler, ch);
+    hdl->attribute = LE_AUDIO_TX_SOURCE;
+    le_audio_usec_to_local_usec(ctx);
+    return 0;
+
+#endif
+
     if (!ctx->tx_stream) {
         ctx->tx_stream = le_audio_stream_tx_open(ctx->le_audio, hdl->coding_type, NULL, NULL);
-        le_audio_stream_set_tx_tick_handler(ctx->le_audio, ctx, le_audio_tx_tick_handler);
+        le_audio_stream_set_tx_tick_handler(ctx->le_audio, ctx, le_audio_tx_tick_handler, 0);
         hdl->attribute = LE_AUDIO_TX_SOURCE;
+        le_audio_usec_to_local_usec(ctx);
         return 0;
     }
 
     if (!ctx->rx_stream) {
+#if LEA_LOCAL_SYNC_PLAY_EN
         ctx->rx_stream = le_audio_stream_rx_open(ctx->le_audio, hdl->coding_type);
+        le_audio_stream_rx_buf_init(ctx->le_audio, hdl->coding_type);
+#endif
         hdl->attribute = LE_AUDIO_LOCAL_SOURCE;
+    } else {//在被打的断恢复的时候，tx_stream/rx_stream没有释放,通过判断前节点是否是编码节点确定是tx/rx的音频流
+        if (iport->prev->node->uuid == NODE_UUID_ENCODER) {
+            hdl->attribute = LE_AUDIO_TX_SOURCE;
+        } else {
+            le_audio_stream_rx_buf_init(ctx->le_audio, hdl->coding_type);
+            hdl->attribute = LE_AUDIO_LOCAL_SOURCE;
+        }
     }
 
     return 0;
@@ -248,17 +258,50 @@ static void le_audio_source_ioc_stop(struct stream_iport *iport)
     struct le_audio_source_context *ctx = (struct le_audio_source_context *)iport->node->private_data;
 
     if (hdl->attribute == LE_AUDIO_LOCAL_SOURCE) {
+#if LEA_LOCAL_SYNC_PLAY_EN
         if (ctx->rx_stream) {
             le_audio_stream_rx_close(ctx->rx_stream);
             ctx->rx_stream = NULL;
         }
+#endif
     } else {
-        le_audio_stream_set_tx_tick_handler(ctx->le_audio, NULL, NULL);
+#if LEA_DUAL_STREAM_MERGE_TRANS_MODE
+        int ch = strcmp(ctx->name, "LEA_Source_CH1") ? 0 : 1;
+        le_audio_stream_set_tx_tick_handler(ctx->le_audio, NULL, NULL, ch);
+#else
+        le_audio_stream_set_tx_tick_handler(ctx->le_audio, NULL, NULL, 0);
+#endif
         if (ctx->tx_stream) {
             le_audio_stream_tx_close(ctx->tx_stream);
             ctx->tx_stream = NULL;
         }
     }
+
+}
+
+static void le_audio_source_suspend(struct stream_iport *iport)
+{
+    struct le_audio_source_iport *hdl = (struct le_audio_source_iport *)iport->private_data;
+    struct le_audio_source_context *ctx = (struct le_audio_source_context *)iport->node->private_data;
+
+    if (hdl->attribute == LE_AUDIO_LOCAL_SOURCE) {
+#if LEA_LOCAL_SYNC_PLAY_EN
+        if (ctx->rx_stream) {
+            le_audio_stream_rx_drain(ctx->rx_stream);
+        }
+#endif
+    } else {
+#if LEA_DUAL_STREAM_MERGE_TRANS_MODE
+        int ch = strcmp(ctx->name, "LEA_Source_CH1") ? 0 : 1;
+        le_audio_stream_set_tx_tick_handler(ctx->le_audio, NULL, NULL, ch);
+#else
+        le_audio_stream_set_tx_tick_handler(ctx->le_audio, NULL, NULL, 0);
+#endif
+        if (ctx->tx_stream) {
+            le_audio_stream_tx_drain(ctx->tx_stream);
+        }
+    }
+
 }
 
 static int le_audio_source_ioc_fmt_nego(struct stream_iport *iport)
@@ -269,10 +312,6 @@ static int le_audio_source_ioc_fmt_nego(struct stream_iport *iport)
 
     if (!ctx->coding_type) {
         ctx->coding_type = in_fmt->coding_type;
-    }
-
-    if (ctx->coding_type != 0 && in_fmt->coding_type != ctx->coding_type) {
-        ctx->diff_coding_type = 1;
     }
 
     if (in_fmt->coding_type == 0) {
@@ -294,6 +333,8 @@ static int le_audio_source_buffer_delay_time(struct stream_iport *iport)
         return le_audio_stream_tx_buffered_time(ctx->tx_stream)/*us*/ / 100;
     }
 
+
+
     return 0;
 }
 
@@ -307,6 +348,7 @@ static void le_audio_source_set_encode_fmt(struct stream_iport *iport, int arg)
     struct le_audio_source_iport *hdl = (struct le_audio_source_iport *)iport->private_data;
     struct le_audio_source_context *ctx = (struct le_audio_source_context *)iport->node->private_data;
     struct stream_enc_fmt *fmt = (struct stream_enc_fmt *)arg;
+    //printf(" =========%s %d,%d,%d,%d, %d\n",ctx->name,fmt->coding_type,fmt->bit_rate,fmt->frame_dms,fmt->sample_rate,fmt->channel);
 
     hdl->bit_rate = fmt->bit_rate;
     hdl->frame_dms = fmt->frame_dms;
@@ -356,17 +398,7 @@ remove_node:
     free(node);
     spin_unlock(&ctx->lock);
 }
-__attribute__((weak))
-void dev_list_add(void *_dev, void *hdl, void *ch, int (*get_delay)(void *hdl, void *ch))
-{
-    printf("%s EMPTY fun\n", __FUNCTION__);
-}
 
-__attribute__((weak))
-void dev_list_del(void *_dev)
-{
-    printf("%s EMPTY fun\n", __FUNCTION__);
-}
 static int le_audio_source_syncts_handler(struct stream_iport *iport, int arg)
 {
     struct le_audio_source_context *ctx = (struct le_audio_source_context *)iport->node->private_data;
@@ -379,11 +411,9 @@ static int le_audio_source_syncts_handler(struct stream_iport *iport, int arg)
     switch (params->cmd) {
     case AUDIO_SYNCTS_MOUNT_ON_SNDPCM:
         le_audio_source_add_syncts(ctx, (void *)params->data[0], params->data[1]);
-        dev_list_add(&ctx->dev, iport, NULL, (int (*)(void *, void *))get_le_audio_source_buffer_delay_time);
         break;
     case AUDIO_SYNCTS_UMOUNT_ON_SNDPCM:
         le_audio_source_remove_syncts(ctx, (void *)params->data[0]);
-        dev_list_del((void *)&ctx->dev);
         break;
     }
     return 0;
@@ -391,6 +421,8 @@ static int le_audio_source_syncts_handler(struct stream_iport *iport, int arg)
 
 static int le_audio_source_ioctl(struct stream_iport *iport, int cmd, int arg)
 {
+    struct le_audio_source_context *ctx = (struct le_audio_source_context *)iport->node->private_data;
+    int ret = 0;
     switch (cmd) {
     case NODE_IOC_OPEN_IPORT:
         le_audio_source_open_iport(iport);
@@ -402,6 +434,9 @@ static int le_audio_source_ioctl(struct stream_iport *iport, int cmd, int arg)
         break;
     case NODE_IOC_START:
         le_audio_source_ioc_start(iport);
+        break;
+    case NODE_IOC_SUSPEND:
+        le_audio_source_suspend(iport);
         break;
     case NODE_IOC_STOP:
         le_audio_source_ioc_stop(iport);
@@ -420,7 +455,7 @@ static int le_audio_source_ioctl(struct stream_iport *iport, int cmd, int arg)
     default:
         break;
     }
-    return 0;
+    return ret;
 }
 
 static void le_audio_source_release(struct stream_node *node)
@@ -433,6 +468,7 @@ REGISTER_STREAM_NODE_ADAPTER(le_audio_source_adapter) = {
     .bind       = le_audio_source_bind,
     .ioctl      = le_audio_source_ioctl,
     .release    = le_audio_source_release,
+    .handle_frame = le_audio_source_handle_frame,
     .hdl_size = sizeof(struct le_audio_source_context),
     .iport_size = sizeof(struct le_audio_source_iport),
 };

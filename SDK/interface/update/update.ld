@@ -24,6 +24,11 @@ SECTIONS
 		*(.bt_updata_ram_code)
 		*(.update_const)
 		*(.update_code)
+		. = ALIGN(4);
+		passive_update_fun_begin = .;
+		*(.passive_update_fun)
+		passive_update_fun_end = .;
+		. = ALIGN(4);
 
 		update_code_end = .;
 

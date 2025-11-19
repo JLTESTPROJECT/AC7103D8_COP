@@ -163,7 +163,7 @@ int wireless_trans_uninit(const char *name, void *priv)
     WIRELESS_DEV_ENTER_CRITICAL();
     list_for_each_wireless_trans(wireless_trans) {
         if (!strcmp(name, wireless_trans->name)) {
-            if (wireless_trans->init) {
+            if (wireless_trans->uninit) {
                 wireless_trans->uninit(priv);
             }
             WIRELESS_DEV_EXIT_CRITICAL();
@@ -321,5 +321,90 @@ int wireless_trans_exit_pair(const char *name, void *priv)
     }
     WIRELESS_DEV_EXIT_CRITICAL();
     return ret;
+}
+
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief 广播获取底层随机生成的pair code，只适用于bst传输
+ *
+ * @param name:dev name for find dev
+ * @param pair_code: ptr for get pair code
+ * @param privacy: pair code type, 0-common code, 1-pri_code
+ *
+ * @return 0:succ, other:err
+ */
+/* ----------------------------------------------------------------------------*/
+int wireless_trans_get_pair_code(const char *name, u8 *pair_code, u8 privacy)
+{
+    int ret = -1;
+    const wireless_trans_ops *wireless_trans;
+    WIRELESS_DEV_ENTER_CRITICAL();
+    list_for_each_wireless_trans(wireless_trans) {
+        if (!strcmp(name, wireless_trans->name)) {
+            if (wireless_trans->ioctrl) {
+                ret = wireless_trans->ioctrl(WIRELESS_DEV_OP_GET_PAIR_CODE, pair_code, privacy);
+            }
+            WIRELESS_DEV_EXIT_CRITICAL();
+            return ret;
+        }
+    }
+    WIRELESS_DEV_EXIT_CRITICAL();
+    return ret;
+}
+
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief 广播设置底层随机生成的pair code，只适用于bst传输
+ *
+ * @param name:dev name for find dev
+ * @param pair_code: ptr for get pair code
+ *
+ * @return 0:succ, other:err
+ */
+/* ----------------------------------------------------------------------------*/
+int wireless_trans_set_pair_code(const char *name, u8 *pair_code)
+{
+    int ret = -1;
+    const wireless_trans_ops *wireless_trans;
+    WIRELESS_DEV_ENTER_CRITICAL();
+    list_for_each_wireless_trans(wireless_trans) {
+        if (!strcmp(name, wireless_trans->name)) {
+            if (wireless_trans->ioctrl) {
+                ret = wireless_trans->ioctrl(WIRELESS_DEV_OP_SET_PAIR_CODE, pair_code);
+            }
+            WIRELESS_DEV_EXIT_CRITICAL();
+            return ret;
+        }
+    }
+    WIRELESS_DEV_EXIT_CRITICAL();
+    return ret;
+}
+
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief 获取当前连接设备的信号强度，只支持RX获取TX的rssi
+ *
+ * @param name:dev name for fine dev
+ * @param bis_hdl:链路句柄
+ *
+ * @return 0:err, other:信号强度
+ */
+/* ----------------------------------------------------------------------------*/
+int wireless_trans_get_rssi(const char *name, u16 bis_hdl)
+{
+    int rssi = 0;
+    const wireless_trans_ops *wireless_trans;
+    WIRELESS_DEV_ENTER_CRITICAL();
+    list_for_each_wireless_trans(wireless_trans) {
+        if (!strcmp(name, wireless_trans->name)) {
+            if (wireless_trans->ioctrl) {
+                rssi = wireless_trans->ioctrl(WIRELESS_DEV_OP_GET_RSSI, bis_hdl);
+            }
+            WIRELESS_DEV_EXIT_CRITICAL();
+            return rssi;
+        }
+    }
+    WIRELESS_DEV_EXIT_CRITICAL();
+    return rssi;
 }
 

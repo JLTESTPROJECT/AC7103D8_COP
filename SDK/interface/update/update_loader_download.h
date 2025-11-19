@@ -5,6 +5,7 @@
 
 // extern const int config_update_mode;
 extern const int support_dual_bank_update_en;
+extern const int support_dual_bank_less_en;
 
 extern const int CONFIG_UPDATE_ENABLE;
 extern const int CONFIG_UPDATE_STORAGE_DEV_EN;
@@ -22,6 +23,15 @@ struct __tws_ota_para {
     u16 max_pkt_len;
     u32 param_len;
     void *param;
+};
+
+struct userfile_info {
+    u32 file_len;
+    u32 file_crc;
+    u32 addr;
+    u16 max_pkt_len;
+    u8 file_type;
+    u8 file_name[16];
 };
 
 typedef struct _ret_code {
@@ -43,6 +53,7 @@ typedef struct _update_op_api_tws {
     //for user chip update
     int (*tws_ota_user_chip_update_send)(u8 cmd, u8 *buf, u16 len);
     int (*tws_ota_user_chip_update_send_data)(u8 *buf, u16 len, u16 pack_crc, void *priv);
+    u32(*tws_ota_request_peer_crc_info_hdl)(void);
 } update_op_tws_api_t;  //给tws同步升级用的接口
 
 update_op_tws_api_t *get_tws_update_api(void);
@@ -181,9 +192,27 @@ typedef struct _user_chip_info_t {
         };
     };
     u32 len;
-    u16 crc;
+    union {
+        u16 crc;
+        u16 files_info_len;
+    };
     u32 dev_addr;
+    u8 type;
+    u8 name[16];
+    void *priv;
 } user_chip_update_info_t;
+
+typedef struct _user_chip_update_v2_t {
+    u32 retry_cnt;
+    int (*update_init)(void *priv, const update_op_api_t *file_ops, u8 type, u8 *file_name, int (*update_info_get)(u8 type, user_chip_update_info_t *info, void *priv));
+    int (*update_get_len)(void);
+    int (*update_loop)(void *priv);
+    int (*update_release)(void *priv);
+    void *(*update_passive_init)(void *priv, u32 one_len, u8 type, u8 *file_name, int (*update_info_get)(u8 type, user_chip_update_info_t *info, void *priv));
+    int (*update_passive_write_init)(void *priv, void *node);
+    int (*update_passive_write)(void *priv, void *node, u8 *buff, u32 len);
+    int (*update_passive_verify)(void *priv, void *node);
+} user_chip_update_v2_t;
 
 typedef struct _update_size_t {
     u8 type;
@@ -195,6 +224,15 @@ enum UPDATE_SIZE_TYPE {
     UPDATE_LEN_TYPE_EX_IC,
 };
 
+#define USER_FILE_UPDATE_V2_EN		1
+#if USER_FILE_UPDATE_V2_EN
+void register_user_chip_update_v2_handle(const user_chip_update_v2_t *user_update_v2_ins);
+void register_user_chip_passive_update_v2_handle(const user_chip_update_v2_t *user_update_v2_ins);
+int pupdate_user_chip_init(struct userfile_info *pinfo);
+int pupdate_user_chip_release(void);
+int pupdate_user_chip_write(u8 *buff, u32 len);
+int pupdate_user_chip_verify(void);
+#endif
 void register_user_chip_update_handle(const user_chip_update_t *user_update_ins);
 void rcsp_update_loader_download_init(int update_type, void (*result_cbk)(void *priv, u8 type, u8 cmd));
 
@@ -227,6 +265,11 @@ typedef struct _MUTIL_UFW_INFO {
 } mutil_ufw_info;
 
 u32 update_target_check(void *fd, void *info);
+void bt_update_set_offset_addr(u32 offset);
+
+enum {
+    CONFIG_UPDATE_FEATRUES_CONTENT_COMPARE_EN = 0,
+};
 
 #endif /*_UPDATE_LOADER_DOWNLOAD_H_*/
 

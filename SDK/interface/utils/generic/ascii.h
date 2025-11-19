@@ -110,6 +110,7 @@ u32 ASCII_StrLen(void   *str, u32 len);
 /* ----------------------------------------------------------------------------*/
 u32 ASCII_WStrLen(void   *str, u32 len);
 
+int ASCII_StrCmpNoCaseAll(const char *src, const char *dst, int len);
 
 #ifdef __cplusplus
 }

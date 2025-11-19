@@ -325,7 +325,7 @@ u32 audio_lrclk_capture(u32 module_idx)
 
 void audio_lrclk_capture_timer(void *p)
 {
-#if TCFG_IIS_NODE_ENABLE || TCFG_MULTI_CH_IIS_NODE_ENABLE || TCFG_MULTI_CH_IIS_RX_NODE_ENABLE
+#if TCFG_IIS_RX_NODE_ENABLE || TCFG_MULTI_CH_IIS_NODE_ENABLE || TCFG_MULTI_CH_IIS_RX_NODE_ENABLE
     struct iis_lrclk_capture *hdl = (struct iis_lrclk_capture *)p;
     u8 module_idx = hdl->module_idx;
     u32 get_sr = audio_lrclk_capture(module_idx);
@@ -376,7 +376,7 @@ void audio_lrclk_capture_timer(void *p)
  * */
 void audio_iis_lrclk_capture_init(struct iis_lrclk_capture *hdl)
 {
-#if TCFG_IIS_NODE_ENABLE || TCFG_MULTI_CH_IIS_NODE_ENABLE || TCFG_MULTI_CH_IIS_RX_NODE_ENABLE
+#if TCFG_IIS_RX_NODE_ENABLE || TCFG_MULTI_CH_IIS_NODE_ENABLE || TCFG_MULTI_CH_IIS_RX_NODE_ENABLE
     if (!hdl) {
         return;
     }
@@ -395,7 +395,7 @@ void audio_iis_lrclk_capture_init(struct iis_lrclk_capture *hdl)
  * */
 void audio_iis_lrclk_capture_uninit(struct iis_lrclk_capture *hdl)
 {
-#if TCFG_IIS_NODE_ENABLE || TCFG_MULTI_CH_IIS_NODE_ENABLE || TCFG_MULTI_CH_IIS_RX_NODE_ENABLE
+#if TCFG_IIS_RX_NODE_ENABLE || TCFG_MULTI_CH_IIS_NODE_ENABLE || TCFG_MULTI_CH_IIS_RX_NODE_ENABLE
     if (!hdl) {
         return;
     }

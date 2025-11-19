@@ -35,7 +35,10 @@ static const char *audio_vol_str[] = {
     "Vol_FileMusic",
     "Vol_FmMusic",
     "Vol_SpdMusic",
+    "Vol_IISMusic",
+    "Vol_MicMusic",
     "Vol_USBMusic",
+    "Vol_WMic0",
     "Vol_SysTone",
     "Vol_SysKTone",
     "NULL",
@@ -51,6 +54,10 @@ typedef enum {
     AppVol_FM,
     AppVol_SPDIF,
     AppVol_USB,
+    AppVol_IIS,
+    AppVol_MIC,
+
+    AppVol_WMic,
 
     SysVol_TONE,
     SysVol_KEY_TONE,
@@ -190,13 +197,13 @@ u8 app_audio_bt_volume_update(u8 *btaddr, u8 state);
 
 void app_audio_bt_volume_save(u8 state);
 
+void app_audio_bt_volume_save_mac(u8 *addr);
+
 void audio_fade_in_fade_out(u8 left_vol, u8 right_vol);
 
 int audio_digital_vol_default_init(void);
 
 void volume_up_down_direct(s16 value);
-void audio_combined_vol_init(u8 cfg_en);
-void audio_volume_list_init(u8 cfg_en);
 
 void dac_power_on(void);
 void dac_power_off(void);

@@ -2,7 +2,6 @@
 #define _APP_CHARGE_H_
 
 #include "typedef.h"
-#include "system/event.h"
 
 #define LDO5V_OFF_TYPE_NORMAL_ON        0 //正常拔出开机
 #define LDO5V_OFF_TYPE_NORMAL_OFF       1 //正常拔出关机
@@ -23,14 +22,14 @@ extern const struct app_charge_handler app_charge_handler_end[];
     for (p = app_charge_handler_begin; p < app_charge_handler_end; p++)
 
 
-extern void charge_close_deal(void);
-extern void charge_start_deal(void);
-extern void ldo5v_keep_deal(void);
-extern void charge_full_deal(void);
-extern void charge_ldo5v_in_deal(void);
-extern void charge_ldo5v_off_deal(void);
-extern u8 get_charge_full_flag(void);
-extern void app_charge_power_off_keep_mode();
+void charge_close_deal(void);
+void charge_start_deal(void);
+void ldo5v_keep_deal(void);
+void charge_full_deal(void);
+void charge_ldo5v_in_deal(void);
+void charge_ldo5v_off_deal(void);
+u8 get_charge_full_flag(void);
+void app_charge_power_off_keep_mode();
 
 
 #endif    //_APP_CHARGE_H_

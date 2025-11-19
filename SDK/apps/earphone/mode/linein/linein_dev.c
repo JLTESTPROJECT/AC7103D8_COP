@@ -195,7 +195,7 @@ static int linein_sample_mult_sd(void *arg)
 static void linein_detect(void *arg)
 {
     int cur_status;
-    extern u8 bt_trim_status_get();
+
     if (bt_trim_status_get()) {
         sys_timer_modify(__this->timer, 50);//bt trim 延后检测
         return;

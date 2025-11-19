@@ -1,7 +1,6 @@
 #ifndef _LINEIN_H_
 #define _LINEIN_H_
 
-#include "system/event.h"
 
 /**
  * @brief linein音量增

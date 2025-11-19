@@ -101,7 +101,6 @@ typedef struct {
 #define DM_FUSB_PD      19
 
 
-
 enum {
     USB0,
 };

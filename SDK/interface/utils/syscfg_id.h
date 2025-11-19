@@ -201,8 +201,11 @@ int syscfg_tools_init(void);
 //=========== btif & cfg_tool.bin & vm ============//
 #define		CFG_BT_NAME    				101
 #define     CFG_BT_MAC_ADDR             102
+#define     VM_RTC_ALM_TIME             103
+#define     VM_RTC_TIME_TRIM            104
 #define     VM_OLD_RTC_TIME             105
 #define     VM_OLD_REAL_TIME            106
+#define     VM_OLD_RTC_TRIM             107
 #define     VM_BLE_LOCAL_INFO           109
 #define     CFG_BT_FRE_OFFSET			110
 #define 	VM_GMA_ALI_PARA				111
@@ -244,12 +247,35 @@ int syscfg_tools_init(void);
 #define		DUAL_BANK_BP_STEP			139
 #define		DUAL_BANK_BP_FW_CODE		140
 
-#define     CFG_BT_FRE_OFFSET1			141
-#define     CFG_BT_FRE_OFFSET2			142
-#define     CFG_BT_FRE_OFFSET3			143
-#define     CFG_BT_FRE_OFFSET4			144
+#define		VM_ALARM_0				    141
+#define		VM_ALARM_1					142
+#define		VM_ALARM_2					143
+#define		VM_ALARM_3					144
+#define		VM_ALARM_4					145
+#define		VM_ALARM_MASK				146
+#define		VM_ALARM_NAME_0				147
+#define		VM_ALARM_NAME_1				148
+#define		VM_ALARM_NAME_2				149
+#define		VM_ALARM_NAME_3				150
+#define		VM_ALARM_NAME_4				151
+#define		VM_ALARM_RING_NAME_0		152
+#define		VM_ALARM_RING_NAME_1		153
+#define		VM_ALARM_RING_NAME_2		154
+#define		VM_ALARM_RING_NAME_3		155
+#define		VM_ALARM_RING_NAME_4		156
+#define		VM_ALARM_EX0				157
+#define		VM_ALARM_EX1				158
+#define		VM_ALARM_EX2				159
+#define		VM_ALARM_EX3				160
+#define		VM_ALARM_EX4				161
 
-#define     VM_ID_XOSC_TRIM             145
+#define     CFG_BT_FRE_OFFSET1			162
+#define     CFG_BT_FRE_OFFSET2			163
+#define     CFG_BT_FRE_OFFSET3			164
+#define     CFG_BT_FRE_OFFSET4			165
+
+#define     VM_ID_XOSC_TRIM             166
+
 
 #define     CFG_ONLINE_EQ_DRC_DATA_ID   254//在线调试保存参数的id
 #define     CFG_ONLINE_SAVE_ID          255//在线保存文件大小的id
@@ -327,6 +353,11 @@ int syscfg_tools_init(void);
 
 #define     CFG_BIG_PARAMS              623
 #define     CFG_CIG_PARAMS              624
+#define     CFG_AURACAST_PARAMS         625
+
+#define     CFG_LEA_PRODUCET_TEST_NAME  633
+#define     CFG_LEA_PAIR_NAME           634
+#define     CFG_AURACAST_LISTEN_NAME    635
 
 //其它类配置项[651 ~ 700]
 #define 	CFG_STORE_BIN_ONLY_END		700

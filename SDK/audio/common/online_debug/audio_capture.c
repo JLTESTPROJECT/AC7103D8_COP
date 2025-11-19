@@ -113,6 +113,15 @@ extern struct audio_adc_hdl adc_hdl;
 #else
 #define SPP_SEND_INTERVAL	6	//ms
 #endif
+
+#if (TCFG_SENSOR_DATA_EXPORT_ENABLE == SENSOR_DATA_EXPORT_USE_PC_SPP)
+//借用spp音频导出流程导出陀螺仪数据
+#undef AC_MIC_TYPE
+#define AC_MIC_TYPE         0
+#undef SPP_EXPORT_CH
+#define SPP_EXPORT_CH       1
+#endif
+
 #endif
 /******************************************************************/
 
@@ -440,6 +449,7 @@ static void adc_mic_output(void *priv, s16 *data, int len)
 {
     //printf("<%x,%x,%d>",adc_dm->adc_buf,data,len);
     u16 wlen;
+    /*len = 1ch adc data len*/
 #if (ADC_DM_CH_NUM == 2)
     /*
      *这里先把mic0的数据取出来放在临时buf，mic1的数据就可以
@@ -839,6 +849,39 @@ static void audio_capture_board_init()
     dm.state = AC_STATE_INIT;
 }
 
+int audio_capture_cbuf_write(u8 index, void *data, u32 len)
+{
+    if (dm.state != AC_STATE_START) {
+        return 0;
+    }
+    u32 wlen = 0;
+    switch (index) {
+    case 0:
+        wlen = cbuf_write(&dm.mic0_cb, data, len);
+        if (wlen != len) {
+            AC_ERR_LOG("mic0_cbuf full:%d,%d\n", wlen, len);
+        }
+        break;
+#if (SPP_EXPORT_CH > 1)
+    case 1:
+        wlen = cbuf_write(&dm.mic1_cb, data, len);
+        if (wlen != len) {
+            AC_ERR_LOG("mic0_cbuf full:%d,%d\n", wlen, len);
+        }
+        break;
+#endif
+#if (SPP_EXPORT_CH > 2)
+    case 2:
+        wlen = cbuf_write(&dm.mic2_cb, data, len);
+        if (wlen != len) {
+            AC_ERR_LOG("mic0_cbuf full:%d,%d\n", wlen, len);
+        }
+        break;
+#endif
+    }
+    return wlen;
+}
+
 int audio_capture_start(void)
 {
     dm.sr = AC_SAMPLE_RATE;
@@ -900,6 +943,7 @@ typedef struct {
     s16 inbuf[DM_RUN_POINT];
     s16 outbuf[320];
     noise_suppress_param param;
+    void *ns;
 } audio_ns_t;
 audio_ns_t *audio_ns = NULL;
 
@@ -910,7 +954,7 @@ static int audio_ns_run(s16 *in, s16 *out, u16 points)
         out_points = points;
         memcpy(out, in, (out_points << 1));
     } else {
-        out_points = noise_suppress_run(in, out, points);
+        out_points = noise_suppress_run(audio_ns->ns, in, out, points);
         //printf(" <%d> ",out_points);
     }
     return (out_points << 1);
@@ -920,8 +964,10 @@ static int audio_ns_open(u16 sr)
 {
     printf("audio_ns_open:%d\n", sr);
 
+#ifndef CONFIG_CODE_MOVABLE_ENABLE
     extern u32 aec_addr[], aec_begin[], aec_size[];
     memcpy(aec_addr, aec_begin, (u32)aec_size) ;
+#endif
 
     audio_ns = zalloc(sizeof(audio_ns_t));
     //audio_ns->bypass = 1;
@@ -930,7 +976,7 @@ static int audio_ns_open(u16 sr)
     audio_ns->param.AggressFactor = 1.25f;
     audio_ns->param.MinSuppress = 0.04f;
     audio_ns->param.NoiseLevel = 2.2e4f;
-    noise_suppress_open(&audio_ns->param);
+    audio_ns->ns = noise_suppress_open(&audio_ns->param);
     printf("audio_ns_open succ\n");
     return 0;
 }
@@ -938,7 +984,7 @@ static int audio_ns_open(u16 sr)
 static void audio_ns_close(void)
 {
     if (audio_ns) {
-        noise_suppress_close();
+        noise_suppress_close(audio_ns->ns);
         free(audio_ns);
         audio_ns = NULL;
     }
@@ -1003,6 +1049,7 @@ int audio_capture_init(void)
 
 int audio_capture_exit()
 {
+    audio_ns_close();
     return 0;
 }
 

@@ -2,12 +2,12 @@
 #define _AUDIO_CVP_H_
 
 #include "generic/typedef.h"
-#include "user_cfg.h"
 #include "app_config.h"
 #include "audio_cvp_def.h"
 #include "cvp_sms.h"
 #include "cvp_dms.h"
 #include "cvp_tms.h"
+#include "cvp_v3.h"
 
 #define AEC_DEBUG_ONLINE	0
 #define AEC_READ_CONFIG		1
@@ -87,20 +87,20 @@ struct audio_cvp_pre_param_t {
 *********************************************************************
 */
 void audio_aec_output_sel(CVP_OUTPUT_ENUM sel, u8 agc);
-
 s8 aec_debug_online(void *buf, u16 size);
 void aec_input_clear_enable(u8 enable);
-
 int audio_aec_init(struct audio_aec_init_param_t *init_param);
 void audio_aec_close(void);
 void audio_aec_inbuf(s16 *buf, u16 len);
 void audio_aec_inbuf_ref(s16 *buf, u16 len);
 void audio_aec_inbuf_ref_1(s16 *buf, u16 len);
+void audio_aec_inbuf_ref_2(s16 *buf, u16 len);
 void audio_aec_refbuf(s16 *data0, s16 *data1, u16 len);
 u8 audio_aec_status(void);
 void audio_aec_reboot(u8 reduce);
 u8 get_audio_aec_rebooting();
 int audio_cvp_probe_param_update(struct audio_cvp_pre_param_t *cfg);
+int audio_sms_vf_probe_param_update(struct audio_cvp_pre_param_t *cfg);
 /*
 *********************************************************************
 *                  Audio AEC Open
@@ -124,11 +124,22 @@ void audio_cvp_ref_src_close();
 /*对齐iis的数据延时，在第一次mic数据来时调用对齐*/
 void audio_cvp_ref_data_align();
 int audio_cvp_ref_data_align_reset(void);
+/*设置是用哪个iis 模块*/
+void audio_cvp_ref_alink_module_idx_set(u8 idx);
+/*设置是用iis的哪个ch*/
+void audio_cvp_ref_alink_ch_idx_set(u8 idx);
+/*获取iis_hdl*/
+void *audio_cvp_ref_iis_hdl_get();
+/*获取是用iis的哪个模块，哪个ch*/
+int audio_cvp_ref_alink_cfg_get(u16 pipeline);
 
 void audio_cvp_ref_start(u8 en);
 void audio_cvp_set_output_way(u8 en);
+
 /*可写长度*/
 int get_audio_cvp_output_way_writable_len();
+void audio_cvp_develop_lock();
+void audio_cvp_develop_unlock();
 
 /*
 *********************************************************************
@@ -190,4 +201,31 @@ int audio_tms_mode_choose(enum cvp_tms_mode mode);
 void cvp_node_context_setup(u16 uuid);
 u16 get_cvp_node_uuid();
 
+int audio_cvp_v3_open(struct audio_aec_init_param_t *init_param, s16 enablebit, int (*out_hdl)(s16 *data, u16 len));
+int audio_cvp_v3_init(struct audio_aec_init_param_t *init_param);
+void audio_cvp_v3_close(void);
+void audio_cvp_v3_talk_mic_push(s16 *buf, u16 len);
+void audio_cvp_v3_ff_mic_push(s16 *buf, u16 len);
+void audio_cvp_v3_fb_mic_push(s16 *buf, u16 len);
+void audio_cvp_v3_spk_data_push(s16 *data0, s16 *data1, u16 len);
+void audio_cvp_v3_input_clear_enable(u8 enable);
+void audio_cvp_v3_output_sel(CVP_OUTPUT_ENUM sel, u8 agc);
+u8 audio_cvp_v3_status(void);
+void audio_cvp_v3_reboot(u8 reduce);
+int audio_cvp_v3_probe_param_update(struct audio_cvp_pre_param_t *cfg);
+int audio_cvp_v3_toggle_set(u8 toggle);
+int audio_cvp_v3_ioctl(int cmd, int value, void *priv);
+void audio_cvp_v3_set_output_way(u8 en);
+int audio_cvp_v3_get_wind_detect_info(int *wd_flag, float *wd_val);
+int audio_cvp_v3_get_bandwidth_info(int is_wb_state);
+int audio_cvp_v3_get_mic_state_info(int mic_state);
+
+void audio_sms_vf_spk_data_push(s16 *data0, s16 *data1, u16 len);
+void audio_sms_vf_talk_mic_push(s16 *buf, u16 len);
+void audio_sms_vf_close(void);
+u8 audio_sms_vf_status(void);
+int audio_sms_vf_ioctl(int cmd, int value, void *priv);
+int audio_sms_vf_toggle_set(u8 toggle);
+u8 get_audio_sms_vf_rebooting();
+int audio_sms_vf_init(struct audio_aec_init_param_t *init_param);
 #endif

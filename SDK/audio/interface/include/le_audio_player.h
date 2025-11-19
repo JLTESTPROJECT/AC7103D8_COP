@@ -14,6 +14,12 @@
 #include "jlstream.h"
 #include "le_audio_stream.h"
 
+/*! \brief 广播接收端音频结构体 */
+struct le_audio_player_hdl {
+    void *le_audio;
+    void *rx_stream;
+};
+
 int le_audio_player_open(u8 *conn, struct le_audio_stream_params *lea_param);
 
 void le_audio_player_close(u8 *btaddr);
@@ -35,5 +41,9 @@ s16 le_audio_get_dvol(u8 le_audio_num);
 void le_audio_dvol_up(u8 le_audio_num);
 
 void le_audio_dvol_down(u8 le_audio_num);
+
+#if TCFG_VIR_UDISK_ENABLE
+int virtual_udisk_get_enc_time(void);
+#endif
 
 #endif

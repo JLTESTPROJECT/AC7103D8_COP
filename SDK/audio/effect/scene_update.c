@@ -112,7 +112,7 @@ void update_music_pipeline_node_list(u8 mode_index, u8 cfg_index)
     }
 }
 
-#if TCFG_MIC_EFFECT_ENABLE
+#if (TCFG_MIC_EFFECT_ENABLE || (defined CONFIG_WIRELESS_MIC_CASE_ENABLE))
 //麦克风音效
 void get_mic_pipeline_node_uuid()
 {
@@ -214,6 +214,8 @@ int node_param_update(u16 uuid, char *node_name, u8 mode_index, u8 cfg_index)
         ret = multiband_drc_update_parm(mode_index, node_name, cfg_index);
         return ret;
 #endif
+    case NODE_UUID_VOLUME_CTRLER://音量节点不参与音效切换
+        break;
 
     default://通用更新
         ret = node_param_update_parm(uuid, mode_index, node_name, cfg_index);

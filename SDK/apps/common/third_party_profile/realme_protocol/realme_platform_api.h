@@ -6,38 +6,39 @@
 extern struct __realme_info *user_realme_info;
 
 // app api
-extern int realme_message_callback_handler(u8 *remote_addr, int id, int opcode, u8 *data, u32 len);
-extern u8  realme_platform_feature_default_state(u8 feature_id);
-extern void realme_remote_name_callback(u8 status, u8 *addr, u8 *name);
-extern void realme_remote_connect_complete_callback(u8 *addr);
-extern void realme_ota_breakpoint_init(void);
-extern u8 realme_platform_get_battery_left(void);
-extern u8 realme_platform_get_battery_right(void);
-extern u8 realme_platform_get_battery_box(void);
-extern int realme_tws_sync_state_send(void);
+int realme_message_callback_handler(u8 *remote_addr, int id, int opcode, u8 *data, u32 len);
+u8  realme_platform_feature_default_state(u8 feature_id);
+void realme_remote_name_callback(u8 status, u8 *addr, u8 *name);
+void realme_remote_connect_complete_callback(u8 *addr);
+void realme_ota_breakpoint_init(void);
+u8 realme_platform_get_battery_left(void);
+u8 realme_platform_get_battery_right(void);
+u8 realme_platform_get_battery_box(void);
+int realme_tws_sync_state_send(void);
+int realme_check_upgrade_area(int update);
 
 // lib api
-extern int  realme_connected_num_get(void);
-extern int  realme_connected_addr_get(u8 *addr);
-extern int  realme_disconnect(void *addr);
-extern int  realme_update_tws_state_to_lib(int state);
-extern void realme_info_register(struct __realme_info *ptr);
-extern void realme_product_test_set(uint8_t enable, int (*func)(uint8_t *buf, uint16_t len));
-extern void realme_message_callback_register(int (*handler)(u8 *remote_addr, int id, int opcode, u8 *data, u32 len));
-extern void realme_is_tws_master_callback_register(bool (*handler)(void));
-extern int realme_tws_sync_data_recv(void *priv, u8 *data, u32 len);
-extern int realme_tws_sync_state_manually(void);
-extern void realme_set_ota_delay_ms(u16 delay_ms);
-extern int  realme_all_init(u8 melody_id, u8 realme_link_id);
-extern int  realme_all_exit();
-extern int  realme_ble_adv_enable(u8 enable);
-extern int  realme_ble_set_adv_interval(u32 adv_interval);
-extern int  realme_ble_disconnect(void);
-extern void realme_debug_log_param_set(u32 frame_size, u32 timer_ms);
-extern void realme_get_host_utc_time(u8 *remote_addr);
-extern int  dual_bank_erase_other_bank(void);
-extern int  realme_check_other_upgrade_bank(void);
-extern void realme_app_set_local_utc_time(u32 time_stamp);
+int  realme_connected_num_get(void);
+int  realme_connected_addr_get(u8 *addr);
+int  realme_disconnect(void *addr);
+int  realme_update_tws_state_to_lib(int state);
+void realme_info_register(struct __realme_info *ptr);
+void realme_product_test_set(uint8_t enable, int (*func)(uint8_t *buf, uint16_t len));
+void realme_message_callback_register(int (*handler)(u8 *remote_addr, int id, int opcode, u8 *data, u32 len));
+void realme_is_tws_master_callback_register(bool (*handler)(void));
+int realme_tws_sync_data_recv(void *priv, u8 *data, u32 len);
+int realme_tws_sync_state_manually(void);
+void realme_set_ota_delay_ms(u16 delay_ms);
+int  realme_all_init(u8 melody_id, u8 realme_link_id);
+int  realme_all_exit();
+int  realme_ble_adv_enable(u8 enable);
+int  realme_ble_set_adv_interval(u32 adv_interval);
+int  realme_ble_disconnect(void);
+void realme_debug_log_param_set(u32 frame_size, u32 timer_ms);
+void realme_get_host_utc_time(u8 *remote_addr);
+int  dual_bank_erase_other_bank(u8 opt);
+int  realme_check_other_upgrade_bank(void);
+void realme_app_set_local_utc_time(u32 time_stamp);
 /*
  realme_send_operation_to_host
 
@@ -49,7 +50,7 @@ extern void realme_app_set_local_utc_time(u32 time_stamp);
      5 = 通知手机响铃或者震动
      6 = 关闭手机响铃或者震动
 */
-extern void realme_send_operation_to_host(u8 *remote_addr, u8 operation);
+void realme_send_operation_to_host(u8 *remote_addr, u8 operation);
 
 /*
     realme_event_notify
@@ -67,7 +68,7 @@ extern void realme_send_operation_to_host(u8 *remote_addr, u8 operation);
 #define OPPO_EVENT_CODE_CONN_DEV_INFO                   0xF2
 #define OPPO_EVENT_CODE_DEVICES_EXCEPTION_INFO          0xF3
 #define OPPO_EVENT_CODE_DEVICE_BURIED_POINT             0xF4
-extern void realme_event_notify(uint8_t *remote_addr, uint8_t event_type, uint8_t *data, uint16_t len);
+void realme_event_notify(uint8_t *remote_addr, uint8_t event_type, uint8_t *data, uint16_t len);
 
 
 /*
@@ -96,7 +97,7 @@ extern void realme_event_notify(uint8_t *remote_addr, uint8_t event_type, uint8_
 #define REALME_STATE_FAIL_AND_RETRY            (0x11)    // 失败， 且耳机请求重发对应命令
 #define REALME_STATE_REQUEST_FAILURE           (0x12)    // 由于耳机被另一个手机占用导致请求失败（ 比如： OTA 请求失败）
 #define REALME_STATE_FAIL_AND_RETRANSFER       (0x13)    // 失败， 且耳机请求从特定的偏移量重传
-extern void realme_upgrade_error(u8 error_code);
+void realme_upgrade_error(u8 error_code);
 
 /*
     realme_upgrade_request
@@ -108,7 +109,7 @@ extern void realme_upgrade_error(u8 error_code);
 #define UPGRADE_TYPE_CHARGE_BOX     (0x02) // 升级充电盒固件
 #define UPGRADE_TYPE_TONE_CHAN      (0x03) // 升级耳机禅定声音文件
 #define UPGRADE_TYPE_TONE           (0x04) // 升级耳机提示音文件
-extern void realme_upgrade_request(uint8_t *remote_addr, u8 type);
+void realme_upgrade_request(uint8_t *remote_addr, u8 type);
 
 
 /*

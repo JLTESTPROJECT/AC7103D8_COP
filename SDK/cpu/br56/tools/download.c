@@ -3,7 +3,8 @@
 
 #ifdef __SHELL__
 
-##!/bin/sh
+
+cd "$(dirname "$0")"
 
 ${OBJDUMP} -D -address-mask=0x7ffffff -print-imm-hex -print-dbg -mcpu=r3 $1.elf > $1.lst
 ${OBJCOPY} -O binary -j .text $1.elf text.bin
@@ -13,13 +14,13 @@ ${OBJCOPY} -O binary -j .data_code_z $1.elf data_code_z.bin
 ${OBJCOPY} -O binary -j .overlay_init $1.elf init.bin
 ${OBJCOPY} -O binary -j .overlay_aec $1.elf aec.bin
 ${OBJCOPY} -O binary -j .overlay_aac $1.elf aac.bin
+${OBJCOPY} -O binary -j .dlog_data $1.elf dlog.bin
 
 bank_files=
 for i in $(seq 0 20)
 do
     ${OBJCOPY} -O binary -j .overlay_bank$i $1.elf bank$i.bin
-    if [ -s bank$i.bin ]
-    then
+    if [ -s bank$i.bin ]; then
         bank_files=$bank_files"bank$i.bin 0xbbaa "
     fi
 done
@@ -33,33 +34,65 @@ $compress_tool -dict text.bin -input data_code_z.bin 0 init.bin 0 aec.bin 0 aac.
 
 cat text.bin data.bin data_code.bin compress.bin > app.bin
 
-${OBJDUMP} -section-headers -address-mask=0x7ffffff $1.elf > segment_list.txt
+rm $bankfiles data_code_z.bin text.bin data.bin compress.bin
 
-${OBJSIZEDUMP} -lite -skip-zero -enable-dbg-info $1.elf | sort -k 1 >  symbol_tbl.txt
+#if TCFG_TONE_EN_ENABLE
+export TONE_EN_ENABLE=1
+#else
+export TONE_EN_ENABLE=0
+#endif
 
+#if TCFG_TONE_ZH_ENABLE
+export TONE_ZH_ENABLE=1
+#else
+export TONE_ZH_ENABLE=0
+#endif
 
-/opt/utils/report_segment_usage --sdk_path ${ROOT} \
---tbl_file symbol_tbl.txt \
---seg_file segment_list.txt \
---map_file $1.map \
---module_depth "{\"apps\":1,\"lib\":2,\"[lib]\":2}"
+#if RCSP_MODE
+export RCSP_EN=1
+#endif
 
-cat segment_list.txt
-/* if [ -f version ]; then */
-    /* host-client -project ${NICKNAME}$2 -f app.bin version $1.elf p11_code.bin br28loader.bin br28loader.uart uboot.boot uboot.boot_debug ota.bin ota_debug.bin isd_config.ini */
-/* else */
-    /* host-client -project ${NICKNAME}$2 -f app.bin $1.elf  p11_code.bin br28loader.bin br28loader.uart uboot.boot uboot.boot_debug ota.bin ota_debug.bin isd_config.ini */
+#if TCFG_UPDATE_COMPRESS
+export UPDATE_COMPRESS_ENABLE=1
+#else
+export UPDATE_COMPRESS_ENABLE=0
+#endif
 
-/* fi */
+#if TCFG_AUDIO_ANC_EAR_ADAPTIVE_EN
+if [ ! -d download/earphone/ALIGN_DIR ]; then
+    mkdir download/earphone/ALIGN_DIR
+fi
+cp anc_ext.bin download/earphone/ALIGN_DIR/
+#else
+if [ -f download/earphone/ALIGN_DIR/anc_ext.bin ]; then
+    rm download/earphone/ALIGN_DIR/anc_ext.bin
+fi
+#endif
 
-/opt/utils/strip-ini -i isd_config.ini -o isd_config.ini
+if [ "$cibuild" = "y" ]; then
+    if [ ! -x isd_download ]; then
+        chmod a+x isd_download fw_add json_to_res packres ufw_maker download/earphone/download.sh
+    fi
+    ./download/earphone/download.sh
+else
+    ${OBJDUMP} -section-headers -address-mask=0x7ffffff $1.elf > segment_list.txt
 
-files="app.bin  br56loader.uart br56loader.bin uboot.boot ota*.bin p11_code.bin  isd_config.ini"
-/* files="app.bin ota*.bin  p11_code.bin isd_config.ini " */
-//files="app.bin isd_config.ini"
+    ${OBJSIZEDUMP} -lite -skip-zero -enable-dbg-info $1.elf | sort -k 1 >  symbol_tbl.txt
 
+    /opt/utils/report_segment_usage --sdk_path ${ROOT} \
+    --tbl_file symbol_tbl.txt \
+    --seg_file segment_list.txt \
+    --map_file $1.map \
+    --module_depth "{\"apps\":1,\"lib\":2,\"[lib]\":2}"
 
-host-client -project ${NICKNAME}$2 -f ${files} $1.elf
+    cat segment_list.txt
+
+    /opt/utils/strip-ini -i isd_config.ini -o isd_config.ini
+
+    files="app.bin  br56loader.uart br56loader.bin uboot.boot ota*.bin isd_config.ini dlog.bin"
+
+    host-client -project ${NICKNAME}$2 -f ${files} $1.elf
+fi
 
 #else
 
@@ -90,6 +123,7 @@ REM %OBJDUMP% -D -address-mask=0x1ffffff -print-dbg $1.elf > $1.lst
 %OBJCOPY% -O binary -j .overlay_init %ELFFILE% init.bin
 %OBJCOPY% -O binary -j .overlay_aec %ELFFILE% aec.bin
 %OBJCOPY% -O binary -j .overlay_aac %ELFFILE% aac.bin
+%OBJCOPY% -O binary -j .dlog_data %ELFFILE% dlog.bin
 
 for /L %%i in (0,1,20) do (
             %OBJCOPY% -O binary -j .overlay_bank%%i %ELFFILE% bank%%i.bin
@@ -122,12 +156,19 @@ set TONE_ZH_ENABLE=0
 set RCSP_EN=1
 #endif
 
+#if TCFG_UPDATE_COMPRESS
+set UPDATE_COMPRESS_ENABLE=1
+#else
+set UPDATE_COMPRESS_ENABLE=0
+#endif
+
 #if TCFG_AUDIO_ANC_EAR_ADAPTIVE_EN
 copy anc_ext.bin download\earphone\ALIGN_DIR\.
 #else
 del download\earphone\ALIGN_DIR\anc_ext.bin
 #endif
 
+call elf_to_lst.bat
 call download/earphone/download.bat
 
 #endif

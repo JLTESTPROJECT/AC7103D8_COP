@@ -37,7 +37,6 @@
 #include "btcrypt.h"
 #include "custom_cfg.h"
 #include "rcsp_music_info_setting.h"
-#include "classic/tws_api.h"
 #include "ble_rcsp_server.h"
 #include "rcsp_manage.h"
 #include "rcsp_bt_manage.h"
@@ -50,13 +49,15 @@
 #include "btstack_rcsp_user.h"
 #include "update.h"
 
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
-#include "app_le_connected.h"
+#if	TCFG_USER_TWS_ENABLE
+#include "bt_tws.h"
+#include "classic/tws_api.h"
 #endif
 
 #if RCSP_MODE == RCSP_MODE_EARPHONE
-#include "bt_tws.h"
 #include "earphone.h"
+#elif RCSP_MODE == RCSP_MODE_SOUNDBOX
+#include "soundbox.h"
 #endif
 
 #include "asm/charge.h"
@@ -81,6 +82,8 @@
 #if !TCFG_THIRD_PARTY_PROTOCOLS_SIMPLIFIED
 extern void *rcsp_server_ble_hdl;
 extern void *rcsp_server_ble_hdl1;
+extern void *rcsp_server_edr_att_hdl;
+extern void *rcsp_server_edr_att_hdl1;
 #endif
 
 static u8 adv_data_len;
@@ -148,7 +151,7 @@ int rcsp_make_set_adv_data(void)
 
     buf[8] = 0x20;	//   2:TWS耳机类型   |  protocol verson
 
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
     buf[8] |= 4;
 #else
     if (RCSP_USE_SPP == get_defalut_bt_channel_sel()) {
@@ -199,7 +202,7 @@ int rcsp_make_set_adv_data(void)
         buf[20] = 1;
     }
 
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
     buf[20] |= BIT(2);  // 是否支持Le Audio功能
     if (is_cig_phone_conn()) {
         buf[20] |= BIT(3);  // Le Audio是否已连接
@@ -655,6 +658,8 @@ static void bt_ble_rcsp_adv_enable_do(void *priv)
         if (rcsp_conn_num >= max_con_dev) {
             __this->modify_flag = 0;
         }
+    }
+    if (__this->ble_adv_notify) {
         set_ble_adv_notify(0);
     }
 
@@ -961,16 +966,29 @@ void adv_role_switch_handle(u8 role)
 #if !TCFG_THIRD_PARTY_PROTOCOLS_SIMPLIFIED
     // 当充电入仓的时候，入仓的主机设备role是1但tws_api_get_role()是0；
     printf("adv_role_switch_handle rcsp role change:%d, %d, %d\n", role, tws_api_get_role(), bt_rcsp_device_conn_num());
+    printf("tws state %x, spp num %x, ble num %x, att num %x\n", tws_api_get_tws_state(), bt_rcsp_spp_conn_num(), bt_rcsp_ble_conn_num(), bt_rcsp_edr_att_conn_num());
     if (tws_api_get_tws_state()) {
         // 设备连接后，主从切换需要spp手机app来请求固件信息
         if ((role == TWS_ROLE_MASTER) && \
-            ((bt_rcsp_spp_conn_num() > 0) || (bt_rcsp_ble_conn_num() > 0))) {
+            ((bt_rcsp_spp_conn_num() > 0) || (bt_rcsp_ble_conn_num() > 0) || (bt_rcsp_edr_att_conn_num() > 0))) {
             u8 adv_cmd = 0x4;
             adv_info_device_request(&adv_cmd, sizeof(adv_cmd));             //让手机来请求固件信息
         }
-
+        // 主从切换后, 新主机重新推送一次电量信息
+        if (role == TWS_ROLE_MASTER) {
+            set_ble_adv_notify(1);
+            bt_ble_rcsp_adv_enable();
+        }
         // 如果还需要开广播 并且 一拖二的时候ble还没有连接
         if (bt_rcsp_device_conn_num() < rcsp_max_support_con_dev_num()) {
+            if (role == TWS_ROLE_MASTER) {
+                rcsp_bt_ble_adv_enable(1);
+            } else {
+                rcsp_bt_ble_adv_enable(0);
+            }
+        }
+        //有att连接中,从机切为主机，要开ble广播；主机切为从机，要关ble广播
+        if (bt_rcsp_edr_att_conn_num() > 0) {
             if (role == TWS_ROLE_MASTER) {
                 rcsp_bt_ble_adv_enable(1);
             } else {
@@ -982,17 +1000,24 @@ void adv_role_switch_handle(u8 role)
 #else // !TCFG_THIRD_PARTY_PROTOCOLS_SIMPLIFIED
 
     if (tws_api_get_tws_state()) {
-        if (rcsp_ble_con_handle_get()) {
-            if (tws_api_get_role() == TWS_ROLE_MASTER) {
-                ble_module_enable(1);
-            } else {
-                u8 adv_cmd = 0x3;
-                adv_info_device_request(&adv_cmd, sizeof(adv_cmd));
-                tws_disconn_ble(NULL);
-            }
-        } else if (!rcsp_ble_con_handle_get() && bt_rcsp_device_conn_num()) {
+        if (!bt_rcsp_spp_conn_num() && (tws_api_get_role() != TWS_ROLE_SLAVE)) {
+            // 新主机开广播
+            ble_module_enable(1);
+        }
+        // 主从切换后, 新主机重新推送一次电量信息
+        if (role == TWS_ROLE_MASTER) {
+            set_ble_adv_notify(1);
+            bt_ble_rcsp_adv_enable();
+        }
+        if (rcsp_ble_con_handle_get() && (tws_api_get_role() == TWS_ROLE_SLAVE)) {
+            // 旧主机让手机回连同时断开ble
+            u8 adv_cmd = 0x3;
+            adv_info_device_request(&adv_cmd, sizeof(adv_cmd));
+            tws_disconn_ble(NULL);
+        }
+        if (bt_rcsp_spp_conn_num() && bt_rcsp_device_conn_num()) {
             u8 adv_cmd = 0x4;
-            adv_info_device_request(&adv_cmd, sizeof(adv_cmd));             //让手机来请求固件信息
+            adv_info_device_request(&adv_cmd, sizeof(adv_cmd));             //主从切换spp让手机来请求固件信息
         }
     }
 

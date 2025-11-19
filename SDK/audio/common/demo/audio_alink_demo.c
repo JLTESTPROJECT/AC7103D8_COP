@@ -14,11 +14,11 @@
  *				  复制再修改
  ****************************************************************************
  */
-#include "asm/audio_link.h"
+#include "audio_link.h"
 #include "media/includes.h"
 #include "audio_config.h"
 
-#if TCFG_IIS_NODE_ENABLE
+#if TCFG_IIS_NODE_ENABLE || TCFG_IIS_RX_NODE_ENABLE
 
 //模块总句柄
 static void *alink0_hdl = NULL;
@@ -225,7 +225,7 @@ void audio_link_open_demo(void)
         alink_channel_io_init(alink0_hdl, alink0_ch0, 0);
     }
     if (hw_ch3_tx_cfg.dir == ALINK_DIR_TX) {
-        alink_channel_io_init(alink0_hdl, alink0_ch3, 1);
+        alink_channel_io_init(alink0_hdl, alink0_ch3, 3);
     }
 
 

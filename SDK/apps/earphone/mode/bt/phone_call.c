@@ -30,6 +30,7 @@
 #include "vol_sync.h"
 #include "audio_config.h"
 #include "bt_slience_detect.h"
+#include "debug/audio_debug.h"
 #if TCFG_SMART_VOICE_ENABLE
 #include "asr/jl_kws.h"
 #include "smart_voice/smart_voice.h"
@@ -321,6 +322,10 @@ int bt_phone_esco_play(u8 *bt_addr)
 #if TCFG_SMART_VOICE_ENABLE
     esco_smart_voice_detect_handler();
 #endif
+    int ret = 0;
+#if (LE_AUDIO_JL_DONGLE_UNICAST_WITH_PHONE_CONN_CONFIG & LE_AUDIO_JL_DONGLE_UNICAST_WITH_PHONE_CONN_PLAY_MIX)
+    ret = le_audio_unicast_play_stop_by_esco();
+#endif
 
 #if TCFG_AUDIO_SOMATOSENSORY_ENABLE && SOMATOSENSORY_CALL_EVENT
     somatosensory_open();
@@ -366,6 +371,11 @@ int bt_phone_esco_play(u8 *bt_addr)
     phone_income_num_check(NULL);
 #endif
     pbg_user_mic_fixed_deal(1);
+#if (LE_AUDIO_JL_DONGLE_UNICAST_WITH_PHONE_CONN_CONFIG & LE_AUDIO_JL_DONGLE_UNICAST_WITH_PHONE_CONN_PLAY_MIX)
+    if (ret) {
+        le_audio_unicast_play_resume_by_esco();
+    }
+#endif
     return 0;
 
 }
@@ -541,7 +551,6 @@ static int bt_phone_status_event_handler(int *msg)
 #if TCFG_BT_SUPPORT_PBAP_LIST
         bt_cmd_prepare(USER_CTRL_PBAP_READ_LIST, 0, NULL);
 #endif
-#if TCFG_BT_PHONE_NUMBER_ENABLE
         phone_number = (u8 *)bt->value;
         printf("phone_number = %s\n", phone_number);
         if (g_bt_hdl.phone_num_flag == 1) {
@@ -564,7 +573,6 @@ static int bt_phone_status_event_handler(int *msg)
         } else {
             log_info("PHONE_NUMBER len err\n");
         }
-#endif
         break;
     case BT_STATUS_PHONE_NAME:
         log_info("BT_STATUS_PHONE_NAME\n");
@@ -587,7 +595,7 @@ static int bt_phone_status_event_handler(int *msg)
         if (bt->value != 0xff) {
 #if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SINK_EN)
             if (le_audio_player_is_playing()) {
-                le_auracast_stop();
+                le_auracast_stop(1);
             }
 #endif
             u8 call_vol = 15;
@@ -596,7 +604,8 @@ static int bt_phone_status_event_handler(int *msg)
             //r_printf("---bt_get_call_vol_for_addr--%d\n", call_vol);
             app_audio_state_switch(APP_AUDIO_STATE_CALL, app_var.aec_dac_gain, NULL);
             app_audio_set_volume(APP_AUDIO_STATE_CALL, call_vol, 1);
-#if (TCFG_BT_ESCO_PLAYER_ENABLE == 0)
+#if ((TCFG_BT_ESCO_PLAYER_ENABLE == 0) || BT_INTERFERE_WITH_AUDIO_DEBUG)
+            y_printf("esco_player disable");
             lmp_private_esco_suspend_resume(1);
 #else
             bt_phone_esco_play(bt->args);
@@ -613,7 +622,11 @@ static int bt_phone_status_event_handler(int *msg)
 
             bt_phone_esco_stop(bt->args);
             bt_phone_esco_stop(bt->args);
-
+#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SINK_EN)
+            if (!le_audio_player_is_playing()) {
+                le_auracast_audio_recover();
+            }
+#endif
         }
         break;
     case BT_STATUS_CALL_VOL_CHANGE:

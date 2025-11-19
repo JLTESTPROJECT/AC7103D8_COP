@@ -23,6 +23,8 @@ void memory_init(void);
 
 void *malloc(size_t size);
 void *zalloc(size_t size);
+void *malloc_with_rets(size_t size, u32 rets);
+void *zalloc_with_rets(size_t size, u32 rets);
 void free(void *mem);
 void *realloc(void *ptr, size_t size);
 void *calloc(unsigned long count, unsigned long size);
@@ -112,6 +114,31 @@ int memory_in_vtl(const void *mem);
  */
 /* ----------------------------------------------------------------------------*/
 u32 pmalloc_get_idle_ram(void);
+
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief :禁止内存整理
+ *
+ * @param : void
+ *
+ * @return :void
+ */
+/* ----------------------------------------------------------------------------*/
+// void pmalloc_defrag_lock(void);
+
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief :使能内存整理
+ *
+ * @param : void
+ *
+ * @return :void
+ */
+/* ----------------------------------------------------------------------------*/
+// void pmalloc_defrag_unlock(void);
+
+void memory_trace_dump();
+void memory_trace_reset();
 
 #ifdef __cplusplus
 }

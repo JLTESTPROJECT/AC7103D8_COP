@@ -13,6 +13,7 @@
 #include "hx3918_prox.h"
 #endif
 
+#if TCFG_HX3918_ENABLE
 
 #ifdef SPO2_ALG_LIB
 extern const uint8_t  hx3918_spo2_agc_green_idac;  // 6,7,8...
@@ -890,3 +891,5 @@ int32_t hx3918_ir_data_cali(int32_t ir_new_raw_data)
 #endif
 
 #endif
+
+#endif // TCFG_HX3918_ENABLE

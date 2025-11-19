@@ -2,7 +2,6 @@
 #define _AUDIO_AEC_H_
 
 #include "generic/typedef.h"
-#include "user_cfg.h"
 #include "app_config.h"
 #include "audio_cvp_def.h"
 #include "audio_cvp.h"

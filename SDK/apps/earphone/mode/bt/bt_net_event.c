@@ -2,14 +2,14 @@
 #include "event.h"
 #include "app_msg.h"
 #include "btstack/avctp_user.h"
-#include "sdk_config.h"
+#include "app_config.h"
+#include "net/bt_netif.h"
 
 
 
 #if (defined TCFG_BT_SUPPORT_PAN && (TCFG_BT_SUPPORT_PAN==1))
 #include "lwip.h"
 static int bt_dhcp_flag = 0;
-extern int user_pan_send_cmd(u8 *addr, u32 cmd, u32 value, u8 *data);
 extern u8 pan_profile_support;
 
 int bt_lwip_event_cb(void *lwip_ctx, enum LWIP_EVENT event)
@@ -48,10 +48,9 @@ int net_event_cb(int *msg)
     case LWIP_BT_DHCP_BOUND_SUCC:
         puts("LWIP_BT_DHCP_BOUND_SUCC\n");
         bt_dhcp_flag = 1;
-        /* extern int jl_net_time_sync(); */
         /* jl_net_time_sync(); */
         break;
-    };
+    }
     return 0;
 }
 

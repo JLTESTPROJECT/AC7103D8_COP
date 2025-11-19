@@ -17,7 +17,7 @@
 #include "rcsp_device_status.h"
 #include "JL_rcsp_api.h"
 #include "JL_rcsp_attr.h"
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
 #include "bt_common.h"
 #include "app_le_connected.h"
 #endif
@@ -53,11 +53,13 @@ static u32 target_feature_attr_sys_info(void *priv, u8 attr, u8 *buf, u16 buf_si
         return 0;
     }
     struct _SYS_info sys_info = {0};
-#if (RCSP_MODE != RCSP_MODE_EARPHONE)
+#if 1//(RCSP_MODE != RCSP_MODE_EARPHONE)
     extern u8 get_vbat_percent(void);
     sys_info.bat_lev = get_vbat_percent(); //get_battery_level() / 10;
+#if (RCSP_MODE && RCSP_ADV_EQ_SET_ENABLE)
     rcsp_get_max_vol_info(&sys_info.max_vol);
     rcsp_get_cur_dev_vol_info(&sys_info.sys_vol);
+#endif
 #endif
 #if BT_SUPPORT_MUSIC_VOL_SYNC || TCFG_BT_VOL_SYNC_ENABLE
     extern u8 avctp_get_remote_vol_sync(bd_addr_t addr);
@@ -247,7 +249,7 @@ static u32 target_feature_ble_only(void *priv, u8 attr, u8 *buf, u16 buf_size, u
 {
     u32 rlen = 0;
 
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
     u8 taddr_buf[8];
     taddr_buf[0] = 0;
     le_controller_get_mac(taddr_buf + 1);
@@ -335,6 +337,9 @@ static u32 target_feature_md5_game_support(void *priv, u8 attr, u8 *buf, u16 buf
 #endif
 #if RCSP_ADV_ADAPTIVE_NOISE_REDUCTION
     ext_function_flag_byte1 |= BIT(1);
+#endif
+#if RCSP_ADV_TRANSLATOR
+    ext_function_flag_byte1 |= BIT(2);
 #endif
 #if RCSP_ADV_AI_NO_PICK
     ext_function_flag_byte1 |= BIT(3);
@@ -440,5 +445,6 @@ RCSP_LeAudioMode rcsp_get_LeAudio_mode()
 #endif
 
 #endif//RCSP_MODE
+
 
 

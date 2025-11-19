@@ -60,47 +60,23 @@
 
 #if (TCFG_USER_BLE_ENABLE && (CONFIG_BT_MODE == BT_NORMAL))
 
-#if ((THIRD_PARTY_PROTOCOLS_SEL & (GFPS_EN | TUYA_DEMO_EN | REALME_EN | TME_EN | DMA_EN | GMA_EN | MMA_EN | FMNA_EN | SWIFT_PAIR_EN | ONLINE_DEBUG_EN | CUSTOM_DEMO_EN | XIMALAYA_EN | AURACAST_APP_EN)) | LE_AUDIO_EN)
-#define EARPHONE_STATE_INIT()                   do { } while(0)
-#define EARPHONE_STATE_SET_PAGE_SCAN_ENABLE()   do { } while(0)
-#define EARPHONE_STATE_GET_CONNECT_MAC_ADDR()   do { } while(0)
-#define EARPHONE_STATE_CANCEL_PAGE_SCAN()       do { } while(0)
-#define EARPHONE_STATE_ENTER_SOFT_POWEROFF()    do { } while(0)
-#define EARPHONE_STATE_TWS_INIT(a)              do { } while(0)
-#define EARPHONE_STATE_TWS_CONNECTED(a, b)      do { } while(0)
-#define SYS_EVENT_HANDLER_SPECIFIC(a)           do { } while(0)
-#define TWS_EVENT_MASSAGE_HANDLER(a)            0
-#define SYS_EVENT_REMAP(a) 				        0
-#define EARPHONE_STATE_SNIFF(a)
-#define EARPHONE_STATE_ROLE_SWITCH(a)
+#if (THIRD_PARTY_PROTOCOLS_SEL & TUYA_DEMO_EN)
+int tuya_earphone_state_init();
+int tuya_earphone_state_set_page_scan_enable();
+int tuya_earphone_state_get_connect_mac_addr();
+int tuya_earphone_state_cancel_page_scan();
+int tuya_earphone_state_enter_soft_poweroff();
+int tuya_earphone_state_tws_init(int paired);
+int tuya_earphone_state_tws_connected(int first_pair, u8 *comm_addr);
+int tuya_sys_event_handler_specific(struct sys_event *event);
 
-#elif TCFG_WIRELESS_MIC_ENABLE
-#define EARPHONE_STATE_INIT()                   do { } while(0)
-#define EARPHONE_STATE_SET_PAGE_SCAN_ENABLE()   do { } while(0)
-#define EARPHONE_STATE_GET_CONNECT_MAC_ADDR()   do { } while(0)
-#define EARPHONE_STATE_CANCEL_PAGE_SCAN()       do { } while(0)
-#define EARPHONE_STATE_ENTER_SOFT_POWEROFF()    do { } while(0)
-#define EARPHONE_STATE_TWS_INIT(a)              do { } while(0)
-#define EARPHONE_STATE_TWS_CONNECTED(a, b)      do { } while(0)
-#define SYS_EVENT_HANDLER_SPECIFIC(a)           do { } while(0)
-#define TWS_EVENT_MASSAGE_HANDLER(a)            0
-#define SYS_EVENT_REMAP(a) 				        0
-#define EARPHONE_STATE_SNIFF(a)
-#define EARPHONE_STATE_ROLE_SWITCH(a)
-
-#elif TCFG_WIRELESS_MIC_ENABLE
-#define EARPHONE_STATE_INIT()                   do { } while(0)
-#define EARPHONE_STATE_SET_PAGE_SCAN_ENABLE()   do { } while(0)
-#define EARPHONE_STATE_GET_CONNECT_MAC_ADDR()   do { } while(0)
-#define EARPHONE_STATE_CANCEL_PAGE_SCAN()       do { } while(0)
-#define EARPHONE_STATE_ENTER_SOFT_POWEROFF()    do { } while(0)
-#define EARPHONE_STATE_TWS_INIT(a)              do { } while(0)
-#define EARPHONE_STATE_TWS_CONNECTED(a, b)      do { } while(0)
-#define SYS_EVENT_HANDLER_SPECIFIC(a)           do { } while(0)
-#define TWS_EVENT_MASSAGE_HANDLER(a)            0
-#define SYS_EVENT_REMAP(a) 				        0
-#define EARPHONE_STATE_SNIFF(a)
-#define EARPHONE_STATE_ROLE_SWITCH(a)
+#define EARPHONE_STATE_INIT()                   tuya_earphone_state_init()
+#define EARPHONE_STATE_SET_PAGE_SCAN_ENABLE()   tuya_earphone_state_set_page_scan_enable()
+#define EARPHONE_STATE_GET_CONNECT_MAC_ADDR()   tuya_earphone_state_get_connect_mac_addr()
+#define EARPHONE_STATE_CANCEL_PAGE_SCAN()       tuya_earphone_state_cancel_page_scan()
+#define EARPHONE_STATE_ENTER_SOFT_POWEROFF()    tuya_earphone_state_enter_soft_poweroff()
+#define EARPHONE_STATE_TWS_INIT(a)              tuya_earphone_state_tws_init(a)
+#define EARPHONE_STATE_TWS_CONNECTED(a, b)      tuya_earphone_state_tws_connected(a,b)
 
 #else
 #define EARPHONE_STATE_INIT()                   do { } while(0)
@@ -110,11 +86,6 @@
 #define EARPHONE_STATE_ENTER_SOFT_POWEROFF()    do { } while(0)
 #define EARPHONE_STATE_TWS_INIT(a)              do { } while(0)
 #define EARPHONE_STATE_TWS_CONNECTED(a, b)      do { } while(0)
-#define SYS_EVENT_HANDLER_SPECIFIC(a)           do { } while(0)
-#define TWS_EVENT_MASSAGE_HANDLER(a)            0
-#define SYS_EVENT_REMAP(a) 				        0
-#define EARPHONE_STATE_SNIFF(a)
-#define EARPHONE_STATE_ROLE_SWITCH(a)
 
 #endif
 
@@ -128,11 +99,6 @@
 #define EARPHONE_STATE_ENTER_SOFT_POWEROFF()    do { } while(0)
 #define EARPHONE_STATE_TWS_INIT(a)              do { } while(0)
 #define EARPHONE_STATE_TWS_CONNECTED(a, b)      do { } while(0)
-#define SYS_EVENT_HANDLER_SPECIFIC(a)           do { } while(0)
-#define TWS_EVENT_MASSAGE_HANDLER(a)            0
-#define SYS_EVENT_REMAP(a) 				        0
-#define EARPHONE_STATE_SNIFF(a)
-#define EARPHONE_STATE_ROLE_SWITCH(a)
 #endif
 
 
@@ -152,16 +118,18 @@ typedef enum {
     CIG_EVENT_OPID_PAUSE        = 0x46,
     CIG_EVENT_OPID_NEXT         = 0x4B,
     CIG_EVENT_OPID_PREV         = 0x4C,
+    CIG_EVENT_OPID_REQ_REMOVE_CIS   = 0x4D,
+    CIG_EVENT_OPID_REQ_CREAT_CIS   = 0x4E,
 } CIG_EVENT_CMD_TYPE;
 // 检查是否已经开始退出蓝牙模式
-extern bool bt_mode_is_try_exit();
+bool bt_mode_is_try_exit();
 
-extern u8 bt_app_exit_check(void);
+u8 bt_app_exit_check(void);
 
 
-extern void bt_mode_app_msg_handler(int *msg);
+void bt_mode_app_msg_handler(int *msg);
 
-extern const struct key_remap_table *get_key_remap_table();
+const struct key_remap_table *get_key_remap_table();
 
 struct app_mode *app_enter_bt_mode(int arg);
 
@@ -193,5 +161,7 @@ void bt_init_ok_search_index(void);
 void bt_fast_test_api(void);
 
 int bt_key_msg_remap(int *msg);
+
+void bt_discovery_and_connectable_using_loca_mac_addr(u8 inquiry_scan_en, u8 page_scan_en);
 
 #endif

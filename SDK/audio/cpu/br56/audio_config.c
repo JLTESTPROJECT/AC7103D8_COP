@@ -30,6 +30,7 @@ const int config_audio_dac_mute_timeout = 70;   //单位：ms
  *******************************************************************
  */
 const int config_audio_dac_trim_fade_enable = AUD_DAC_TRIM_FADE_ENABLE;
+const int config_audio_dac_mute_nf_level = 0;   // DAC mute后底噪等级
 
 /*
  *******************************************************************
@@ -42,12 +43,16 @@ const int config_audio_dac_mix_enable = 1;
 //*		AAC Codec       *
 //***********************
 const int AAC_DEC_MP4A_LATM_ANALYSIS = 1;
-const int AAC_DEC_LIB_SUPPORT_24BIT_OUTPUT = 0;
+const int AAC_DEC_LIB_SUPPORT_24BIT_OUTPUT = 1;
 const int WTS_DEC_LIB_SUPPORT_24BIT_OUTPUT = 1;
 //***********************
 //*		MP3 Codec       *
 //***********************
+#ifdef CONFIG_SOUNDBOX_CASE_ENABLE
+const int MP3_DEC_LIB_SUPPORT_24BIT_OUTPUT = 1;
+#else
 const int MP3_DEC_LIB_SUPPORT_24BIT_OUTPUT = 0;
+#endif
 
 //***********************
 //*		Audio Params    *
@@ -90,7 +95,7 @@ int aud_clock_alloc(const char *name, u32 clk)
 
 int aud_clock_free(char *name)
 {
-    y_printf("aud_clock_alloc:%s\n", name);
+    y_printf("aud_clock_free:%s\n", name);
     return clock_free(name);
 
 }

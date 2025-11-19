@@ -1,0 +1,68 @@
+project earphone_sdk/
+29f3c74e8de04f7a31d1b2db6a69f984e5cb1bbe
+
+project earphone_sdk/apps/common/
+4a2d5cd1bf8a750f80d03845b05d1a4819d44d4a
+
+project earphone_sdk/apps/common/device/
+46a0a4e7fdd0e7f98bd8977afe97f4685753ca16
+
+project earphone_sdk/apps/earphone/
+b364fd82d47fb7990ad21cb8a8c9e6150d938144
+
+project earphone_sdk/audio/
+5dfe15ec07c150b0d1086d9b435668bc3183da37
+
+project earphone_sdk/cpu/
+2bc58085266b4882faabedea8dc19a543756840a
+
+project earphone_sdk/interface/btctrler/
+c0a207c3f1018b0b9d0dd81f29d9a69ddeee1728
+
+project earphone_sdk/interface/btstack/
+86f1470250bc8d4accffe87db97a945bccd39692
+
+project earphone_sdk/interface/driver/
+c3055391ae9ca58f417313c9b37ab7dbb3362ba8
+
+project earphone_sdk/interface/media/
+b8d2161a54256c230df37b46d1986d2353b6bbe6
+
+project earphone_sdk/interface/net/
+67357d4e635b6971388627e307e18d82c9e4f9df
+
+project earphone_sdk/interface/system/
+99b050688fd37fef187dfde5a0932a24fdd3d028
+
+project earphone_sdk/interface/update/
+a7284f6e10d8da6dd4bd19827a7679e690c6110c
+
+project earphone_sdk/interface/utils/
+0a14f29e87dc0abd19ac20cfa2be6db7e3b54176
+
+project earphone_sdk/lib/bt_protocol/
+9b365f9e033f28d498ecab9be11eb68dab3d243b
+
+project earphone_sdk/lib/btctrler/
+31d9c5fda9736bb453d5105c45dac8cd6bf8d1aa
+
+project earphone_sdk/lib/driver/
+7d02207c3756afcfa0e3f51539f67e2955bbcedb
+
+project earphone_sdk/lib/interface/crypto_toolbox/
+0c0b7c430c2cad0079e876fb290a51a918efff87
+
+project earphone_sdk/lib/media/
+173b997787296eb9115c76ce1d3150fdec89454e
+
+project earphone_sdk/lib/net/
+3c5e9f04c1604569371f6c078de5b522ac97c2d2
+
+project earphone_sdk/lib/system/
+253e34f75284720ad0224bd4f68b376b86e2f9ea
+
+project earphone_sdk/lib/update/
+f68e1fd86f509dc4398bee544636fc8bbf639775
+
+project earphone_sdk/lib/utils/
+caaf4a030b5236b13edd65d998048f66198a9703

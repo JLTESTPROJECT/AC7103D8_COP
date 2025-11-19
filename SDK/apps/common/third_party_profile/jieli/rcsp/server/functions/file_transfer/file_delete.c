@@ -19,7 +19,6 @@
 #include "rcsp_extra_flash_opt.h"
 
 #if (RCSP_MODE && TCFG_DEV_MANAGER_ENABLE && RCSP_FILE_OPT)
-#include "media/file_decoder.h"
 
 #define FILE_DELELET_TIMEOUT 				(10*1000)
 

@@ -2,7 +2,7 @@
 #define DYNAMICEQ_PRO_API_H
 
 #include "AudioEffect_DataType.h"
-#include "asm/hw_eq.h"
+#include "hw_eq.h"
 
 #ifdef WIN32
 

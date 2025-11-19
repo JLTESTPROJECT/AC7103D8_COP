@@ -9,6 +9,7 @@
 #include "asm/adc.h"
 #include "media_config.h"
 
+
 /*
 *********************************************************************
 *                  Audio ADC Initialize
@@ -81,6 +82,18 @@ int audio_adc_mic_open(struct adc_mic_ch *mic, u32 ch_map, struct audio_adc_hdl 
 *********************************************************************
 */
 int audio_adc_mic_set_gain(struct adc_mic_ch *mic, u32 ch_map, int gain);
+
+/*
+*********************************************************************
+*                  Audio ADC Mic Digital Gain
+* Description: 设置mic数字增益
+* Arguments  : 数字增益
+* Return	 : none
+* Note(s)    : 单位dB，可配范围参考可视化工具(不同系列范围不同):
+*              "音频配置->ADC配置->数字增益"
+*********************************************************************
+*/
+void audio_adc_set_digital_gain(float gain_dB);
 
 /*
 *********************************************************************

@@ -1,7 +1,8 @@
-#include "asm/includes.h"
+#include "cpu/includes.h"
 #include "system/includes.h"
 #include "app_config.h"
 #include "audio_config_def.h"
+#include "generic/lbuf.h"
 
 #define LOG_TAG             "[SETUP]"
 #define LOG_ERROR_ENABLE
@@ -28,8 +29,11 @@ void system_main(void)
 
     wdt_close();
 
+#if (defined TCFG_FIX_CLOCK_FREQ  && ((TCFG_FIX_CLOCK_FREQ == 240000000) || (TCFG_FIX_CLOCK_FREQ == 160000000)))|| TCFG_IIS_NODE_ENABLE
+    clk_early_init(PLL_REF_XOSC_DIFF, TCFG_CLOCK_OSC_HZ, 240 * MHz);
+#else
     clk_early_init(PLL_REF_XOSC_DIFF, TCFG_CLOCK_OSC_HZ, 192 * MHz);
-
+#endif
     //heap内存管理，STDIO需要heap
     memory_init();
 
@@ -145,6 +149,70 @@ void app_bank_init()
 }
 
 //==================================================//
+extern u32 icache0_ram_data_code_addr;
+extern u32 icache0_ram_data_code_begin;
+extern u32 icache0_ram_data_code_size;
+
+struct lbuff_head *icache0_lbuf = NULL;
+
+#if TCFG_FREE_ICACHE0_WAY_NUM
+u8 icache0_buf[TCFG_FREE_ICACHE0_WAY_NUM * 8 * 1024] SEC(.icache0_pool);
+void *get_icache0_lbuf(void)
+{
+    return icache0_lbuf;
+}
+#endif
+
+
+__attribute__((weak))
+AT(.volatile_ram_code)
+void cache_ram_init(void)
+{
+#if TCFG_FREE_ICACHE0_WAY_NUM
+    // 用 volatile 避免被优化而导致出错
+    volatile u8 icache0_way = 4 - TCFG_FREE_ICACHE0_WAY_NUM;
+    if (icache0_way != 4) {
+        IcuDisable();
+        IcuInitial();
+        // 空出way当ram用
+        IcuSetWayNum(icache0_way);
+        memcpy((u8 *)&icache0_ram_data_code_addr, (u8 *)&icache0_ram_data_code_begin, (u32)&icache0_ram_data_code_size);
+
+        icache0_lbuf = lbuf_init(icache0_buf, sizeof(icache0_buf), 4, 0);
+    }
+#endif
+}
+
+#if TCFG_NORMAL_SET_DUT_MODE
+AT(.volatile_ram_code)
+void debug_random_read(u32 size)
+{
+    u32 ali_start = rand32();
+    u32 ali_end;
+    volatile u8 tmp;
+    extern u32 CODE_BEG;
+    ali_start %= 32 * 1024;
+    ali_start += (u32)&CODE_BEG;
+    ali_end = ali_start + size;
+
+    for (u32 i = ali_start;  i <  ali_end; i += 32) {
+        tmp = *(u8 *)i;
+    }
+
+    /* local_irq_disable(); */
+    /* extern void sfc_drop_cache(void *ptr, u32 len); */
+    /* sfc_drop_cache((void *)ali_start, size); */
+    /* local_irq_enable(); */
+}
+
+void idle_hook(void)
+{
+    while (1) {
+        wdt_close();
+        debug_random_read(128 * 1024);
+    }
+}
+#endif
 
 /* extern void gpio_longpress_pin0_reset_config(u32 pin, u32 level, u32 time); */
 void memory_init(void);
@@ -167,11 +235,18 @@ void setup_arch()
 {
     q32DSP(core_num())->PMU_CON1 &= ~BIT(8); //分支预测
 
+#if TCFG_LONG_PRESS_RESET_ENABLE
+    gpio_longpress_pin0_reset_config(TCFG_LONG_PRESS_RESET_PORT, TCFG_LONG_PRESS_RESET_LEVEL, TCFG_LONG_PRESS_RESET_TIME, 1, TCFG_LONG_PRESS_RESET_INSIDE_PULL_UP_DOWN, 0);
+#else
+    gpio_longpress_pin0_reset_config(IO_PORTB_01, 0, 0, 1, 1, 0);
+#endif
+
     memory_init();
 
     wdt_init(WDT_16S);
     /* wdt_close(); */
 
+    gpadc_mem_init(8);
     efuse_init();
 
     sdfile_init();
@@ -188,12 +263,12 @@ void setup_arch()
     clk_set_vdc_lowest_voltage(DCVDD_VOL_155V);
 #endif
 #endif
+
 #if (TCFG_MAX_LIMIT_SYS_CLOCK==MAX_LIMIT_SYS_CLOCK_160M)
     clk_early_init(PLL_REF_XOSC_DIFF, TCFG_CLOCK_OSC_HZ, 240 * MHz);//  240:max clock 160
 #else
     clk_early_init(PLL_REF_XOSC_DIFF, TCFG_CLOCK_OSC_HZ, 192 * MHz);
 #endif
-
     os_init();
     tick_timer_init();
     sys_timer_init();
@@ -212,6 +287,11 @@ void setup_arch()
     power_early_flowing();
 
     clock_dump();
+
+    void mvbg_current_trim();        //pmu used
+    mvbg_current_trim();
+    void audio_vbg_current_trim();        //audio used
+    audio_vbg_current_trim();
 
     //Register debugger interrupt
     request_irq(0, 2, exception_irq_handler, 0);

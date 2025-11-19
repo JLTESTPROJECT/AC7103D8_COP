@@ -40,8 +40,6 @@ BT_CONFIG bt_cfg = {
     .mac_addr        = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
     .tws_local_addr  = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
     .rf_power        = 10,
-    .dac_analog_gain = 25,
-    .mic_analog_gain = 7,
     .tws_device_indicate = 0x6688,
 };
 
@@ -68,11 +66,6 @@ const struct btif_item btif_table[] = {
     {0, 						0 },   //reserved cfg
 };
 
-//============================= VM 区域空间最大值 ======================================//
-/* const int vm_max_size_config = VM_MAX_SIZE_CONFIG; //该宏在app_cfg中配置 */
-const int vm_max_page_align_size_config   = TCFG_VM_SIZE; 		//page对齐vm管理空间最大值配置
-const int vm_max_sector_align_size_config = TCFG_VM_SIZE; 	//sector对齐vm管理空间最大值配置
-//======================================================================================//
 
 #if TCFG_BT_SNIFF_ENABLE
 const struct lp_ws_t lp_winsize = {
@@ -86,7 +79,11 @@ const struct lp_ws_t lp_winsize = {
 
 u16 bt_get_tws_device_indicate(u8 *tws_device_indicate)
 {
-    return bt_cfg.tws_device_indicate;
+    u16 crc = 0;
+#if CONFIG_TWS_DIFF_NAME_NOT_MATCH
+    crc = CRC16(bt_get_local_name(), strlen(bt_get_local_name()));
+#endif
+    return bt_cfg.tws_device_indicate + crc;
 }
 
 const u8 *bt_get_mac_addr()
@@ -235,17 +232,6 @@ void cfg_file_parse(u8 idx)
     put_float(app_var.audio_mic_cmp.ff);
     log_info("mic_cmp-fb:");
     put_float(app_var.audio_mic_cmp.fb);
-#endif
-
-    //-----------------------------CFG_MIC_TYPE_ID------------------------------------//
-#if USE_CONFIG_MIC_TYPE_SETTING
-    log_info("mic_type_config:");
-    extern int read_mic_type_config(void);
-    read_mic_type_config();
-
-#endif
-
-#if TCFG_MC_BIAS_AUTO_ADJUST
 #endif
 
     s16 default_volume;

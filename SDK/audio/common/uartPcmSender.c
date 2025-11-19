@@ -57,6 +57,7 @@ void uartSendInit()
         .baud_rate = PCM_UART1_BAUDRATE,
         .tx_pin = PCM_UART1_TX_PORT,
         .rx_pin = PCM_UART1_RX_PORT,
+        .tx_wait_mutex = 1,//不支持中断调用，互斥
     };
 
     hdl->uart = uart_init(-1, &ut);

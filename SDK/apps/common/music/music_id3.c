@@ -147,10 +147,10 @@ static void id3_v2_analysis(void *file, void *buf)
         struct id3_v2_frame *frame = (struct id3_v2_frame *)frame_hdl;
         frame_len = (((u32)frame->size[0]) << 24) + (((u32)frame->size[1]) << 16) + (((u32)frame->size[2]) << 8) + (u32)frame->size[3];
 
-        log_info_hexdump((u8 *)frame, ID3_V2_FRAME_SIZE);
-        log_info("frame ID:%s ", frame->frameID);
-        log_info("frame len:0x%x ", frame_len);
-        log_info("addr :0x%x ", addr);
+        /* log_info_hexdump((u8 *)frame, ID3_V2_FRAME_SIZE); */
+        /* log_info("frame ID:%s ", frame->frameID); */
+        /* log_info("frame len:0x%x ", frame_len); */
+        /* log_info("addr :0x%x ", addr); */
 
         if (!frame_len) {
             break;

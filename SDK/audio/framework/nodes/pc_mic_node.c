@@ -767,6 +767,13 @@ static void pc_mic_handle_frame(struct stream_iport *iport, struct stream_note *
             break;
         }
 
+        //如果mic 上行已经关掉,这里继续写数大概率还是阻塞的状态,会导致源节点不推数据出来，音频流没办法从源节点开始跑
+        //导致一些依赖数据流跑起来才能处理的流程异常(比如：switch节点状态的切换),这里直接把数据丢掉.
+        if (!uac_get_mic_stream_status()) {
+            jlstream_free_frame(frame);
+            continue;
+        }
+
         if (config_dev_sync_enable) {
             if (frame->offset == 0) {
                 pc_mic_synchronize_with_main_device(iport, frame);
@@ -844,7 +851,6 @@ static void pc_mic_ioc_stop(struct pc_mic_node_hdl *hdl)
 
 static void pc_mic_adapter_open_iport(struct stream_iport *iport)
 {
-    iport->handle_frame = pc_mic_handle_frame;
 }
 
 static int pc_mic_ioc_negotiate(struct stream_iport *iport)
@@ -1001,6 +1007,7 @@ REGISTER_STREAM_NODE_ADAPTER(pc_mic_node_adapter) = {
     .bind       = pc_mic_adapter_bind,
     .ioctl      = pc_mic_adapter_ioctl,
     .release    = pc_mic_adapter_release,
+    .handle_frame = pc_mic_handle_frame,
     .hdl_size   = sizeof(struct pc_mic_node_hdl),
 };
 

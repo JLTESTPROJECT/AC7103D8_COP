@@ -33,11 +33,16 @@ struct le_audio_stream_format {
 
 enum LEA_SERVICE {
     LEA_SERVICE_MEDIA,
-    LEA_SERVICE_CALL
+    LEA_SERVICE_CALL,
+    LEA_SERVICE_WL_MIC
 };
 
 struct le_audio_stream_params {
     struct le_audio_stream_format fmt;
+#if LEA_DUAL_STREAM_MERGE_TRANS_MODE
+    //环绕声项目需要两个广播解码参数
+    struct le_audio_stream_format fmt2;		//环绕声这个是做单声道，fmt那个是双声道
+#endif
     enum LEA_SERVICE service_type;
     int latency;
     u16 conn;
@@ -60,9 +65,13 @@ void *le_audio_stream_create(u16 conn, struct le_audio_stream_format *fmt);
 
 void le_audio_stream_free(void *le_audio);
 
-void le_audio_stream_set_tx_tick_handler(void *le_audio, void *priv, int (*tick_hanlder)(void *, int, u32));
+void le_audio_stream_set_tx_tick_handler(void *le_audio, void *priv, int (*tick_hanlder)(void *, int, u32), u8 ch);
 
 void *le_audio_stream_tx_open(void *le_audio, int coding_type, void *priv, int (*tick_handler)(void *, int, u32));
+
+#if LEA_DUAL_STREAM_MERGE_TRANS_MODE
+void *le_audio_dual_stream_tx_open(void *le_audio, int coding_type, int frame_size, u8 ch);
+#endif
 
 void le_audio_stream_tx_close(void *stream);
 
@@ -70,9 +79,10 @@ int le_audio_stream_tx_write(void *stream, void *data, int len);
 
 int le_audio_stream_tx_buffered_time(void *stream);
 
-int le_audio_stream_tx_data_handler(void *le_audio, void *data, int len, u32 timestamp);
+int le_audio_stream_tx_data_handler(void *le_audio, void *data, int len, u32 timestamp, int latency);
 
 void *le_audio_stream_rx_open(void *le_audio, int coding_type);
+int le_audio_stream_rx_buf_init(void *le_audio, int coding_type);
 
 int le_audio_stream_rx_write(void *stream, void *data, int len);
 
@@ -102,6 +112,14 @@ void le_audio_stream_latch_time_enable(void *le_audio);
 u32 le_audio_stream_current_time(void *le_audio);
 
 int le_audio_stream_set_bit_width(void *le_audio, u8 bit_width);
+
+int le_audio_stream_tx_drain(void *stream);
+
+int le_audio_stream_rx_drain(void *stream);
+
+int le_audio_stream_set_start_time(void *stream, u32 start_time);
+
+int le_audio_get_encoder_len(u32 coding_type, u16 frame_len, u32 bit_rate);
 /*****************************LE Audio stream 音频流管理简介**************************
  *
  *  1、LE Audio 的一条BIS/CIS可对应一路LE Audio stream

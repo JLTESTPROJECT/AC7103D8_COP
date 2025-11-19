@@ -64,6 +64,7 @@ struct audio_echo {
     void *workbuf;
     ECHO_FUNC_API *ops;           //函数指针
     struct audio_echo_parm parm;
+    u32 work_buf_size;
     u8 status;
     u8 update;
 };
@@ -86,7 +87,7 @@ void  audio_echo_close(struct audio_echo *hdl);
 /*
  *  plate声卡混响参数更新
  */
-void audio_echo_update_parm(struct audio_echo *hdl, struct echo_update_parm *parm);
+int audio_echo_update_parm(struct audio_echo *hdl, struct echo_update_parm *parm);
 
 void audio_echo_bypass(struct audio_echo *hdl, u8 bypass);
 

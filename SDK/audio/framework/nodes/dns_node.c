@@ -41,7 +41,6 @@ struct ns_cfg_t {
 } __attribute__((packed));
 
 struct dns_node_hdl {
-    char name[16];
     u8 bt_addr[6];
     u8 trigger;
     u32 sample_rate;
@@ -56,14 +55,13 @@ int dns_param_cfg_read(struct stream_node *node)
 {
     struct ns_cfg_t config;
     struct dns_node_hdl *hdl = (struct dns_node_hdl *)node->private_data;
-    int ret = 0;
-    if (!hdl) {
-        return -1 ;
-    }
+    char name[16];
+
     /*
      *获取配置文件内的参数,及名字
      * */
-    ret = jlstream_read_node_data_new(NODE_UUID_DNS_NOISE_SUPPRESSOR, node->subid, (void *)&config, hdl->name);
+    int ret = jlstream_read_node_data_new(NODE_UUID_DNS_NOISE_SUPPRESSOR, node->subid,
+                                          (void *)&config, name);
     if (ret != sizeof(config)) {
         printf("%s, read node data err %d = %d\n", __FUNCTION__, ret, (int)sizeof(config));
         return -1 ;
@@ -73,8 +71,8 @@ int dns_param_cfg_read(struct stream_node *node)
      *获取在线调试的临时参数
      * */
     if (config_audio_cfg_online_enable) {
-        ret = jlstream_read_effects_online_param(hdl_node(hdl)->uuid, hdl->name, &config, sizeof(config));
-        if (jlstream_read_effects_online_param(hdl_node(hdl)->uuid, hdl->name, &config, sizeof(config))) {
+        ret = jlstream_read_effects_online_param(node->uuid, name, &config, sizeof(config));
+        if (jlstream_read_effects_online_param(node->uuid, name, &config, sizeof(config))) {
             printf("get dns online param succ\n");
         }
     }
@@ -160,6 +158,7 @@ static void dns_handle_frame(struct stream_iport *iport, struct stream_note *not
         if (out_frame_len) {
             hdl->out_frame = jlstream_get_frame(node->oport, out_frame_len);
             if (!hdl->out_frame) {
+                jlstream_return_frame(iport, in_frame);
                 return;
             }
         }
@@ -185,7 +184,6 @@ static int dns_adapter_bind(struct stream_node *node, u16 uuid)
 /*打开改节点输入接口*/
 static void dns_ioc_open_iport(struct stream_iport *iport)
 {
-    iport->handle_frame = dns_handle_frame;				//注册输出回调
 }
 
 /*节点参数协商*/
@@ -310,12 +308,6 @@ static int dns_adapter_ioctl(struct stream_iport *iport, int cmd, int arg)
     case NODE_IOC_STOP:
         dns_ioc_stop(hdl);
         break;
-    case NODE_IOC_NAME_MATCH:
-        if (!strcmp((const char *)arg, hdl->name)) {
-            ret = 1;
-        }
-        break;
-
     case NODE_IOC_SET_PARAM:
         ret = dns_ioc_update_parm(hdl, arg);
         break;
@@ -336,6 +328,7 @@ REGISTER_STREAM_NODE_ADAPTER(dns_node_adapter) = {
     .bind       = dns_adapter_bind,
     .ioctl      = dns_adapter_ioctl,
     .release    = dns_adapter_release,
+    .handle_frame = dns_handle_frame,				//注册输出回调
     .hdl_size   = sizeof(struct dns_node_hdl),
 };
 

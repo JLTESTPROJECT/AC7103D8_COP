@@ -11,6 +11,7 @@
 #include "system/spinlock.h"
 #include "media_bank.h"
 #include "fs/resfile.h"
+#include "jlstream_report.h"
 
 #define FADE_GAIN_MAX	16384
 
@@ -92,6 +93,16 @@ struct jlstream;
 #define NODE_IOC_GET_ENC_TIME       0x00020032		//获取编码时间
 #define NODE_IOC_GET_FMT_EX         0x00020033
 #define NODE_IOC_SET_FMT_EX         0x00020034
+#define NODE_IOC_MIDI_CTRL_NOTE_ON 	0x00020035      //MIDI按键按下
+#define NODE_IOC_MIDI_CTRL_NOTE_OFF 0x00020036      //MIDI按键松开
+#define NODE_IOC_MIDI_CTRL_SET_PROG 0x00020037      //MIDI更改乐器
+#define NODE_IOC_MIDI_CTRL_PIT_BEND 0x00020038      //MIDI弯音轮
+#define NODE_IOC_MIDI_CTRL_VEL_VIBR 0x00020039      //MIDI抖动幅度
+#define NODE_IOC_MIDI_CTRL_QUE_KEY  0x0002003a      //MIDI查询指定通道的key播放
+#define NODE_IOC_SET_SYNC_NETWORK   0x0002003b
+#define NODE_IOC_GET_PRIV_FMT 		0x0002003c		//获取解码码率等信息
+#define NODE_IOC_SOURCE_MUTE_EN     0x0002003d		//从源头处mute（数据流源头清零）
+#define NODE_IOC_GET_SOURCE_MUTE_EN 0x0002003e
 
 #define NODE_IOC_START              (0x00040000 | NODE_STA_RUN)
 #define NODE_IOC_PAUSE              (0x00040000 | NODE_STA_PAUSE)
@@ -131,9 +142,11 @@ enum stream_event {
     STREAM_EVENT_GET_SWITCH_CALLBACK,
     STREAM_EVENT_GET_MERGER_CALLBACK,
     STREAM_EVENT_GET_SPATIAL_ADV_CALLBACK,
+    STREAM_EVENT_GET_FILE_BUF_SIZE,
 
     STREAM_EVENT_GLOBAL_PAUSE,
     STREAM_EVENT_GET_NOISEGATE_CALLBACK,
+    STREAM_EVENT_GET_OUTPUT_NODE_DELAY,
 };
 
 enum stream_scene : u8 {
@@ -150,6 +163,7 @@ enum stream_scene : u8 {
     STREAM_SCENE_PC_SPK,
     STREAM_SCENE_PC_MIC,
     STREAM_SCENE_IIS,
+    STREAM_SCENE_MUTI_CH_IIS,
     STREAM_SCENE_MIC,			//mic 模式
     STREAM_SCENE_MIC_EFFECT,
     STREAM_SCENE_MIC_EFFECT2,
@@ -160,7 +174,11 @@ enum stream_scene : u8 {
     STREAM_SCENE_ADDA_LOOP,
     STREAM_SCENE_WIRELESS_MIC,  //16 wireless mic
     STREAM_SCENE_LOCAL_TWS,
+    STREAM_SCENE_MIDI,      //MIDI 琴解码
 
+    STREAM_SCENE_LOUDSPEAKER_IIS, //扩音器IIS
+    STREAM_SCENE_LOUDSPEAKER_MIC, //扩音器MIC
+    STREAM_SCENE_USER_DEFINED, //自定义流程
 
     //最大32个场景，如果大于32个场景，需把tone、ring, key_tone场景号往后挪
     STREAM_SCENE_TONE = 0x20,
@@ -204,8 +222,8 @@ enum stream_node_state : u16 {
     NODE_STA_ENC_END                = 0x0400,
     NODE_STA_OUTPUT_TO_FAST         = 0x0800,   //解码输出太多主动挂起
     NODE_STA_OUTPUT_BLOCKED         = 0x1000,   //终端节点缓存满,数据写不进去
-    NODE_STA_OUTPUT_SPLIT           = 0x2000,
-    NODE_STA_DECODER_FADEOUT        = 0X4000,  //用来判断是否是解码节点的淡出
+    NODE_STA_SOURCE_STOP_PUSH       = 0x2000,
+    NODE_STA_DECODER_FADEOUT        = 0x4000,  //用来判断是否是解码节点的淡出
 };
 
 enum stream_node_type : u8 {
@@ -326,6 +344,10 @@ enum frame_flags : u16 {
     FRAME_FLAG_PULL_AGAIN               = 0x1000    //frame被pull过之后被重新加回iport->frame
 };
 
+#define TIMESTAMP_STATE_START  0x1
+#define TIMESTAMP_STATE_RUN    0x2
+
+
 enum audio_Qval : u8 {
     AUDIO_QVAL_16BIT = 15,
     AUDIO_QVAL_24BIT = 23,
@@ -385,7 +407,6 @@ struct stream_iport {
 
     struct stream_iport *sibling;
 
-    void (*handle_frame)(struct stream_iport *, struct stream_note *note);
     int private_data[0];
 };
 
@@ -395,6 +416,7 @@ struct stream_oport {
     s16 d_sample_rate;
     enum frame_flags flags;
     u8 id;
+    u8 timestamp_state;
     u16 buffered_pcms;
 
     struct stream_fmt fmt;
@@ -429,6 +451,8 @@ struct stream_node_adapter {
     int (*ioctl)(struct stream_iport *iport, int cmd, int arg);
 
     void (*release)(struct stream_node *node);
+
+    void (*handle_frame)(struct stream_iport *, struct stream_note *note);
 };
 
 struct node_locker {
@@ -461,6 +485,7 @@ struct stream_snode {
     struct stream_node node;
     struct jlstream *stream;
     u16 pipeline;
+    u16 uuid;
     int private_data[0];
 };
 
@@ -480,6 +505,7 @@ struct stream_note {
     u8 input_empty_check;
     u16 output_time;
     enum stream_node_state state;
+    enum stream_node_state prev_state;
 
     int delay;
     int sleep;
@@ -509,9 +535,11 @@ struct jlstream {
     u8 thread_num;
     u8 thread_policy_step;
     u8 continue_nego_flag;
+    u16 timeout_time;       //thread timer超时时间(ms)
     enum stream_state state;
     enum stream_state pp_state;
     enum stream_coexist coexist;
+    enum stream_node_state thread_state;
 
     u16 max_delay;
     u16 dest_delay;         // 目标缓存大小
@@ -699,6 +727,7 @@ int jlstream_get_node_param_s(void *node, void *param, u16 param_len);
 void jlstream_put_node(void *);
 
 int jlstream_set_node_param(u16 node_uuid, const char *name, void *param, u16 param_len);
+int jlstream_set_node_specify_param(u16 node_uuid, const char *name, int cmd, void *param, u16 param_len);
 
 int jlstream_get_node_param(u16 node_uuid, const char *name, void *param, u16 param_len);
 
@@ -707,6 +736,8 @@ int jlstream_read_bit_width(u16 uuid, u8 *buf);
 int jlstream_is_contains_node_from(struct stream_node *node, u16 node_uuid);
 
 int jlstream_read_indicator_node_data(u16 uuid, u8 subid, u8 *param);
+
+void jlstream_set_thread_timeout(struct jlstream *stream, u16 time);
 /*
  * 数据淡入淡出接口
  *
@@ -774,6 +805,10 @@ struct jlsream_crossfade {
 
 void jlstream_frames_cross_fade_init(struct jlsream_crossfade *crossfade);
 u8 jlstream_frames_cross_fade_run(struct jlsream_crossfade *crossfade, void *fadein_addr, void *fadeout_addr, void *output_addr, int len);
+
+int jlstream_set_node_task(struct jlstream *stream, u16 node_uuid,
+                           const char *node_name, const char *task_name);
+
 
 #endif
 

@@ -26,7 +26,10 @@ typedef struct REVERB_V2_PARM_SET {
     int highcutoff;          //lateReflect highcut, 0-20k
     int late_type;        //0或1
     int early_taps;        //0-9
-    int reserved0;
+    unsigned char Roomshape;         //范围0到99， 默认值50
+    unsigned char Reflection_lowcut;      //范围0到20000，默认值 80
+    unsigned char RoomRgain;      //范围0到99， 默认值50
+    unsigned char rbyte1;
     int reserved1;
     af_DataType dataTypeobj;
 } REVERB_V2_PARM_SET;

@@ -75,6 +75,12 @@ extern const int  CONFIG_BTCTLER_TWS_FUN;
 
 #define TWS_FUNCTION_IS(x)           (  CONFIG_BTCTLER_TWS_FUN & (x))
 
+extern const int  CONFIG_BTCTLER_FUN;
+#define EDR_LMP_SUPPORT_ESCO            BIT(0)   //
+#define EDR_LMP_SUPPORT_SNIFF           BIT(1)   //
+
+#define EDR_FUNCTION_IS(x)    	(CONFIG_BTCTLER_FUN & (x))
+
 /*---------------------- tws fun end -------------------------------------*/
 
 

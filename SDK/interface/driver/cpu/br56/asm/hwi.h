@@ -276,6 +276,7 @@ static inline void lp_waiting(int *ptr, int pnd, int cpd, char inum)
 // interrupt cli/sti
 //---------------------------------------------//
 
+__attribute__((always_inline))
 static inline int int_cli(void)
 {
     int msg;
@@ -283,6 +284,7 @@ static inline int int_cli(void)
     return msg;
 }
 
+__attribute__((always_inline))
 static inline void int_sti(int msg)
 {
     asm volatile("sti %0" :: "r"(msg));

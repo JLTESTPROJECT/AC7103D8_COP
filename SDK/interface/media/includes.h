@@ -9,13 +9,11 @@
 #ifdef CONFIG_AUDIO_ONCHIP
 
 #include "media/audio_decoder.h"
-#include "media/mixer.h"
 #include "media/automute.h"
 #include "media/audio_dac.h"
 #include "media/audio_adc.h"
 #include "media_bank.h"
-
-#include "asm/cpu_includes.h"
+#include "media/audio_stdlog.h"
 #include "effects/eq_func_define.h"
 
 /*encoder init*/

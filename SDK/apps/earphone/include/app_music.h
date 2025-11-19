@@ -112,7 +112,7 @@ const char *get_music_tone_name_by_logo(const char *logo);
  * @return  true 成功
  *          false 失败
  */
-extern int music_device_tone_play(char *logo);
+int music_device_tone_play(char *logo);
 
 #endif
 

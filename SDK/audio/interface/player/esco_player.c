@@ -9,6 +9,8 @@
 #include "sdk_config.h"
 #include "app_config.h"
 #include "aec_ref_dac_ch_data.h"
+#include "audio_cvp.h"
+#include "encoder_node.h"
 
 #if TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN
 #include "icsd_adt_app.h"
@@ -17,6 +19,8 @@
 #if TCFG_AUDIO_ANC_REAL_TIME_ADAPTIVE_ENABLE
 #include "rt_anc_app.h"
 #endif
+
+#if TCFG_BT_SUPPORT_HFP
 
 struct esco_player {
     u8 bt_addr[6];
@@ -42,6 +46,11 @@ static void esco_player_callback(void *private_data, int event)
 
 int esco_player_open(u8 *bt_addr)
 {
+    return esco_player_open_extended(bt_addr, ESCO_PLAYER_EXT_TYPE_NONE, NULL);
+}
+
+int esco_player_open_extended(u8 *bt_addr, int ext_type, void *ext_param)
+{
     int err;
     struct esco_player *player;
 
@@ -54,8 +63,10 @@ int esco_player_open(u8 *bt_addr)
     if (!player) {
         return -ENOMEM;
     }
-
-    player->stream = jlstream_pipeline_parse(uuid, NODE_UUID_ESCO_RX);
+    player->stream = jlstream_pipeline_parse_by_node_name(uuid, "esco_rx");
+    if (!player->stream) {
+        player->stream = jlstream_pipeline_parse(uuid, NODE_UUID_ESCO_RX);
+    }
     if (!player->stream) {
         err = -ENOMEM;
         goto __exit0;
@@ -88,6 +99,47 @@ int esco_player_open(u8 *bt_addr)
     jlstream_node_ioctl(player->stream, NODE_UUID_BT_AUDIO_SYNC, NODE_IOC_SET_PRIV_FMT, TCFG_ESCO_DL_CVSD_SR_USE_16K);
 #endif /*TCFG_ESCO_DL_CVSD_SR_USE_16K*/
 
+#if (((defined TCFG_MULTI_CH_IIS_NODE_ENABLE) && (TCFG_MULTI_CH_IIS_NODE_ENABLE == 1)) || ((defined TCFG_IIS_NODE_ENABLE) && (TCFG_IIS_NODE_ENABLE == 1))) && (TCFG_DAC_NODE_ENABLE == 0)
+#if (TCFG_AUDIO_GLOBAL_SAMPLE_RATE == 48000)
+    //如果涉及iis输出, 将通话的同步节点采样率改为48k, 前提是全局采样率已经设置为48000
+    jlstream_node_ioctl(player->stream, NODE_UUID_BT_AUDIO_SYNC, NODE_IOC_SET_PRIV_FMT, 3);
+#else
+    //报错，需要客户自己检查把关
+    r_printf("If esco failed, Please check if the call stream is IIS output? and global sample rate is 48000? \n");
+#endif
+#endif
+
+#if TCFG_AI_TX_NODE_ENABLE
+    if (ext_type == ESCO_PLAYER_EXT_TYPE_AI) {
+        struct stream_enc_fmt *s_enc_fmt = ext_param;
+        struct stream_enc_fmt ai_tx_s_enc_fmt = {0};
+        jlstream_node_ioctl(player->stream, NODE_UUID_ENCODER, NODE_IOC_GET_ENC_FMT, (int)&ai_tx_s_enc_fmt);
+        if (s_enc_fmt && s_enc_fmt->coding_type == AUDIO_CODING_OPUS) {
+#if TCFG_ENC_OPUS_ENABLE
+            ai_tx_s_enc_fmt.coding_type = s_enc_fmt->coding_type;
+            ai_tx_s_enc_fmt.bit_rate = s_enc_fmt->bit_rate;
+            ai_tx_s_enc_fmt.sample_rate = s_enc_fmt->sample_rate;
+            ai_tx_s_enc_fmt.frame_dms = s_enc_fmt->frame_dms;
+            jlstream_node_ioctl(player->stream, NODE_UUID_ENCODER, NODE_IOC_SET_ENC_FMT, (int)&ai_tx_s_enc_fmt);
+            struct encoder_fmt ai_tx_enc_fmt = {0};
+            ai_tx_enc_fmt.complexity = 0;
+            ai_tx_enc_fmt.format = 0;
+            ai_tx_enc_fmt.frame_dms = 200;
+            jlstream_node_ioctl(player->stream, NODE_UUID_ENCODER, NODE_IOC_SET_PRIV_FMT, (int)&ai_tx_enc_fmt);
+#endif
+        } else if (s_enc_fmt && s_enc_fmt->coding_type == AUDIO_CODING_JLA_V2) {
+#if TCFG_ENC_JLA_V2_ENABLE
+            ai_tx_s_enc_fmt.coding_type = s_enc_fmt->coding_type;
+            ai_tx_s_enc_fmt.sample_rate = s_enc_fmt->sample_rate;
+            ai_tx_s_enc_fmt.frame_dms = s_enc_fmt->frame_dms;
+            ai_tx_s_enc_fmt.bit_rate = s_enc_fmt->bit_rate;
+            ai_tx_s_enc_fmt.channel = s_enc_fmt->channel;
+            jlstream_ioctl(player->stream, NODE_IOC_SET_ENC_FMT, (int)&ai_tx_s_enc_fmt);
+#endif
+        }
+    }
+#endif
+
     jlstream_set_callback(player->stream, player->stream, esco_player_callback);
     jlstream_set_scene(player->stream, STREAM_SCENE_ESCO);
     jlstream_node_ioctl(player->stream, NODE_UUID_SOURCE, NODE_IOC_SET_BTADDR, (int)bt_addr);
@@ -108,6 +160,10 @@ int esco_player_open(u8 *bt_addr)
     memcpy(player->bt_addr, bt_addr, 6);
     g_esco_player = player;
 
+#if (TCFG_AUDIO_CVP_OUTPUT_WAY_IIS_ENABLE && (TCFG_IIS_NODE_ENABLE || TCFG_MULTI_CH_IIS_NODE_ENABLE))
+    //获取用的哪个iis模块， 哪个通道
+    audio_cvp_ref_alink_cfg_get(uuid);
+#endif
 
     return 0;
 
@@ -162,6 +218,15 @@ int esco_player_is_playing(u8 *btaddr)
     return false;
 }
 
+void esco_player_set_ai_tx_node_func(int (*func)(u8 *, u32))
+{
+    struct esco_player *player = g_esco_player;
+
+    if (player && player->stream) {
+        jlstream_node_ioctl(player->stream, NODE_UUID_AI_TX, NODE_IOC_SET_PRIV_FMT, (int)func);
+    }
+}
+
 void esco_player_close()
 {
     struct esco_player *player = g_esco_player;
@@ -199,5 +264,25 @@ void esco_player_close()
 
     jlstream_event_notify(STREAM_EVENT_CLOSE_PLAYER, (int)"esco");
 }
+#else
+bool esco_player_runing()
+{
+    return 0;
+}
+int esco_player_get_btaddr(u8 *btaddr)
+{
+    return 0;
+}
+int esco_player_is_playing(u8 *btaddr)
+{
+    return false;
+}
+int esco_player_open(u8 *bt_addr)
+{
+    return -EFAULT;
+}
+void esco_player_close()
+{
+}
 
-
+#endif

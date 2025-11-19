@@ -181,7 +181,7 @@ int get_eff_default_param(int arg)
     }
 #endif
 
-#if TCFG_VIRTUAL_SURROUND_PRO_MODULE_NODE_ENABLE
+#if defined(TCFG_VIRTUAL_SURROUND_EFF_MODULE_NODE_ENABLE) && TCFG_VIRTUAL_SURROUND_EFF_MODULE_NODE_ENABLE
 // virtual surround pro/2to4/2to5 模块节点默认参数配置, virtual surround pro/2to4/2to5节点名需配置成：VSPro,此处默认配置才会生效
     char out[16];
 #if TCFG_EQ_ENABLE
@@ -201,8 +201,8 @@ int get_eff_default_param(int arg)
     char *vspro_name[] = {"PreLimiter", "LRLimiter", "CLimiter", "LRSLimiter",
                           "CDrcAdv", "LRSDrcAdv", "LRCross", "LRBand", "LR3Band", "LSCBand", "RSCBand",
                           "LRPcmDly", "LRSNsGate", "UpMix2to5", "RLSCBand", "RRSCBand",
-                          "SPWider"
-                         };//子节点名
+                          "SPWider", "StereoSpat6"
+                         };//子节点名,其中"StereoSpat6"是virtual surround 2to5流程内子节点名
 
     for (int i = 0; i < ARRAY_SIZE(vspro_name); i++) {
         jlstream_module_node_get_name(vspro_name[i], "VSPro", out);
@@ -358,12 +358,45 @@ int get_eff_default_param(int arg)
     }
 #endif
 
+#if TCFG_MULTI_BAND_LIMITER_NODE_ENABLE
+    if (!effect_strcmp(name->name, "MBLimiter*Media")) {
+        struct eff_default_parm *get_parm = (struct eff_default_parm *)arg;
+        get_parm->mode_index = get_current_scene();
+        get_parm->cfg_index = 0;//目标配置项
+        ret = 1;
+    }
+#endif
+
+#if TCFG_LIMITER_NODE_ENABLE
+    if (!effect_strcmp(name->name, "Limiter*Media")) {
+        struct eff_default_parm *get_parm = (struct eff_default_parm *)arg;
+        get_parm->mode_index = get_current_scene();
+        get_parm->cfg_index = 0;//目标配置项
+        ret = 1;
+    }
+#endif
+
+#if TCFG_VBASS_NODE_ENABLE
+    if (!effect_strcmp(name->name, "VBass*Media")) {
+        struct eff_default_parm *get_parm = (struct eff_default_parm *)arg;
+        get_parm->mode_index = get_current_scene();
+        get_parm->cfg_index = 0;//目标配置项
+        ret = 1;
+    }
+#endif
+
 #if TCFG_VOCAL_REMOVER_NODE_ENABLE
     if (!effect_strcmp(name->name, "VocalRemovMedia")) {
+        struct eff_default_parm *get_parm = (struct eff_default_parm *)arg;
+        get_parm->mode_index = get_current_scene();
+        get_parm->cfg_index = 0;//目标配置项
+        ret = 1;
     }
 #endif
 
 #if TCFG_EQ_ENABLE
+#if ((!defined TCFG_BT_HFP_ONLY_DISPLAY_BAT_ENABLE) && TCFG_BT_SUPPORT_HFP) || \
+	((defined TCFG_BT_HFP_ONLY_DISPLAY_BAT_ENABLE) && (!TCFG_BT_HFP_ONLY_DISPLAY_BAT_ENABLE) && TCFG_BT_SUPPORT_HFP)
     if (!effect_strcmp(name->name, "EscoDlEq") || !effect_strcmp(name->name, "EscoUlEq")) {
         struct eq_default_parm *get_eq_parm = (struct eq_default_parm *)arg;
         int type = lmp_private_get_esco_packet_type();
@@ -375,6 +408,7 @@ int get_eff_default_param(int arg)
         }
         ret = 1;
     }
+#endif
 #endif
 
 #if TCFG_SPECTRUM_ADVANCE_NODE_ENABLE

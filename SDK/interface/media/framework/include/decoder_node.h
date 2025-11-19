@@ -86,6 +86,9 @@ struct decoder_hdl {
     struct convert_bit_wide convert;
 };
 
+extern const struct decoder_plug_ops decoder_plug_begin[];
+extern const struct decoder_plug_ops decoder_plug_end[];
+
 #define REGISTER_DECODER_PLUG(plug) \
     const struct decoder_plug_ops plug sec(.decoder_plug)
 

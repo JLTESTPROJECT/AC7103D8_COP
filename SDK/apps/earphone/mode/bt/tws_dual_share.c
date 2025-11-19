@@ -16,6 +16,8 @@
 #include "tws_dual_share.h"
 #include "a2dp_player.h"
 #include "esco_player.h"
+#include "bt_common.h"
+#include "user_cfg.h"
 
 
 #if TCFG_USER_TWS_ENABLE
@@ -56,19 +58,6 @@ static u8 a2dp_share_preempted_addr[6] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 
 struct share_info_t share_info;
 
-extern int lmp_hci_write_quick_page_enable(u8 enable);
-extern int lmp_hci_write_quick_scan_enable(u8 enable);
-extern const char *bt_get_local_name();
-extern u16 bt_get_tws_device_indicate(u8 *tws_device_indicate);
-extern int add_device_2_page_list(u8 *mac_addr, u32 timeout, u8 dev_type);
-/* extern void page_next_device(void *p); */
-extern void dual_conn_page_device_phone_dev_timeout(u8 dev_type);
-extern void del_device_type_from_page_list(u8 dev_type);
-extern void write_scan_conn_enable(bool scan_enable, bool conn_enable);
-extern void tws_dual_conn_state_handler();
-void lmp_hci_send_share_user_date(u8 *date, u8 len, u32 func_id);
-extern void dual_conn_page_device();
-extern bool page_list_empty();
 
 //获取共享设备和手机的连接状态
 int get_share_phone_conn_state()

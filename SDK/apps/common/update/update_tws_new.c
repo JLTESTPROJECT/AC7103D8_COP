@@ -20,11 +20,11 @@
 #include "timer.h"
 #include "clock_manager/clock_manager.h"
 
-#if (OTA_TWS_SAME_TIME_ENABLE && OTA_TWS_SAME_TIME_NEW)
+#if (OTA_TWS_SAME_TIME_ENABLE && OTA_TWS_SAME_TIME_NEW && !OTA_TWS_SAME_TIME_NEW_LESS)
 
 //#define LOG_TAG_CONST       EARPHONE
 #define LOG_TAG             "[UPDATE_TWS]"
-#define log_errorOR_ENABLE
+#define log_ERROR_ENABLE
 #define LOG_DEBUG_ENABLE
 #define LOG_INFO_ENABLE
 /* #define LOG_DUMP_ENABLE */
@@ -45,6 +45,10 @@ static void (*sync_update_crc_init_hdl)(void) = NULL;
 static u32(*sync_update_crc_calc_hdl)(u32 init_crc, const void *data, u32 len) = NULL;
 extern const int support_dual_bank_update_no_erase;
 extern const int support_dual_bank_update_breakpoint;
+extern const int support_dual_bank_sync_verify_en;
+
+extern void user_file_update_tws_init_slave(void);
+extern void user_file_update_tws_deinit_slave(void);
 
 struct _bt_event {
     u8 event;
@@ -97,6 +101,10 @@ void tws_ota_timeout(void *priv) 		//从机没收到命令超时就退出升级
 {
     tws_ota_close();
     dual_bank_passive_update_exit(NULL);
+#if (CONFIG_USER_FILE_UPDATE_V2_EN && CONFIG_USER_FILE_UPDATE_V2_TWS)
+    user_file_update_tws_deinit_slave();
+#endif
+
 }
 
 void tws_ota_timeout_reset(void)
@@ -308,8 +316,10 @@ u16 tws_ota_enter_verify(void *priv)
     if (tws_ota_trans_to_sibling((u8 *)&rsp_data, 2)) {
         return -1;
     }
-    if (os_sem_pend(&tws_ota_sem, 800) ==  OS_TIMEOUT) {
-        return -1;
+    if (0 == support_dual_bank_sync_verify_en) {
+        if (os_sem_pend(&tws_ota_sem, 800) ==  OS_TIMEOUT) {
+            return -1;
+        }
     }
     printf("tws_ota_enter_verify222\n");
     return 0;
@@ -439,6 +449,7 @@ int tws_ota_open(void *priv)
         ret = -1;
         goto _ERR_RET;
     }
+
     if (os_sem_pend(&tws_ota_sem, 500) == OS_TIMEOUT) {
         log_info("tws_ota_open pend timeout\n");
         ret = -1;
@@ -620,6 +631,10 @@ static void deal_sibling_tws_ota_trans(void *data, u16 len)
             rsp_data[2] = OTA_TWS_CMD_SUCC;
         }
         tws_ota_trans_to_sibling(rsp_data, 3);
+
+#if (CONFIG_USER_FILE_UPDATE_V2_EN && CONFIG_USER_FILE_UPDATE_V2_TWS)
+        user_file_update_tws_init_slave();
+#endif
         break;
     case OTA_TWS_START_UPDATE_RSP:
         g_printf("MSG_OTA_TWS_START_UPDATE_RSP\n");
@@ -737,12 +752,15 @@ int tws_ota_sync_cmd(int reason)
         g_printf("SYNC_CMD_UPDATE_ERR\n");
         if (tws_api_get_role() == TWS_ROLE_SLAVE) {
             update_result_set(UPDATA_DEV_ERR);
-        } else {
             /* // 如果这里cpu_reset被注释掉，就打开这个，fw验证码校验不通过，从机就会触发擦除 */
             /* if (support_dual_bank_update_no_erase) { */
-            /* 	if ((u8)-1 == g_tws_ota_addr_recore) { */
-            /* 		dual_bank_check_flash_update_area(1); */
-            /* 	} */
+            /*     if (support_dual_bank_update_breakpoint) { */
+            /*         if ((u32)-1 == g_tws_ota_addr_recore) { */
+            /*             dual_bank_check_flash_update_area(1); */
+            /*         } */
+            /*     } else { */
+            /*         dual_bank_check_flash_update_area(1); */
+            /*     } */
             /* } */
             /* // 添加写保护 */
             /* norflash_set_write_protect_en(); */

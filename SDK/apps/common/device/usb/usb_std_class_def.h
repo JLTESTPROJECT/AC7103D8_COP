@@ -18,6 +18,7 @@
 #define     MIDI_CLASS          0x00000040
 #define     PRINTER_CLASS       0x00000080
 #define     MTP_CLASS           0x00000100
+#define     IAP_CLASS           0x00000200
 
 
 #ifndef FUSB_MODE
@@ -59,6 +60,10 @@
 #endif
 #ifndef MSD_STR_INDEX
 #define MSD_STR_INDEX               7
+#endif
+
+#ifndef IAP_STR_INDEX
+#define IAP_STR_INDEX               10
 #endif
 
 ///////////HID class
@@ -227,6 +232,7 @@
 #ifndef MIC_SELECTOR_UNIT_ID
 #define MIC_SELECTOR_UNIT_ID        7
 #endif
+
 
 ////////////CDC Class
 #ifndef CDC_DATA_EP_IN

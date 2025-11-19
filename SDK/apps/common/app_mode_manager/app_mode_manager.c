@@ -99,6 +99,10 @@ struct app_mode *app_get_next_mode()
         }
     }
     if (current_mode_unactive) {
+        if (list_empty(&g_mode_mgr.head)) {
+            printf("not support any app mode?\n");
+            return NULL;
+        }
         next = g_mode_mgr.head.next;
     } else {
         next = g_mode_mgr.curr_mode->entry.next;

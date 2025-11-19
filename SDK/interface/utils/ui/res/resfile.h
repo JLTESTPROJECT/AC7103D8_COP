@@ -14,7 +14,6 @@
 #define FILE_TYPE_JPEG 	5
 #define AT_UI_RAM             AT(.ui_ram)
 
-extern int JLUI_TYPE_AND_VERSION;
 
 
 //图像数据格式

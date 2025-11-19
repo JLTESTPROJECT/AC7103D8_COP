@@ -2,7 +2,6 @@
 #define _APP_CHARGESTORE_H_
 
 #include "typedef.h"
-#include "system/event.h"
 
 //LDOIN升级口命令定义
 #define CMD_TWS_CHANNEL_SET         0x01
@@ -59,24 +58,24 @@ struct _CHARGE_STORE_INFO {
 } _GNU_PACKED_;
 typedef struct _CHARGE_STORE_INFO   CHARGE_STORE_INFO;
 
-extern u8 chargestore_get_power_level(void);
-extern u8 chargestore_get_power_status(void);
-extern u8 chargestore_get_cover_status(void);
-extern u8 chargestore_get_sibling_power_level(void);
-extern void chargestore_set_bt_init_ok(u8 flag);
-extern u8 chargestore_get_earphone_online(void);
-extern u8 chargestore_get_earphone_pos(void);
-extern int chargestore_sync_chg_level(void);
-extern void chargestore_set_power_level(u8 power);
-extern void chargestore_set_sibling_chg_lev(u8 chg_lev);
-extern void chargestore_set_phone_disconnect(void);
-extern void chargestore_set_phone_connect(void);
-extern u8 chargestore_check_going_to_poweroff(void);
-extern void chargestore_shutdown_reset(void);
-extern void testbox_set_testbox_tws_paired(u8 flag);
-extern u8 testbox_get_testbox_tws_paired(void);
-extern u8 testbox_get_touch_trim_en(u8 *sec);
-extern u8 testbox_get_softpwroff_after_paired(void);
+u8 chargestore_get_power_level(void);
+u8 chargestore_get_power_status(void);
+u8 chargestore_get_cover_status(void);
+u8 chargestore_get_sibling_power_level(void);
+void chargestore_set_bt_init_ok(u8 flag);
+u8 chargestore_get_earphone_online(void);
+u8 chargestore_get_earphone_pos(void);
+int chargestore_sync_chg_level(void);
+void chargestore_set_power_level(u8 power);
+void chargestore_set_sibling_chg_lev(u8 chg_lev);
+void chargestore_set_phone_disconnect(void);
+void chargestore_set_phone_connect(void);
+u8 chargestore_check_going_to_poweroff(void);
+void chargestore_shutdown_reset(void);
+void testbox_set_testbox_tws_paired(u8 flag);
+u8 testbox_get_testbox_tws_paired(void);
+u8 testbox_get_touch_trim_en(u8 *sec);
+u8 testbox_get_softpwroff_after_paired(void);
 
 
 void chargestore_set_tws_channel_info(u8 channel);

@@ -20,6 +20,7 @@
 
 #if TCFG_USB_APPLE_DOCK_EN
 #include "apple_dock/iAP.h"
+#include "usb/device/iap.h"
 #endif
 
 #define LOG_TAG_CONST       USB
@@ -36,11 +37,13 @@
 static u32 host_type[USB_MAX_HW_NUM];
 static u32 dev_desc_len[USB_MAX_HW_NUM];
 static u32 cfg_desc_len[USB_MAX_HW_NUM];
+static u8 get_str_desc_flag;
 void usb_reset_host_type(const usb_dev usb_id)
 {
     host_type[usb_id] = HOST_TYPE_ERR;
     dev_desc_len[usb_id] = 0;
     cfg_desc_len[usb_id] = 0;
+    get_str_desc_flag = 0;
 }
 u32 usb_get_host_type(const usb_dev usb_id)
 {
@@ -134,6 +137,9 @@ static u32 setup_device(struct usb_device_t *usb_device, struct usb_ctrlrequest 
     case USB_REQ_GET_DESCRIPTOR:
         switch (HIBYTE(req->wValue)) {
         case USB_DT_STRING:
+            if (get_str_desc_flag == 0) {
+                get_str_desc_flag = 1;
+            }
             switch (LOBYTE(req->wValue)) {
 #if TCFG_USB_SLAVE_AUDIO_SPK_ENABLE || TCFG_USB_SLAVE_AUDIO_MIC_ENABLE
             case SPEAKER_STR_INDEX:
@@ -147,13 +153,12 @@ static u32 setup_device(struct usb_device_t *usb_device, struct usb_ctrlrequest 
                 break;
 #endif
 #if TCFG_USB_APPLE_DOCK_EN
-            case MSD_STR_INDEX:
+            case IAP_STR_INDEX:
                 if (apple_mfi_chip_online_lib()) {
-                    y_printf("MSD_STR_INDEX \n");
+                    log_info("IAP_STR_INDEX \n");
                     usb_set_data_payload(usb_device, req, IAP_interface_string, sizeof(IAP_interface_string));
                     apple_mfi_pass_ready_set_api();
-                    extern void apple_usb_msd_wakeup(struct usb_device_t *usb_device);
-                    apple_usb_msd_wakeup(usb_device);
+                    apple_usb_iap_wakeup(usb_device);
                     ret = 1;
                     break;
                 }
@@ -188,31 +193,28 @@ static u32 setup_device(struct usb_device_t *usb_device, struct usb_ctrlrequest 
         case USB_DT_CONFIG:
             if (cfg_desc_len[usb_id] == 0) {
                 cfg_desc_len[usb_id] = req->wLength;
+                if (get_str_desc_flag) {
+                    get_str_desc_flag = HOST_TYPE_IOS; //在set_cfg判断,这里只是前置条件
+                } else {
+                    get_str_desc_flag = HOST_TYPE_ANDROID; //在set_cfg判断,这里只是前置条件
+                }
             }
             break;
         }
         break;
     case USB_REQ_SET_CONFIGURATION:
-        switch (dev_desc_len[usb_id]) {
-        case 18:
-            if (cfg_desc_len[usb_id] == 255) {
-                host_type[usb_id] = HOST_TYPE_WINDOWS;
-                log_info("host_type = %d, windows, line:%d\n", host_type[usb_id], __LINE__);
-            } else if (cfg_desc_len[usb_id] == 9) {
-                host_type[usb_id] = HOST_TYPE_ANDROID;
-                log_info("host_type = %d, android, line:%d\n", host_type[usb_id], __LINE__);
-            } else {
-                host_type[usb_id] = HOST_TYPE_UNKNOW;
-                log_info("host_type = %d, unknow, line:%d\n", host_type[usb_id], __LINE__);
-            }
+        switch (cfg_desc_len[usb_id]) {
+        case 255:
+            host_type[usb_id] = HOST_TYPE_WINDOWS;
+            log_info("host_type = %d, windows, line:%d\n", host_type[usb_id], __LINE__);
             break;
-        case 8:
-            if (cfg_desc_len[usb_id] == 9) {
+        case 9:
+            if (get_str_desc_flag == HOST_TYPE_IOS) {
                 host_type[usb_id] = HOST_TYPE_IOS;
                 log_info("host_type = %d, ios, line:%d\n", host_type[usb_id], __LINE__);
-            } else {
-                host_type[usb_id] = HOST_TYPE_UNKNOW;
-                log_info("host_type = %d, unknow, line:%d\n", host_type[usb_id], __LINE__);
+            } else if (get_str_desc_flag == HOST_TYPE_ANDROID) {
+                host_type[usb_id] = HOST_TYPE_ANDROID;
+                log_info("host_type = %d, android, line:%d\n", host_type[usb_id], __LINE__);
             }
             break;
         default:

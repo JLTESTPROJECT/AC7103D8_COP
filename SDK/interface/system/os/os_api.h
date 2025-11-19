@@ -425,6 +425,7 @@ void os_system_info_output(void);
 
 u8 os_idle_percentage(void);
 
+const char *pcTaskName(void *pxTCB);
 
 #ifdef __cplusplus
 }

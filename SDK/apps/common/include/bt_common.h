@@ -213,4 +213,11 @@ enum {
 //初始化配置蓝牙发射功率最大值范围,解析详见 btcontroller_modules.h
 void bt_max_pwr_set(u8 pwr, u8 pg_pwr, u8 iq_pwr, u8 ble_pwr);
 
+/*-------------------
+蓝牙发射功率档位参考值(unit: dBm):
+br29 pwr rang(0~5): -15.7,  -9.7,   -3.6,   -0.1,   3.2,    8.5
+br52 pwr rang(0~4): -4.2,   0.25,   4.14,   7.32,   11.79
+br56 pwr rang(0~4): -6,     -2,     2,      6,      10
+-----------------------*/
+
 #endif

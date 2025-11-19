@@ -33,6 +33,10 @@
 
 typedef int (*music_player_cb_t)(void *, int parm, enum stream_event);
 
+struct midi_player {
+    struct jlstream *stream;
+};
+
 enum play_status {
     FILE_PLAYER_STOP = 0x0, //播放结束
     FILE_PLAYER_START, //播放中
@@ -76,6 +80,8 @@ struct file_player {
     s8 music_pitch_mode; //变调模式
     enum play_status  status;    //播放状态
     u8 break_point_flag; //是否有播放器申请的断点
+    void *le_audio;     //广播音箱的句柄
+    void *fmt;//广播音箱的编码格式
 };
 
 // AB点复读模式
@@ -116,6 +122,9 @@ struct file_player *music_file_play_callback(FILE *file, void *priv,
         music_player_cb_t callback,
         struct audio_dec_breakpoint *dbp
                                             );
+
+struct file_player *le_audio_music_file_play_callback(FILE *file, void *priv, music_player_cb_t callback, struct audio_dec_breakpoint *dbp, void *le_audio, void *fmt);
+
 /*
  * 停止播放所有音乐
  */
