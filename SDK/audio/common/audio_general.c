@@ -256,6 +256,21 @@ const int LC3_CODEC_STKBUF_RELEASE_ENABLE = 1;
 const int JLA_CODEC_STKBUF_RELEASE_ENABLE = 1;
 const int JLA_V2_CODEC_STKBUF_RELEASE_ENABLE = 1;
 
+//***********************
+//*		LDAC Codec       *
+//***********************
+#define   LDAC_ENC_MODE_CONFIG   0
+//设为1和pc模型对比数据,可以过一致性测试.   Window或Linux编码工具均可.
+//设为0 采用硬件fft加速,去掉非必要运算,速度更快.
+
+#if (LDAC_ENC_MODE_CONFIG == 1)
+const int LDAC_ENC_FRAME_STATUS = 1;
+const int LDAC_ENC_HW_FFT = 0;
+#else
+const int LDAC_ENC_FRAME_STATUS = 0;
+const int LDAC_ENC_HW_FFT = 1;
+#endif
+
 /*
  *******************************************************************
  *						Audio SYNCTS Config

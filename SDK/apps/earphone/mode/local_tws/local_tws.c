@@ -546,40 +546,50 @@ REGISTER_TWS_FUNC_STUB(local_tws_sync_stub) = {
 static int local_tws_event_handler(int *_event)
 {
     struct tws_event *event = (struct tws_event *)_event;
+    int trans_role = event->args[0];
+
     switch (event->event) {
     case TWS_EVENT_DATA_TRANS_OPEN:
         break;
     case TWS_EVENT_DATA_TRANS_START:
         /*Source端打开本地传输Sink端会收到该event并收到参数，在此处打开本地解码*/
-        if (!app_in_mode(APP_MODE_SINK)) { //不在SINK模式下不应该打开
+#if (!LOCAL_TWS_SOURCE_PLAYER_USE_ENC_DATA)
+        if (trans_role == TWS_DATA_TRANS_SOURCE) {
             log_info("Not in sink mode not Respone TWS_EVENT_DATA_TRANS_START\n");
             break;
         }
+#endif
+
         log_info("TWS_EVENT_DATA_TRANS_START\n");
 #if TCFG_TWS_AUTO_ROLE_SWITCH_ENABLE
         //本地传输打开时不自动主从切换
         tws_api_auto_role_switch_disable();
 #endif
-        local_tws_dec_status_report(1);
+        if (trans_role == TWS_DATA_TRANS_SINK) {
+            local_tws_dec_status_report(1);
+        }
         struct local_tws_player_param tws_player_param;
-        tws_player_param.tws_channel = event->args[0];
-        tws_player_param.channel_mode = event->args[2];
-        tws_player_param.sample_rate = event->args[3];
-        tws_player_param.coding_type = event->args[4];
-        tws_player_param.durations = event->args[5];
-        tws_player_param.bit_rate = event->args[6];
+        tws_player_param.tws_channel = event->args[1];
+        tws_player_param.channel_mode = event->args[3];
+        tws_player_param.sample_rate = event->args[4];
+        tws_player_param.coding_type = event->args[5];
+        tws_player_param.durations = event->args[6];
+        tws_player_param.bit_rate = event->args[7];
         local_tws_player_open(&tws_player_param);
         break;
     case TWS_EVENT_DATA_TRANS_CLOSE:
         /*Source端关闭本地传输Sink端会收到该event并收到参数，在此处关闭本地解码*/
-        if (!app_in_mode(APP_MODE_SINK)) { //不在SINK模式下不应该有关闭
+#if (!LOCAL_TWS_SOURCE_PLAYER_USE_ENC_DATA)
+        if (trans_role == TWS_DATA_TRANS_SOURCE) {
             log_info("Not in sink mode not Respone TWS_EVENT_DATA_TRANS_CLOSE\n");
             break;
         }
-
+#endif
         log_info("TWS_EVENT_DATA_TRANS_CLOSE\n");
         local_tws_player_close();
-        local_tws_dec_status_report(0);
+        if (trans_role == TWS_DATA_TRANS_SINK) {
+            local_tws_dec_status_report(0);
+        }
 #if TCFG_TWS_AUTO_ROLE_SWITCH_ENABLE
         tws_api_auto_role_switch_enable();
 #endif

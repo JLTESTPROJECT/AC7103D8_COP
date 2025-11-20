@@ -173,7 +173,7 @@ static void a2dp_player_callback(void *private_data, int event)
 
 static void a2dp_player_set_audio_channel(struct a2dp_player *player)
 {
-#if AUDIO_TWS_DUAL_DRIVER_ENABLE
+#if (defined(TCFG_AUDIO_FLOW_PRESET_TWS_DUAL_DRIVER_ENABLE) && TCFG_AUDIO_FLOW_PRESET_TWS_DUAL_DRIVER_ENABLE)
     int channel = AUDIO_CH_MIX;
 #else
     int channel = (TCFG_AUDIO_DAC_CONNECT_MODE == DAC_OUTPUT_LR) ? AUDIO_CH_LR : AUDIO_CH_MIX;
@@ -292,7 +292,7 @@ static void retry_start_a2dp_player(void *p)
 static void a2dp_player_set_channel_by_tws(struct a2dp_player *player)
 {
     if (CONFIG_BTCTLER_TWS_ENABLE) {
-#if AUDIO_TWS_DUAL_DRIVER_ENABLE
+#if (defined(TCFG_AUDIO_FLOW_PRESET_TWS_DUAL_DRIVER_ENABLE) && TCFG_AUDIO_FLOW_PRESET_TWS_DUAL_DRIVER_ENABLE)
         if (tws_api_get_tws_state() & TWS_STA_SIBLING_CONNECTED) {
             player->channel = tws_api_get_local_channel() == 'L' ? AUDIO_CH_L : AUDIO_CH_R;
         } else {

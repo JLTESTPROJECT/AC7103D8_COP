@@ -327,8 +327,8 @@
 #define AUD_PLC_TD_MODE						1	//时域（TimeDomain）模式
 #define AUD_PLC_FD_MODE						2	//频域（FrequencyDomain）模式
 #define AUD_PLC_SILENCE_MODE				3	//填充静音包模式
-#define AUD_PLC_APLC_MODE					4	//官方高级PLC模式（需授权使用）
-#define AUD_PLC_NPLC_MODE					5	//自研高级PLC模式
+#define AUD_PLC_ADVANCED_MODE				4	//官方高级PLC模式（需授权使用）
+#define AUD_PLC_ULTRA_MODE					5	//JL自研高级PLC模式
 
 
 /*

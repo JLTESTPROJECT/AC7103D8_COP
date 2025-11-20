@@ -1,3 +1,5 @@
+	    *(.ble_ll_const)
+	    *(.ble_ll_code)
 
 		. = ALIGN(4);
         tws_sync_call_begin = .;

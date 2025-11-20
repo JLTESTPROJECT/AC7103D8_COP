@@ -1369,7 +1369,7 @@ enum {
 
 };
 
-static u32 ear_version[2] = {0x00, 0x00};           // 临时定义耳机版本号，后面可以考虑存在VM
+static u32 ear_version[2] = {0x02, 0x00};           // 临时定义耳机版本号，后面可以考虑存在VM
 static u32 dongle_common_version[2] = {0x00, 0x00}; // 耳机和dongle协商共用用双方中的低版本
 
 static u32 dongle_codec_type = 0;

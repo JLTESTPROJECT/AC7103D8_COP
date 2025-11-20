@@ -121,8 +121,11 @@ jla_v2_dec_plug
 jla_v2_enc_plug
 #endif
 
-#if TCFG_BT_SUPPORT_LDAC
+#if TCFG_BT_SUPPORT_LDAC ||  TCFG_DEC_LDAC_ENABLE
 ldac_dec_plug
+#endif
+#if TCFG_ENC_LDAC_ENABLE
+ldac_enc_plug
 #endif
 
 #if TCFG_TONE_SIN_ENABLE

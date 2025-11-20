@@ -815,8 +815,8 @@ static void adc_ioc_get_fmt(struct adc_file_hdl *hdl, struct stream_fmt *fmt)
 #endif
         break;
     case STREAM_SCENE_HEARING_AID:
-#ifdef TCFG_AUDIO_HEARING_AID_SAMPLE_RATE
-        fmt->sample_rate = TCFG_AUDIO_HEARING_AID_SAMPLE_RATE;
+#ifdef  AUDIO_MIC_EFFECT_SAMPLE_RATE
+        fmt->sample_rate = AUDIO_MIC_EFFECT_SAMPLE_RATE;
 #else
         fmt->sample_rate = 44100;
 #endif

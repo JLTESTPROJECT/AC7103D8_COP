@@ -219,6 +219,11 @@
 #define TCFG_FILE_MANAGER_ENABLE							0
 #endif
 
+#if TCFG_LOCAL_TWS_ENABLE
+// 耳机local_tws使用编码数据进行音频同步
+#define LOCAL_TWS_SOURCE_PLAYER_USE_ENC_DATA				1
+#endif
+
 #if (THIRD_PARTY_PROTOCOLS_SEL & FMNA_EN)
 //存放token信息
 #define CONFIG_FINDMY_INFO_ENABLE      		    1		//配置是否支持FINDMY存储

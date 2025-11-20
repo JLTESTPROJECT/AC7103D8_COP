@@ -22,6 +22,10 @@
 
 #define LOCAL_TWS_SEND_DEBUG    0
 
+#ifndef LOCAL_TWS_SOURCE_PLAYER_USE_ENC_DATA  //source 端是否解编码数据
+#define LOCAL_TWS_SOURCE_PLAYER_USE_ENC_DATA  0
+#endif
+
 struct local_tws_param_data {
     u8 frame_num;
 } __attribute__((packed));
@@ -122,7 +126,9 @@ static int local_tws_send_frame(struct local_tws_source_context *ctx, struct str
     }
 
 __exit:
+#if (!LOCAL_TWS_SOURCE_PLAYER_USE_ENC_DATA) //source端解码编码数据，会自动释放数据
     tws_api_data_trans_buf_free(ctx);
+#endif
     if (!ctx->send_start) {
         ctx->send_start = 1;
     }
@@ -384,7 +390,7 @@ static int local_tws_source_ioc_start(struct stream_iport *iport)
         ctx->frame_latency = jla_v2_frame_latency(ctx->fmt.sample_rate, ctx->fmt.frame_dms);
     } else if (ctx->fmt.coding_type == AUDIO_CODING_LDAC) {
         int pcm_frames = ctx->fmt.sample_rate >= 88200 ? 256 : 128;
-        frame_len = (ctx->fmt.bit_rate / 8) * pcm_frames / ctx->fmt.sample_rate;
+        frame_len = (ctx->fmt.bit_rate / 8) * pcm_frames / ((ctx->fmt.sample_rate == 44100) ?  48000 : ctx->fmt.sample_rate) ;
         ctx->frame_latency = pcm_frames * 1000000 / ctx->fmt.sample_rate;
         ctx->look_ahead_latency = ctx->frame_latency;
     } else {
