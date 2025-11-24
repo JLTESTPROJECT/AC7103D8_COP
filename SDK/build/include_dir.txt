@@ -113,6 +113,7 @@
 -Iapps/common/third_party_profile/auracast_app
 -Iapps/common/third_party_profile/jieli/jl_earbox
 -Iinterface/btstack/third_party/jl_earbox
+-Iapps/common/third_party_profile/hid_iso
 -Iinterface/btstack
 -Iapps/common/device/usb
 -Iapps/common/device/usb/device
@@ -140,6 +141,9 @@
 -Iaudio/common/icsd/vdt
 -Iaudio/common/icsd/wat
 -Iaudio/common/icsd/ein
+-Iaudio/common/icsd/adjdcc
+-Iaudio/common/icsd/env_noise_det
+-Iaudio/common/icsd/howl
 -Iaudio/common/power
 -Iaudio/anc
 -Iaudio/cpu/br56/audio_dai

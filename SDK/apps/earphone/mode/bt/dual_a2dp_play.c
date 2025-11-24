@@ -454,10 +454,10 @@ void try_play_preempted_a2dp(void *p)
     }
 }
 
-static void a2dp_suspend_by_call(u8 *play_addr, void *play_device)
+static int a2dp_suspend_by_call(u8 *play_addr, void *play_device)
 {
     if (tws_api_get_role() == TWS_ROLE_SLAVE) {
-        return;
+        return 0;
     }
     if (play_addr && play_device && a2dp_player_is_playing(play_addr)) {
         puts("--a2dp_mute\n");
@@ -466,7 +466,9 @@ static void a2dp_suspend_by_call(u8 *play_addr, void *play_device)
         memset(a2dp_energy_detect_addr, 0xff, 6);
         btstack_device_control(play_device, USER_CTRL_AVCTP_OPID_PAUSE);
         tws_a2dp_play_send_cmd(CMD_A2DP_MUTE_BY_CALL, play_addr, 6, 1);
+        return 1;
     }
+    return 0;
 }
 
 /* --------------------------------------------------------------------------*/
@@ -549,17 +551,56 @@ u8 try_a2dp_resume_by_le_audio_preempted()
 
 }
 
+/**
+ * @brief 判断设备是否处于通话状态
+ *
+ * @param device 蓝牙设备
+ * @param addr 蓝牙设备地址
+ *
+ * @return 1:处于通话中；0:没有处于通话中
+ */
+static int bt_device_esco_status_is_open(void *device, u8 *addr)
+{
+#if TCFG_A2DP_PREEMPTED_ENABLE
+    if (device && (btstack_get_call_esco_status(device) == BT_ESCO_STATUS_OPEN)) {
+        return 1;
+    }
+#else
+    if (device && ((btstack_get_call_esco_status(device) == BT_ESCO_STATUS_OPEN) || (memcmp(g_a2dp_phone_call_addr, addr, 6)) == 0)) {
+        return 1;
+    }
+#endif
+    return 0;
+}
+
 static int a2dp_bt_status_event_handler(int *event)
 {
     int ret;
     u8 data[8];
     u8 btaddr[6];
     struct bt_event *bt = (struct bt_event *)event;
+
+#if TCFG_BT_DUAL_1T3_CONN_ENABLE
+    void *device_a, *device_b, *device_c;
+    bt_get_btstack_device3(bt->args, &device_a, &device_b, &device_c);
+#else
     void *device_a, *device_b;
-
     bt_get_btstack_device(bt->args, &device_a, &device_b);
+#endif
     u8 *addr_b = device_b ? btstack_get_device_mac_addr(device_b) : NULL;
-
+    puts("device_a\n");
+    put_buf(bt->args, 6);
+    if (addr_b) {
+        puts("device_b\n");
+        put_buf(addr_b, 6);
+    }
+#if TCFG_BT_DUAL_1T3_CONN_ENABLE
+    u8 *addr_c = device_c ? btstack_get_device_mac_addr(device_c) : NULL;
+    if (addr_c) {
+        puts("device_c\n");
+        put_buf(addr_c, 6);
+    }
+#endif
 
     switch (bt->event) {
     case BT_STATUS_A2DP_MEDIA_START:
@@ -569,13 +610,10 @@ static int a2dp_bt_status_event_handler(int *event)
             break;
         }
         if (tws_api_get_role() == TWS_ROLE_MASTER) {
-#if TCFG_A2DP_PREEMPTED_ENABLE
-            if (device_b &&
-                (btstack_get_call_esco_status(device_b) == BT_ESCO_STATUS_OPEN)) {
+#if TCFG_BT_DUAL_1T3_CONN_ENABLE
+            if (bt_device_esco_status_is_open(device_b, addr_b) || bt_device_esco_status_is_open(device_c, addr_c)) {
 #else
-            if (device_b &&
-                ((btstack_get_call_esco_status(device_b) == BT_ESCO_STATUS_OPEN) ||
-                 (memcmp(g_a2dp_phone_call_addr, addr_b, 6) == 0))) {
+            if (bt_device_esco_status_is_open(device_b, addr_b)) {
 #endif
                 puts("---mute_a\n");
                 a2dp_media_mute(bt->args);
@@ -621,8 +659,14 @@ static int a2dp_bt_status_event_handler(int *event)
         }
         if (memcmp(a2dp_drop_packet_detect_addr, bt->args, 6) == 0) {
             g_printf("bt_action_is_drop_flag");
+#if TCFG_BT_DUAL_1T3_CONN_ENABLE
+            if ((addr_b && ((memcmp(a2dp_energy_detect_addr, addr_b, 6) == 0) ||
+                            (memcmp(a2dp_preempted_addr, addr_b, 6) == 0))) ||
+                (addr_c && ((memcmp(a2dp_energy_detect_addr, addr_c, 6) == 0) || (memcmp(a2dp_preempted_addr, addr_c, 6) == 0)))) {
+#else
             if (addr_b && ((memcmp(a2dp_energy_detect_addr, addr_b, 6) == 0) ||
                            (memcmp(a2dp_preempted_addr, addr_b, 6) == 0))) {
+#endif
                 tws_a2dp_play_send_cmd(CMD_A2DP_MUTE, bt->args, 6, 1);
                 break;
             }
@@ -720,8 +764,14 @@ static int a2dp_bt_status_event_handler(int *event)
         if (bt->value != AVC_PLAY) {
             break;
         }
+#if TCFG_BT_DUAL_1T3_CONN_ENABLE
+        if ((device_b &&
+             btstack_get_call_esco_status(device_b) == BT_ESCO_STATUS_OPEN) ||
+            (device_c && btstack_get_call_esco_status(device_c) == BT_ESCO_STATUS_OPEN)) {
+#else
         if (device_b &&
             btstack_get_call_esco_status(device_b) == BT_ESCO_STATUS_OPEN) {
+#endif
             puts("--mute_a\n");
             a2dp_media_mute(bt->args);
             btstack_device_control(device_a, USER_CTRL_AVCTP_OPID_PAUSE);
@@ -737,7 +787,14 @@ static int a2dp_bt_status_event_handler(int *event)
     case BT_STATUS_SCO_CONNECTION_REQ:
         puts("A2DP BT_STATUS_SCO_CONNECTION_REQ\n");
         put_buf(bt->args, 6);
-        a2dp_suspend_by_call(addr_b, device_b);
+        if (a2dp_suspend_by_call(addr_b, device_b)) {
+            puts("a2dp_suspend_by_call device_b\n");
+        }
+#if TCFG_BT_DUAL_1T3_CONN_ENABLE
+        if (a2dp_suspend_by_call(addr_c, device_c)) {
+            puts("a2dp_suspend_by_call device_c\n");
+        }
+#endif
 #if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_UNICAST_SINK_EN)
         le_audio_unicast_play_remove_by_phone_call();
 #endif
@@ -785,6 +842,34 @@ static int a2dp_bt_status_event_handler(int *event)
                 a2dp_media_close(addr_b);
             }
         }
+#if TCFG_BT_DUAL_1T3_CONN_ENABLE
+        if (addr_c && device_c && bt_not_in_phone_call_state(device_c)) {
+            if (memcmp(a2dp_preempted_addr, addr_c, 6) == 0) {
+                if (a2dp_media_is_mute(addr_c)) {
+                    puts("--a2dp_unmute-c\n");
+                    tws_api_role_switch_lock_msec(1500);
+                    a2dp_media_unmute(addr_c);
+                    a2dp_media_close(addr_c);
+                    memcpy(a2dp_energy_detect_addr, addr_c, 6);
+                    memset(a2dp_preempted_addr, 0xff, 6);
+                } else {
+                    sys_timeout_add(NULL, try_play_preempted_a2dp, 500);
+                }
+                memcpy(a2dp_drop_packet_detect_addr, bt->args, 6);
+                break;
+            }
+            /* 手机A通话中,点击2次手机B的音频播放或打开抖音导致无法暂停
+             * 这里取消静音和能量检查，等待协议栈重新发送MEDIA_START消息
+             * 此处无法区分是否为没播放完的提示音，所以不走上面的流程，
+             * 防止发送PLAY命令把手机B的播放器拉起
+             */
+            if (a2dp_media_is_mute(addr_c)) {
+                bt_stop_a2dp_slience_detect(addr_c);
+                a2dp_media_unmute(addr_c);
+                a2dp_media_close(addr_c);
+            }
+        }
+#endif
         if (memcmp(a2dp_preempted_addr, bt->args, 6) == 0) {
             puts("--a2dp_unmute-a\n");
             sys_timeout_add(NULL, try_play_preempted_a2dp, 500);
@@ -795,7 +880,14 @@ static int a2dp_bt_status_event_handler(int *event)
                (bt->value >> 16), (bt->value & 0x0000ffff));
         put_buf(bt->args, 6);
         if (bt->value != 0xff) {
-            a2dp_suspend_by_call(addr_b, device_b);
+            if (a2dp_suspend_by_call(addr_b, device_b)) {
+                puts("a2dp_suspend_by_call device_b\n");
+            }
+#if TCFG_BT_DUAL_1T3_CONN_ENABLE
+            if (a2dp_suspend_by_call(addr_c, device_c)) {
+                puts("a2dp_suspend_by_call device_c\n");
+            }
+#endif
         } else {
 #if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_UNICAST_SINK_EN)
             le_audio_unicast_try_resume_play_by_phone_call_remove();

@@ -97,7 +97,7 @@ void bt_sniff_ready_clean(void)
 
 void bt_check_enter_sniff()
 {
-    u8 addr[12];
+    u8 addr[18];
 #if TCFG_BT_SNIFF_ENABLE
 
 #if TCFG_AUDIO_ANC_ENABLE
@@ -128,7 +128,7 @@ void bt_check_enter_sniff()
     }
 
     int conn_cnt = bt_api_enter_sniff_status_check(SNIFF_CNT_TIME, addr);
-    ASSERT(conn_cnt <= 2);
+    ASSERT(conn_cnt <= TCFG_BT_SUPPORT_CONN_NUM);
     struct sniff_ctrl_config_t config = {0};
     for (int i = 0; i < conn_cnt; i++) {
         log_info("-----USER SEND SNIFF IN %d %d\n", i, conn_cnt);
@@ -203,6 +203,7 @@ static int sniff_btstack_event_handler(int *_event)
     switch (bt->event) {
     case BT_STATUS_SECOND_CONNECTED:
     case BT_STATUS_FIRST_CONNECTED:
+    case BT_STATUS_THIRD_CONNECTED:
         sys_auto_sniff_controle(1, bt->args);
         break;
     case BT_STATUS_SNIFF_STATE_UPDATE:

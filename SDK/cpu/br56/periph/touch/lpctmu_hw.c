@@ -37,6 +37,7 @@ static const u8 ch_port[LPCTMU_CHANNEL_SIZE] = {
     IO_PORTB_04,
 };
 
+static u32 lpctmu_dma_nvram_size;
 struct lpctmu_dma_kfifo res_kfifo;
 struct lpctmu_dma_kfifo *dma_kfifo = NULL;
 static struct lpctmu_config_data *__this = NULL;
@@ -835,7 +836,7 @@ void lpctmu_ch_res_key_msg_lim_upgrade(void)
     u32 ch_idx, ch;
     u16 *lim = (u16 *)(__this->pdata->dma_nvram_addr);
     for (ch_idx = 0; ch_idx < __this->ch_num; ch_idx ++) {
-        ch = __this->ch_list[ch_idx];
+        ch = lpctmu_ch_order_list[ch_idx];
         if (lim[(ch_idx * 2)] == __this->lim_h[ch]) {
         } else {
             lim[(ch_idx * 2)]  = __this->lim_h[ch];
@@ -849,10 +850,10 @@ void lpctmu_ch_res_key_msg_lim_upgrade(void)
 
 void lpctmu_dma_init(void)
 {
-    memset((u8 *)(__this->pdata->dma_nvram_addr), 0xff, __this->pdata->dma_nvram_size);
+    memset((u8 *)(__this->pdata->dma_nvram_addr), 0xff, lpctmu_dma_nvram_size);
 
-    u32 dma_len = __this->pdata->dma_nvram_size / (__this->ch_num * 2) * (__this->ch_num * 2);
     u32 dma_base_offset = __this->ch_num * 4;
+    u32 dma_len = lpctmu_dma_nvram_size / (__this->ch_num * 2) * (__this->ch_num * 2);
 
     dma_kfifo->buffer = (u16 *)(__this->pdata->dma_nvram_addr + dma_base_offset);
     dma_kfifo->buf_size = (dma_len - dma_base_offset) / 2;
@@ -954,14 +955,15 @@ void lpctmu_init(struct lpctmu_config_data *cfg_data)
     res_kfifo.buf_in = 0;
     res_kfifo.buf_out = 0;
 
-    dma_kfifo = (struct lpctmu_dma_kfifo *)(__this->pdata->dma_nvram_addr + __this->pdata->dma_nvram_size);
+    u32 dma_base_offset = __this->ch_num * 4;
+    lpctmu_dma_nvram_size = __this->pdata->dma_nvram_size + dma_base_offset;
+    dma_kfifo = (struct lpctmu_dma_kfifo *)(__this->pdata->dma_nvram_addr + lpctmu_dma_nvram_size);
 
     u32 hw_init = 0;
     if (!is_wakeup_source(PWR_WK_REASON_P11)) {
         hw_init = 1;
     } else if (__this->ch_ear_en == 0) {
         if (__this->ch_num > 1) {
-            u32 dma_base_offset = __this->ch_num * 4;
             u32 cur_buf_in = (P11_LPCTM0->DMA_WADR / 2) - (dma_base_offset / 2);
             if (lpctmu_addr_to_ch_order(cur_buf_in)) {
                 hw_init = 1;

@@ -186,4 +186,52 @@ void gSensor_wkupup_enable(void)
     // power_wakeup_index_enable(4, 1);
 }
 
+// 步数管理接口
+// 步数管理变量
+static u32 total_steps = 0;
+// 算法输出数据管理
+static algo_out g_algo_out = {0};
+// 获取累计步数
+u32 g_sensor_get_total_steps(void)
+{
+    return total_steps;
+}
+
+// 设置累计步数
+void g_sensor_set_total_steps(u32 steps)
+{
+    total_steps = steps;
+}
+
+// 增加步数
+void g_sensor_add_steps(u32 steps)
+{
+    total_steps += steps;
+}
+
+// 清零步数
+void g_sensor_clear_steps(void)
+{
+    total_steps = 0;
+}
+
+// 算法输出数据管理接口
+
+// 更新算法输出数据
+void g_sensor_update_algo_out(algo_out out)
+{
+    g_algo_out = out;
+}
+
+// 获取算法输出数据
+algo_out g_sensor_get_algo_out(void)
+{
+    return g_algo_out;
+}
+
+// 清除算法输出数据
+void g_sensor_clear_algo_out(void)
+{
+    memset(&g_algo_out, 0, sizeof(algo_out));
+}
 #endif

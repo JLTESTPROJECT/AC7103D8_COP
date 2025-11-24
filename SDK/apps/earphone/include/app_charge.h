@@ -30,6 +30,7 @@ void charge_ldo5v_in_deal(void);
 void charge_ldo5v_off_deal(void);
 u8 get_charge_full_flag(void);
 void app_charge_power_off_keep_mode();
+void app_charge_system_reset(void);
 
 
 #endif    //_APP_CHARGE_H_

@@ -413,7 +413,7 @@ void chargestore_timeout_deal(void *priv)
     if (!__this->cover_status || __this->active_disconnect) {
         //当前为合盖或者主动断开连接
         if (!app_in_mode(APP_MODE_IDLE)) {
-            sys_enter_soft_poweroff(POWEROFF_RESET);
+            sys_enter_soft_poweroff(POWEROFF_POWER_RESET);
         }
     } else {
 
@@ -512,7 +512,7 @@ static int app_chargestore_event_handler(int *msg)
         bt_tws_remove_pairs();
 #endif
         bt_cmd_prepare(USER_CTRL_DEL_ALL_REMOTE_INFO, 0, NULL);
-        cpu_reset();
+        app_charge_system_reset();
         break;
     case CMD_TWS_CHANNEL_SET:
         chargestore_set_tws_channel_info(__this->channel);
@@ -523,7 +523,7 @@ static int app_chargestore_event_handler(int *msg)
             //交换地址后,断开与手机连接,并删除所有连过的手机地址
             bt_cmd_prepare(USER_CTRL_DEL_ALL_REMOTE_INFO, 0, NULL);
             __this->ear_number = 2;
-            sys_enter_soft_poweroff(POWEROFF_RESET);
+            sys_enter_soft_poweroff(POWEROFF_POWER_RESET);
         } else {
             __this->pair_flag = 1;
             if (bt_get_total_connect_dev()) {
@@ -569,7 +569,7 @@ static int app_chargestore_event_handler(int *msg)
         log_info("event_CMD_POWER_LEVEL_CLOSE\n");
         if (!__this->cover_status) {//当前为合盖
             if (!app_in_mode(APP_MODE_IDLE)) {
-                sys_enter_soft_poweroff(POWEROFF_RESET);
+                sys_enter_soft_poweroff(POWEROFF_POWER_RESET);
             }
         }
         break;

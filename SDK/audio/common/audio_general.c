@@ -271,6 +271,12 @@ const int LDAC_ENC_FRAME_STATUS = 0;
 const int LDAC_ENC_HW_FFT = 1;
 #endif
 
+/////////////////////opus codec/////////////////
+#if defined(TCFG_ENCODER_CHANNEL_NUM) && (TCFG_ENCODER_CHANNEL_NUM & BIT(1)) //双声道opus编码
+const u8 OPUS_ENC_CELT_EN = 1; //是否使能opus celt 编码，仅支持10ms,20ms帧长，支持8k,16k,24k,48k采样率,支持单双声道编码
+#else
+const u8 OPUS_ENC_CELT_EN = 0; //是否使能opus celt 编码，仅支持10ms,20ms帧长，支持8k,16k,24k,48k采样率,支持单双声道编码
+#endif
 /*
  *******************************************************************
  *						Audio SYNCTS Config
@@ -679,6 +685,13 @@ const int virtualbass_noisegate_attack_time = 50;
 const int virtualbass_noisegate_release_time = 30;
 const int virtualbass_noisegate_hold_time = 15;
 const float virtualbass_noisegate_threshold = -85.0f;
+
+/*
+ *******************************************************************
+ *			Audio hardware DMA malloc config
+ *******************************************************************
+ */
+const int config_src_hw_dma_malloc_enable = 1;
 
 
 __attribute__((weak))

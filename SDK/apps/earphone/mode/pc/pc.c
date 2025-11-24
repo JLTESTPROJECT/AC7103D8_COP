@@ -333,7 +333,7 @@ static int pc_mode_exit()
 
 struct app_mode *app_enter_pc_mode(int arg)
 {
-    int msg[16];
+    int msg[16] = {0};
     struct app_mode *next_mode;
 
     pc_mode_init();

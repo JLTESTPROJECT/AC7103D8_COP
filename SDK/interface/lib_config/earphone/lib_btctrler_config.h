@@ -7,6 +7,7 @@
 extern const int CONFIG_DONGLE_SPEAK_ENABLE  ;
 extern const int CONFIG_BTCTLER_JL_DONGLE_SOURCE_ENABLE;
 extern const int config_master_qos_poll;
+extern const int CONFIG_1T3_CONNECTION_ENABLE ;
 extern const int CONFIG_LMP_CONNECTION_NUM ;
 extern const int CONFIG_LMP_CONNECTION_LIMIT_NUM ;
 extern const int CONFIG_DISTURB_SCAN_ENABLE ;

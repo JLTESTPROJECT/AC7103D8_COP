@@ -2,7 +2,7 @@
 #define _ANC_BTSPP_H_
 
 #include "generic/typedef.h"
-#include "asm/anc.h"
+#include "anc.h"
 
 //前期训练 建议先做喇叭测试，再做MIC测试。这样内部可以通过喇叭判断MIC好不好
 //-------------------ANC SPP 协议 -------------------//

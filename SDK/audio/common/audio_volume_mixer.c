@@ -37,6 +37,7 @@
 #include "tone_player.h"
 #include "ring_player.h"
 #include "audio_volume_mixer.h"
+#include "audio_anc_includes.h"
 #if AUDIO_EQ_LINK_VOLUME
 #include "effects/eq_config.h"
 #endif
@@ -56,10 +57,6 @@
 #if TCFG_AUDIO_DUT_ENABLE
 #include "audio_dut_control.h"
 #endif/*TCFG_AUDIO_DUT_ENABLE*/
-
-#if TCFG_AUDIO_ADAPTIVE_EQ_ENABLE
-#include "icsd_aeq_app.h"
-#endif
 
 #ifdef SUPPORT_MS_EXTENSIONS
 #pragma const_seg(	".app_audio_const")

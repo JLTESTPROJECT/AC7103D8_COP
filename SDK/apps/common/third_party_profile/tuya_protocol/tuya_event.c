@@ -216,10 +216,12 @@ static int tuya_bt_status_event_handler(int *msg)
     switch (bt->event) {
     case BT_STATUS_SECOND_CONNECTED:
     case BT_STATUS_FIRST_CONNECTED:
+    case BT_STATUS_THIRD_CONNECTED:
         tuya_conn_state_set_and_indicate(1);
         break;
     case BT_STATUS_FIRST_DISCONNECT:
     case BT_STATUS_SECOND_DISCONNECT:
+    case BT_STATUS_THIRD_DISCONNECT:
         tuya_conn_state_set_and_indicate(0);
         break;
     case BT_STATUS_AVRCP_VOL_CHANGE:

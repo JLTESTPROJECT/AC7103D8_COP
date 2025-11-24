@@ -28,9 +28,7 @@
 #include "mix_record_api.h"
 #include "system/event.h"
 
-#if TCFG_AUDIO_ANC_ENABLE
-#include "audio_anc.h"
-#endif
+#include "audio_anc_includes.h"
 
 #if RCSP_MODE && RCSP_ADV_KEY_SET_ENABLE
 #include "adv_anc_voice_key.h"
@@ -45,16 +43,8 @@
 #include "spatial_effects_process.h"
 #endif
 
-#if TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN
-#include "icsd_adt_app.h"
-#endif
-
 #if TCFG_APP_KEY_DUT_ENABLE
 #include "app_key_dut.h"
-#endif
-
-#if TCFG_AUDIO_FIT_DET_ENABLE
-#include "icsd_dot_app.h"
 #endif
 
 #if TCFG_VOICE_CHANGER_NODE_ENABLE
@@ -389,7 +379,7 @@ static void app_common_app_event_handler(int *msg)
         audio_icsd_wind_detect_demo();
         break;
 #endif
-#if (defined TCFG_AUDIO_VOLUME_ADAPTIVE_ENABLE) && TCFG_AUDIO_VOLUME_ADAPTIVE_ENABLE
+#if (defined TCFG_AUDIO_ANC_ENV_ADAPTIVE_VOLUME_ENABLE) && TCFG_AUDIO_ANC_ENV_ADAPTIVE_VOLUME_ENABLE
     case APP_MSG_ADAPTIVE_VOL_SWITCH:
         audio_icsd_adaptive_vol_demo();
         break;

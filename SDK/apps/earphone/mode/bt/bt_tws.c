@@ -38,20 +38,11 @@
 #include "local_tws.h"
 
 #include "multi_protocol_main.h"
+#include "audio_anc_includes.h"
+
 #if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN)))
 #include "app_le_connected.h"
 #endif
-#if TCFG_AUDIO_ANC_ENABLE
-#include "audio_anc.h"
-#endif
-
-#if TCFG_ANC_BOX_ENABLE
-#include "app_ancbox.h"
-#endif
-
-#if TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN
-#include "icsd_adt_app.h"
-#endif /*TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN*/
 
 #if (TCFG_USER_TWS_ENABLE && TCFG_APP_BT_EN)
 
@@ -760,56 +751,6 @@ void bt_tws_sync_volume()
 
     tws_api_send_data_to_slave(data, 2, TWS_FUNC_ID_VOL_SYNC);
 }
-
-#if TCFG_AUDIO_ANC_ENABLE
-#define TWS_FUNC_ID_ANC_SYNC    TWS_FUNC_ID('A', 'N', 'C', 'S')
-static void bt_tws_anc_sync(void *_data, u16 len, bool rx)
-{
-    if (rx) {
-        u8 *data = (u8 *)_data;
-        //r_printf("[slave]anc_sync: %d, %d\n", data[0], data[1]);
-        /*先同步adt的状态，然后在切anc里面跑同步adt的动作*/
-#if TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN
-        audio_anc_icsd_adt_state_sync(data);
-#else
-        anc_mode_sync(data);
-#endif /*TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN*/
-    }
-}
-
-REGISTER_TWS_FUNC_STUB(app_anc_sync_stub) = {
-    .func_id = TWS_FUNC_ID_ANC_SYNC,
-    .func    = bt_tws_anc_sync,
-};
-
-/**
- * @brief TWS同步anc
- */
-void bt_tws_sync_anc(void)
-{
-    u8 data[5];
-#if TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN
-    /* 处理tws配对前一瞬间，在anc off开adt和
-     * 进入免摘通透同步anc mode的情况*/
-    data[0] = get_icsd_adt_anc_mode();
-#else
-    data[0] = anc_mode_get();
-#endif /*TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN*/
-#if ANC_EAR_ADAPTIVE_EN
-    data[1] = anc_ear_adaptive_seq_get();
-#endif/*ANC_EAR_ADAPTIVE_EN*/
-#if ANC_MULT_ORDER_ENABLE
-    data[2] = audio_anc_mult_scene_get();
-#endif/*ANC_MULT_ORDER_ENABLE*/
-#if TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN
-    data[3] = get_icsd_adt_mode();
-    data[4] = get_speak_to_chat_state();
-#endif /*TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN*/
-    //r_printf("[master]anc_sync: %d, %d\n", data[0], data[1]);
-    tws_api_send_data_to_slave(data, 5, TWS_FUNC_ID_ANC_SYNC);
-}
-
-#endif /*TCFG_AUDIO_ANC_ENABLE*/
 
 #if ((defined TCFG_AUDIO_SPATIAL_EFFECT_ENABLE) && TCFG_AUDIO_SPATIAL_EFFECT_ENABLE)
 #include "spatial_effects_process.h"

@@ -143,6 +143,7 @@ void connected_uninit(void);
 /* ----------------------------------------------------------------------------*/
 int connected_send_acl_data(u16 acl_hdl, void *data, size_t length);
 
+int connected_send_cis_data(u8 cig_hdl, void *data, size_t length);
 /* --------------------------------------------------------------------------*/
 /**
  * @brief CIG主机连接成功处理事件

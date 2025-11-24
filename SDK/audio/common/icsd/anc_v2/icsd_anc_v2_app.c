@@ -10,11 +10,9 @@
 	 TCFG_AUDIO_ANC_ENABLE && \
 	 TCFG_AUDIO_ANC_EAR_ADAPTIVE_VERSION == ANC_EXT_V2)
 
+#include "audio_anc_includes.h"
 #include "board_config.h"
-#include "icsd_anc_v2_app.h"
 #include "tone_player.h"
-#include "audio_anc.h"
-#include "icsd_anc_user.h"
 
 #if 1
 #define icsd_board_log printf
@@ -22,7 +20,7 @@
 #define icsd_board_log(...)
 #endif/*log_en*/
 
-#if TCFG_AUDIO_ANC_CH == (ANC_L_CH | ANC_R_CH)	/*头戴式*/
+#if AUDIO_ANC_STEREO_ENABLE	/*头戴式*/
 
 #if ANC_CHIP_VERSION == ANC_VERSION_BR28
 const u8 ICSD_ANC_V2_MODE = HEADSET_2CH_TONE_BYPASS_PZ; //HEADSET_TONES_MODE;//训练模式
@@ -75,7 +73,7 @@ static void icsd_anc_v2_time_data_exit()
 static void icsd_anc_v2_exit()
 {
     if (ICSD_REG->anc_v2_ram_addr) {
-        free(ICSD_REG->anc_v2_ram_addr);
+        anc_free(ICSD_REG->anc_v2_ram_addr);
         ICSD_REG->anc_v2_ram_addr = 0;
     }
     printf("icsd_anc_v2_exit");
@@ -258,10 +256,10 @@ u8 icsd_anc_v2_set_bypass(u8 ff_yorder, float bypass_vol, s8 bypass_sign)
 
 float icsd_anc_v2_readfbgain()
 {
-    anc_gain_t *fb_gain = zalloc(sizeof(anc_gain_t));
+    anc_gain_t *fb_gain = anc_malloc("ICSD_ANC", sizeof(anc_gain_t));
     anc_param_fill(ANC_CFG_READ, fb_gain);
     float l_fbgain = fb_gain->gains.l_fbgain;
-    free(fb_gain);
+    anc_free(fb_gain);
     return l_fbgain;
 }
 

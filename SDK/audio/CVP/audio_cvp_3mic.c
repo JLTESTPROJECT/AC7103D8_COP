@@ -37,13 +37,10 @@
 #include "fs/sdfile.h"
 #include "online_db_deal.h"
 #include "spp_user.h"
+#include "audio_anc_includes.h"
 #if TCFG_AUDIO_DUT_ENABLE
 //#include "audio_dut_control.h"
 #endif/*TCFG_AUDIO_DUT_ENABLE*/
-#if ((defined TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN) && TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN && \
-        TCFG_AUDIO_ANC_ENABLE && TCFG_AUDIO_ANC_WIND_NOISE_DET_ENABLE)
-#include "icsd_adt_app.h"
-#endif
 
 #if !defined(TCFG_CVP_DEVELOP_ENABLE) || (TCFG_CVP_DEVELOP_ENABLE == 0)
 

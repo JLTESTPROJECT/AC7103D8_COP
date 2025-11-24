@@ -16,16 +16,9 @@
 #include "pc_mic_recoder.h"
 #include "btstack/avctp_user.h"
 #include "effects/audio_howling_ahs.h"
-#if TCFG_AUDIO_ANC_ENABLE
-#include "audio_anc.h"
-#endif
+#include "audio_anc_includes.h"
 #if TCFG_AUDIO_DUT_ENABLE
 #include "audio_dut_control.h"
-#endif
-
-#if defined(TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN) && TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN
-#include "icsd_adt_app.h"
-#include "icsd_anc_user.h"
 #endif
 
 #if TCFG_AUDIO_DUT_ENABLE
@@ -389,7 +382,7 @@ void audio_adc_file_global_cfg_init(void)
         if (!adc_hdl.hw_buf) {
             u8 adc_num = adc_hdl.max_adc_num;
 #if defined(TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN) && TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN
-            adc_num = adc_hdl.max_adc_num > get_icsd_adt_mic_num() ? adc_hdl.max_adc_num : get_icsd_adt_mic_num();
+            adc_num = AUDIO_ADC_MAX_NUM; //按照最大通道数申请
 #endif /*TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN*/
             esco_adc_file_g.fixed_buf = malloc(ESCO_ADC_BUF_NUM * 256 * ((adc_hdl.bit_width == ADC_BIT_WIDTH_16) ? 2 : 4) * adc_num);
         }
@@ -983,15 +976,6 @@ static int adc_file_ioc_start(struct adc_file_hdl *hdl)
         smart_voice_mcu_mic_suspend();
 #endif
         hdl->dump_cnt = 0;
-        //不启动ANC动态MIC增益时，由用户自己保证ANC与通话复用的ADC增益一致
-#if TCFG_AUDIO_ANC_ENABLE && TCFG_AUDIO_DYNAMIC_ADC_GAIN
-#if (!TCFG_AUDIO_DUAL_MIC_ENABLE && (TCFG_AUDIO_ADC_MIC_CHA & AUDIO_ADC_MIC_1)) || \
-		(TCFG_AUDIO_DUAL_MIC_ENABLE && (TCFG_AUDIO_DMS_MIC_MANAGE == DMS_MASTER_MIC0))
-        anc_dynamic_micgain_start(hdl->adc_f->cfg.param[1].mic_gain);
-#else
-        anc_dynamic_micgain_start(hdl->adc_f->cfg.param[0].mic_gain);
-#endif/*TCFG_AUDIO_DUAL_MIC_ENABLE*/
-#endif/*TCFG_AUDIO_ANC_ENABLE && TCFG_AUDIO_DYNAMIC_ADC_GAIN*/
 
         //br50的LPADC需要根据采样率配置模拟部分的时钟分频,需要先设置采样率才能打开MIC
         audio_adc_mic_set_sample_rate(&hdl->mic_ch, hdl->sample_rate);
@@ -1066,9 +1050,6 @@ static int adc_file_ioc_stop(struct adc_file_hdl *hdl)
         if (jl_call_kws_get_status() == BT_STATUS_PHONE_INCOME) {
             audio_phone_call_kws_start();
         }
-#endif
-#if TCFG_AUDIO_ANC_ENABLE && TCFG_AUDIO_DYNAMIC_ADC_GAIN
-        anc_dynamic_micgain_stop();
 #endif
 
 #ifdef CONFIG_CPU_BR36

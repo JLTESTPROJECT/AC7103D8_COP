@@ -136,7 +136,7 @@ struct lpctmu_config_data {
     .sample_scan_time = 20, \
     .lowpower_sample_scan_time = 100, \
     .dma_nvram_addr = 0xf20000, \
-    .dma_nvram_size = 204, \
+    .dma_nvram_size = 240, \
 }
 
 

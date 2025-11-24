@@ -36,6 +36,9 @@
 #include "pub_mutual_set_cmd_opt.h"
 #include "file_transfer_sync.h"
 
+#include "sensors/ear_sports_data_opt.h"
+#include "sensors/ear_sport_info_opt.h"
+
 #if TCFG_USER_TWS_ENABLE
 #include "classic/tws_api.h"
 #include "bt_tws.h"
@@ -539,6 +542,23 @@ static void rcsp_request_exception_info(void *priv, u8 OpCode, u8 OpCode_SN, u8 
 }
 #endif /* #if (define CONFIG_DEBUG_RECORD_ENABLE && CONFIG_DEBUG_RECORD_ENABLE) */
 
+#if (RCSP_MODE && JL_RCSP_EAR_SENSORS_DATA_OPT)
+int JL_rcsp_ear_sensors_data_opt(void *priv, u8 OpCode, u8 OpCode_SN, u8 *data, u16 len)
+{
+#if HEALTH_ALL_DAY_CHECK_ENABLE
+    // 全天检测功能的开关
+    if (0 == JL_rcsp_ear_sports_info_funciton(priv, OpCode, OpCode_SN, data, len)) {
+        return 0;
+    }
+#endif
+    // 实时检测和运动信息的处理
+    if (0 == JL_rcsp_ear_sports_data_funciton(priv, OpCode, OpCode_SN, data, len)) {
+        return 0;
+    }
+    return -1;
+}
+#endif
+
 void rcsp_cmd_recieve(void *priv, u8 OpCode, u8 OpCode_SN, u8 *data, u16 len, u16 ble_con_handle, u8 *spp_remote_addr)
 {
     switch (OpCode) {
@@ -663,6 +683,11 @@ void rcsp_cmd_recieve(void *priv, u8 OpCode, u8 OpCode_SN, u8 *data, u16 len, u1
         break;
 #endif
     default:
+#if JL_RCSP_EAR_SENSORS_DATA_OPT
+        if (0 == JL_rcsp_ear_sensors_data_opt(priv, OpCode, OpCode_SN, data, len)) {
+            break;
+        }
+#endif
 #if JL_RCSP_SENSORS_DATA_OPT
         if (0 == JL_rcsp_sensors_data_opt(priv, OpCode, OpCode_SN, data, len)) {
             break;

@@ -63,6 +63,7 @@ static int realme_bt_status_event_handler(int *msg)
         break;
     case BT_STATUS_SECOND_CONNECTED:
     case BT_STATUS_FIRST_CONNECTED:
+    case BT_STATUS_THIRD_CONNECTED:
         break;
     case BT_STATUS_PHONE_INCOME:
     case BT_STATUS_PHONE_OUT:

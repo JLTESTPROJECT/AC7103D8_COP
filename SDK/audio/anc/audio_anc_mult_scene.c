@@ -2,10 +2,7 @@
 /*******************************************************************
 						  ANC 多滤波器场景
 *******************************************************************/
-#include "audio_anc.h"
-#include "audio_anc_mult_scene.h"
-#include "audio_anc_common_plug.h"
-
+#include "audio_anc_includes.h"
 
 #if ANC_MULT_ORDER_ENABLE
 
@@ -83,7 +80,7 @@ static int anc_mult_scene_param_read(struct list_head *list, u8 *dat)
     memcpy((u8 *)&file_align, (u8 *)file, sizeof(anc_mult_scene_file_t));
     struct anc_param_head_t id_head[file_align.cnt];
 
-    anc_mult_bulk_t *bulk = zalloc(sizeof(anc_mult_bulk_t));
+    anc_mult_bulk_t *bulk = anc_malloc("MULTI", sizeof(anc_mult_bulk_t));
 
     bulk->scene_id = file_align.scene_id;
 
@@ -197,7 +194,7 @@ static int anc_mult_scene_list_del(struct list_head *list)
     anc_mult_bulk_t *temp;
     list_for_each_entry_safe(bulk, temp, list, entry) {
         list_del(&bulk->entry);
-        free(bulk);
+        anc_free(bulk);
     }
     return 0;
 }
@@ -234,7 +231,7 @@ int anc_mult_coeff_file_fill(anc_coeff_t *db_coeff)
 //多滤波器初始化API
 void anc_mult_init(audio_anc_t *param)
 {
-    mult_hdl = zalloc(sizeof(anc_mult_hdl_t));
+    mult_hdl = anc_malloc("MULTI", sizeof(anc_mult_hdl_t));
     mult_hdl->param = param;
 
     //链表初始化
@@ -242,18 +239,17 @@ void anc_mult_init(audio_anc_t *param)
     spin_lock_init(&mult_hdl->lock);
 }
 
-extern void audio_anc_biquad2ab_double(anc_fr_t *iir, double *out_coeff, u8 order, int alogm);
 static int anc_mult_cfg_analsis(anc_mult_param_t *p, double **coeff, float *gain, int alogm)
 {
     if (*coeff) {
-        free(*coeff);
+        anc_free(*coeff);
         *coeff = NULL;
     }
     if (!p->yorder) {
         //没有滤波器, 退出
         return -1;
     }
-    *coeff = (double *)malloc(p->yorder * 40);
+    *coeff = (double *)anc_malloc("MULTI", p->yorder * 40);
     /* g_printf("coeff %x\n", (u32)*coeff); */
     audio_anc_biquad2ab_double(p->fr, *coeff, p->yorder, alogm);
     float temp;
@@ -299,6 +295,13 @@ static int anc_mult_scene_set_base(u16 scene_id)
     anc_mult_bulk_t *bulk;
     anc_mult_bulk_t *cmp_bulk = NULL;
     anc_mult_bulk_t *trans_bulk = NULL;
+#if (TCFG_AUDIO_ANC_CH == ANC_L_CH) && (TCFG_AUDIO_ANC_REAL_TIME_ADAPTIVE_ENABLE || TCFG_AUDIO_ANC_EAR_ADAPTIVE_EN)
+    //用于TWS R 映射 工具右声道参数
+    u8 make_param_r_ch = (audio_anc_develop_get() || anc_ext_tool_online_get()) ? 1 : 0;
+#else
+    u8 make_param_r_ch = 1;
+#endif
+
 
     spin_lock(&mult_hdl->lock);
     list_for_each_entry(bulk, &mult_hdl->head, entry) {
@@ -339,18 +342,20 @@ static int anc_mult_scene_set_base(u16 scene_id)
         }
         param->lfb_coeff = mult_hdl->lfb_coeff;
         param->lfb_yorder = bulk->lfb.yorder;
+        // cppcheck-suppress knownConditionTrueFalse
+        if (make_param_r_ch) {
+            if (anc_mult_cfg_analsis(&bulk->rff, &mult_hdl->rff_coeff, &param->gains.r_ffgain, audio_anc_gains_alogm_get(ANC_FB_TYPE)) > 0) {
+                gain_sign |= ANCR_FF_SIGN;
+            }
+            param->rff_coeff = mult_hdl->rff_coeff;
+            param->rff_yorder = bulk->rff.yorder;
 
-        if (anc_mult_cfg_analsis(&bulk->rff, &mult_hdl->rff_coeff, &param->gains.r_ffgain, audio_anc_gains_alogm_get(ANC_FB_TYPE)) > 0) {
-            gain_sign |= ANCR_FF_SIGN;
+            if (anc_mult_cfg_analsis(&bulk->rfb, &mult_hdl->rfb_coeff, &param->gains.r_fbgain, audio_anc_gains_alogm_get(ANC_FB_TYPE)) > 0) {
+                gain_sign |= ANCR_FB_SIGN;
+            }
+            param->rfb_coeff = mult_hdl->rfb_coeff;
+            param->rfb_yorder = bulk->rfb.yorder;
         }
-        param->rff_coeff = mult_hdl->rff_coeff;
-        param->rff_yorder = bulk->rff.yorder;
-
-        if (anc_mult_cfg_analsis(&bulk->rfb, &mult_hdl->rfb_coeff, &param->gains.r_fbgain, audio_anc_gains_alogm_get(ANC_FB_TYPE)) > 0) {
-            gain_sign |= ANCR_FB_SIGN;
-        }
-        param->rfb_coeff = mult_hdl->rfb_coeff;
-        param->rfb_yorder = bulk->rfb.yorder;
     }
 
     if (cmp_bulk) {
@@ -360,14 +365,17 @@ static int anc_mult_scene_set_base(u16 scene_id)
         }
         param->lcmp_coeff = mult_hdl->lcmp_coeff;
         param->lcmp_yorder = cmp_bulk->lcmp.yorder;
-
-        if (anc_mult_cfg_analsis(&cmp_bulk->rcmp, &mult_hdl->rcmp_coeff, &param->gains.r_cmpgain, audio_anc_gains_alogm_get(ANC_CMP_TYPE)) > 0) {
-            gain_sign |= ANCR_CMP_SIGN;
+        // cppcheck-suppress knownConditionTrueFalse
+        if (make_param_r_ch) {
+            if (anc_mult_cfg_analsis(&cmp_bulk->rcmp, &mult_hdl->rcmp_coeff, &param->gains.r_cmpgain, audio_anc_gains_alogm_get(ANC_CMP_TYPE)) > 0) {
+                gain_sign |= ANCR_CMP_SIGN;
+            }
+            param->rcmp_coeff = mult_hdl->rcmp_coeff;
+            param->rcmp_yorder = cmp_bulk->rcmp.yorder;
         }
-        param->rcmp_coeff = mult_hdl->rcmp_coeff;
-        param->rcmp_yorder = cmp_bulk->rcmp.yorder;
     }
 
+#if ANC_MULT_TRANS_FB_ENABLE == 0 //通透支持FB滤波器复用ANC场景的滤波器，不需要解析原有通透滤波器
     if (trans_bulk) {
         //找到对应场景的滤波器，对通透 滤波器参数赋值
         if (anc_mult_cfg_analsis(&trans_bulk->ltrans, &mult_hdl->ltrans_coeff, &param->gains.l_transgain, audio_anc_gains_alogm_get(ANC_TRANS_TYPE)) > 0) {
@@ -375,13 +383,16 @@ static int anc_mult_scene_set_base(u16 scene_id)
         }
         param->ltrans_coeff = mult_hdl->ltrans_coeff;
         param->ltrans_yorder = trans_bulk->ltrans.yorder;
-
-        if (anc_mult_cfg_analsis(&trans_bulk->rtrans, &mult_hdl->rtrans_coeff, &param->gains.r_transgain, audio_anc_gains_alogm_get(ANC_TRANS_TYPE)) > 0) {
-            gain_sign |= ANCR_TRANS_SIGN;
+        // cppcheck-suppress knownConditionTrueFalse
+        if (make_param_r_ch) {
+            if (anc_mult_cfg_analsis(&trans_bulk->rtrans, &mult_hdl->rtrans_coeff, &param->gains.r_transgain, audio_anc_gains_alogm_get(ANC_TRANS_TYPE)) > 0) {
+                gain_sign |= ANCR_TRANS_SIGN;
+            }
+            param->rtrans_coeff = mult_hdl->rtrans_coeff;
+            param->rtrans_yorder = trans_bulk->rtrans.yorder;
         }
-        param->rtrans_coeff = mult_hdl->rtrans_coeff;
-        param->rtrans_yorder = trans_bulk->rtrans.yorder;
     }
+#endif
 
 #if ANC_DUT_MIC_CMP_GAIN_ENABLE
     if (param->mic_cmp.en) {
@@ -393,13 +404,16 @@ static int anc_mult_scene_set_base(u16 scene_id)
         } else {
             param->gains.l_cmpgain = 0;
         }
-        param->gains.r_ffgain *= param->mic_cmp.rff_gain;
-        param->gains.r_transgain *= param->mic_cmp.rff_gain;
-        param->gains.r_fbgain *= param->mic_cmp.rfb_gain;
-        if (param->mic_cmp.lfb_gain) {
-            param->gains.r_cmpgain /= param->mic_cmp.rfb_gain;
-        } else {
-            param->gains.r_cmpgain = 0;
+        // cppcheck-suppress knownConditionTrueFalse
+        if (make_param_r_ch) {
+            param->gains.r_ffgain *= param->mic_cmp.rff_gain;
+            param->gains.r_transgain *= param->mic_cmp.rff_gain;
+            param->gains.r_fbgain *= param->mic_cmp.rfb_gain;
+            if (param->mic_cmp.lfb_gain) {
+                param->gains.r_cmpgain /= param->mic_cmp.rfb_gain;
+            } else {
+                param->gains.r_cmpgain = 0;
+            }
         }
     }
 #endif
@@ -419,7 +433,7 @@ int anc_mult_scene_set(u16 scene_id)
     if (!mult_hdl) {
         return 1;
     }
-    if (mult_hdl->param->mode == ANC_TRANSPARENCY && ANC_MULT_TRANS_FB_ENABLE) {
+    if (anc_mode_get() == ANC_TRANSPARENCY && ANC_MULT_TRANS_FB_ENABLE) {
         ret = audio_anc_mult_trans_param_use_anc(mult_hdl->param, ANC_MULT_TRANS_FB_USB_ANC_ID);
     } else {
         ret = anc_mult_scene_set_base(scene_id);
@@ -622,7 +636,7 @@ static int anc_mult_part_coeff_write(anc_coeff_t *target_coeff, u16 len)
                 break;
             }
         }
-        file[scene_cnt] = zalloc(sizeof(struct anc_param_head_t) * 16 + sizeof(anc_mult_scene_file_t));
+        file[scene_cnt] = anc_malloc("MULTI", sizeof(struct anc_param_head_t) * 16 + sizeof(anc_mult_scene_file_t));
         struct anc_param_head_t *id_head = (struct anc_param_head_t *)file[scene_cnt]->dat;
         head_cnt = 0;
         anc_mult_part_head_recombination(&head_cnt, id_head, &old_bulk->lff,    &t_bulk->lff,    0);
@@ -648,7 +662,7 @@ static int anc_mult_part_coeff_write(anc_coeff_t *target_coeff, u16 len)
     anc_mult_log("PART FILE new_file_len %d\n", new_len);
 
     //3、申请新数据空间
-    anc_coeff_t *new_coeff = (anc_coeff_t *)zalloc(new_len);
+    anc_coeff_t *new_coeff = (anc_coeff_t *)anc_malloc("MULTI", new_len);
     struct list_head new_list;
     INIT_LIST_HEAD(&new_list);
 
@@ -705,12 +719,12 @@ static int anc_mult_part_coeff_write(anc_coeff_t *target_coeff, u16 len)
 
     //7、释放新数据链表、ram
     anc_mult_scene_list_del(&new_list);
-    free(new_coeff);
+    anc_free(new_coeff);
 
 __free1:
     //8、释放重组临时ram
     for (i = 0; i < old_coeff->cnt; i++) {
-        free(file[i]);
+        anc_free(file[i]);
     }
 __free2:
     //9、释放目标数据解析链表
@@ -740,7 +754,7 @@ void audio_anc_mult_gains_id_set(u8 gain_id, void *buf, int len)
     if ((db_coeff->version & 0xF0) != 0xA0) {
         return;
     }
-    anc_coeff_t *coeff = malloc(mult_hdl->param->coeff_size);
+    anc_coeff_t *coeff = anc_malloc("MULTI", mult_hdl->param->coeff_size);
     memcpy((u8 *)coeff, (u8 *)db_coeff, mult_hdl->param->coeff_size);
 
     temp_dat = coeff->dat;
@@ -816,7 +830,7 @@ void audio_anc_mult_gains_id_set(u8 gain_id, void *buf, int len)
     audio_anc_mult_coeff_file_read();
 
     anc_mult_scene_list_del(&list);
-    free(coeff);
+    anc_free(coeff);
 }
 
 int audio_anc_mult_gains_id_get(u8 gain_id, int *data)
@@ -913,7 +927,7 @@ int audio_anc_mult_coeff_file_read(void)
     int ret = anc_mult_coeff_file_fill(db_coeff);
 
     //更新效果
-    if (param->mode != ANC_OFF) {
+    if (anc_mode_get() != ANC_OFF) {
         /* g_printf("read cur scene_id %d\n",mult_hdl->cur_scene); */
         anc_mult_scene_set(mult_hdl->cur_scene);
         audio_anc_reset(param, 0);

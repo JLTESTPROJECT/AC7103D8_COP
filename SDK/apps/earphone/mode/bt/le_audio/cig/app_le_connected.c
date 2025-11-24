@@ -52,6 +52,9 @@
 #if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SINK_EN)
 #include "app_le_auracast.h"
 #endif
+#if (THIRD_PARTY_PROTOCOLS_SEL & HID_ISO_EN)
+#include "hid_iso.h"
+#endif
 
 #include "volume_node.h"
 
@@ -559,6 +562,9 @@ static int app_connected_conn_status_event_handler(int *msg)
 #if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
         rcsp_bt_ble_adv_enable(0);
 #endif
+#if (THIRD_PARTY_PROTOCOLS_SEL & HID_ISO_EN)
+        hid_iso_adv_enable(0);
+#endif
         acl_info = (cis_acl_info_t *)&event[1];
         if (acl_info->conn_type) {
             log_info("connect test box ble");
@@ -635,6 +641,11 @@ static int app_connected_conn_status_event_handler(int *msg)
 #else
         rcsp_bt_ble_adv_enable(1);
 #endif
+#endif
+#if (THIRD_PARTY_PROTOCOLS_SEL & HID_ISO_EN)
+        hid_iso_adv_enable(1);
+        void le_audio_adv_open_discover_mode();
+        le_audio_adv_open_discover_mode();
 #endif
         g_le_audio_hdl.cig_phone_conn_status = 0;
         acl_info = (cis_acl_info_t *)&event[1];
@@ -750,6 +761,9 @@ static int app_connected_conn_status_event_handler(int *msg)
 #else
         rcsp_bt_ble_adv_enable(1);
 #endif
+#endif
+#if (THIRD_PARTY_PROTOCOLS_SEL & HID_ISO_EN)
+        hid_iso_adv_enable(1);
 #endif
 
         break;
@@ -1606,6 +1620,9 @@ void le_audio_profile_init()
     if (get_bt_le_audio_config() && (g_le_audio_hdl.le_audio_profile_ok == 0)) {
 #if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
         le_audio_user_server_profile_init(rcsp_profile_data);
+#endif
+#if (THIRD_PARTY_PROTOCOLS_SEL & HID_ISO_EN)
+        le_audio_user_server_profile_init(hid_iso_profile_data);
 #endif
         g_le_audio_hdl.le_audio_profile_ok = 1;
         char le_audio_name[LOCAL_NAME_LEN] = "le_audio_";     //le_audio蓝牙名

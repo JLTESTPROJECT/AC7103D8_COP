@@ -1,3 +1,4 @@
+#include "app_config.h"
 #include "hr_sensor/hrSensor_manage.h"
 #include "gSensor/gSensor_manage.h"
 
@@ -87,17 +88,23 @@ const uint8_t  gsen_lv_val = 0;
 
 
 //HRS_INFRARED_THRES
-const int32_t  hrs_ir_unwear_thres = 5000;
-const int32_t  hrs_ir_wear_thres = 6000;
+// const int32_t  hrs_ir_unwear_thres = 5000;
+// const int32_t  hrs_ir_wear_thres = 6000;
+const int32_t  hrs_ir_unwear_thres = 7000;
+const int32_t  hrs_ir_wear_thres = 8000;
 //HRV_INFRARED_THRES
 const int32_t  hrv_ir_unwear_thres = 5000;
 const int32_t  hrv_ir_wear_thres = 6000;
 //SPO2_INFRARED_THRES
-const uint8_t  spo2_check_unwear_oft = 4;
-const int32_t  spo2_ir_wear_thres = 12000;
+// const uint8_t  spo2_check_unwear_oft = 4;
+// const int32_t  spo2_ir_wear_thres = 12000;
+const uint8_t  spo2_check_unwear_oft = 16;
+const int32_t  spo2_ir_wear_thres = 251500;
 //CHECK_WEAR_MODE_THRES
-const int32_t  check_mode_unwear_thre = 5000;
-const int32_t  check_mode_wear_thre = 6000;
+// const int32_t  check_mode_unwear_thre = 5000;
+// const int32_t  check_mode_wear_thre = 6000;
+const int32_t  check_mode_unwear_thre = 10000;
+const int32_t  check_mode_wear_thre = 12000;
 //const int32_t  check_mode_sar_thre = 6000;
 
 
@@ -121,7 +128,7 @@ const  uint8_t   QUICK_RESULT = 1;                //come out the spo2 result qui
 const  uint16_t  MEAN_NUM = 32;                  //the length of smooth-average ;the value of MEAN_NUM can be given only 256 and 512
 const  uint8_t   G_SENSOR = 0;                      //if =1, open the gsensor mode
 const  uint8_t   SPO2_GSEN_POW_THRE = 150;         //gsen pow judge move, range:0-200;
-const  uint32_t  SPO2_BASE_LINE_INIT = 135000;    //spo2 baseline init, = 103000 + ratio(a variable quantity,depends on different cases)*SPO2_SLOPE
+const  uint32_t  SPO2_BASE_LINE_INIT = 165000; // 135000;    //spo2 baseline init, = 103000 + ratio(a variable quantity,depends on different cases)*SPO2_SLOPE
 const  int32_t   SOP2_DEGLITCH_THRE = 100000;     //remove signal glitch over this threshold
 const  int32_t   SPO2_REMOVE_JUMP_THRE = 100000;  //remove signal jump over this threshold
 const  uint32_t  SPO2_SLOPE = 50000;              //increase this slope, spo2 reduce more
@@ -134,7 +141,7 @@ const  uint16_t  IR_FFT_POW_THRE = 200;           //fft_pow_min
 const  uint8_t   SLOPE_PARA_MAX = 30;
 const  uint8_t   SLOPE_PARA_MIN = 3;
 
-WORK_MODE_T work_mode_flag = HRV_MODE;
+WORK_MODE_T work_mode_flag = NULL_MODE;
 void display_refresh(void)
 {
 
@@ -754,9 +761,12 @@ void hx3011_hrs_ppg_Int_handle(void)
     gsensor_read_cbuf();
     for (ii = 0; ii < *count; ii++) {
 #ifdef GSENSER_DATA
-        gsen_fifo_x_send[ii] = gsen_fifo_x[32 - *count + ii];
-        gsen_fifo_y_send[ii] = gsen_fifo_y[32 - *count + ii];
-        gsen_fifo_z_send[ii] = gsen_fifo_z[32 - *count + ii];
+        // gsen_fifo_x_send[ii] = gsen_fifo_x[32 - *count + ii];
+        // gsen_fifo_y_send[ii] = gsen_fifo_y[32 - *count + ii];
+        // gsen_fifo_z_send[ii] = gsen_fifo_z[32 - *count + ii];
+        gsen_fifo_x_send[ii] = gsen_fifo_x[32 - *count + ii] * 4;   // 量程要对齐±4G，gSensor驱动是1G，所以要*4
+        gsen_fifo_y_send[ii] = gsen_fifo_y[32 - *count + ii] * 4;   // 量程要对齐±4G，gSensor驱动是1G，所以要*4
+        gsen_fifo_z_send[ii] = gsen_fifo_z[32 - *count + ii] * 4;   // 量程要对齐±4G，gSensor驱动是1G，所以要*4
 #endif
         DEBUG_PRINTF("HX %d/%d  %d %d %d %d %d %d\r\n", ii, *count, PPG_buf[ii], ir_buf[ii], gsen_fifo_x[ii], gsen_fifo_y[ii], gsen_fifo_z[ii], ppg_s_dat.green_cur);
     }
@@ -831,7 +841,7 @@ void hx3011_living_Int_handle(void)
 void hx3011_spo2_ppg_Int_handle(void)
 {
     uint8_t        ii = 0;
-    spo2_results_t alg_results = {MSG_SPO2_ALG_NOT_OPEN, MSG_SPO2_LIVING_INITIAL, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0};
+    tyhx_spo2_results_t alg_results = {MSG_SPO2_ALG_NOT_OPEN, 0, 0, 0, 0, 0, 0};
     SPO2_CAL_SET_T cal = get_spo2_agc_status();
     hx3011_spo2_wear_msg_code_t spo2_wear_status = MSG_SPO2_INIT;
     int32_t *green_buf = &(ppg_s_dat.green_data[0]);
@@ -864,13 +874,18 @@ void hx3011_spo2_ppg_Int_handle(void)
     gsensor_read_cbuf();
 
     for (ii = 0; ii < *count; ii++) {
+#ifdef GSENSER_DATA
+        gsen_fifo_x[ii] = gsen_fifo_x[ii] * 4;   // 量程要对齐±4G，gSensor驱动是1G，所以要*4
+        gsen_fifo_y[ii] = gsen_fifo_y[ii] * 4;   // 量程要对齐±4G，gSensor驱动是1G，所以要*4
+        gsen_fifo_z[ii] = gsen_fifo_z[ii] * 4;   // 量程要对齐±4G，gSensor驱动是1G，所以要*4
+#endif
         DEBUG_PRINTF("HX %d/%d %d %d %d %d %d %d %d %d %d\r\n", 1 + ii, *count, \
                      red_buf[ii], ir_buf[ii], cal.red_idac, cal.ir_idac, cal.red_cur, cal.ir_cur, gsen_fifo_x[ii], gsen_fifo_y[ii], gsen_fifo_z[ii]);
     }
     spo2_wear_status = hx3011_spo2_get_wear_status();
     hrsresult.wearstatus = spo2_wear_status;
     if (spo2_wear_status == MSG_SPO2_WEAR) {
-        tyhx_spo2_alg_send_data(red_buf, ir_buf, green_buf, cal.red_idac, cal.ir_idac, cal.green_idac, (int16_t *)gsen_fifo_x, (int16_t *)gsen_fifo_y, (int16_t *)gsen_fifo_z, *count);
+        tyhx_spo2_alg_send_data(red_buf, ir_buf, cal.red_idac, cal.ir_idac, *count, gsen_fifo_x, gsen_fifo_y, gsen_fifo_z);
     }
 #endif
 
@@ -1048,6 +1063,93 @@ static u8 sensor_init(void)
     return 0;
 }
 
+#define LOW_POWER_INTERVAL_TIME 4   // 传感器下电时间
+
+u8 hx3011_sniff_time_id = 0;
+u8 hx3011_sniff_mode = 0;
+bool hx3011_low_power_mode = 0;
+
+// 3011退出低功耗
+int hx3011_exit_low_power()
+{
+    hx3011_low_power_mode = 0;
+    printf("hr_sensor_exit_low_power\n");
+    // 注意：3011重新初始，到血氧出值，至少要20s（天易合芯的算法处理至少要16s）
+    gpio_write(HX3011_LDO_EN_IO, 1);// 拉高供电IO
+
+    hx3011_init(work_mode_flag);    // 退出低功耗要回到进入低功耗前的模式
+    return 1;
+}
+
+// 3011进入低功耗
+int hx3011_enter_low_power()
+{
+    hx3011_low_power_mode = 1;
+    printf("hr_sensor_enter_low_power\n");
+    // 进入低功耗模式要先记录当前的模式状态。
+    // printf("work_mode_flag = %d\n", work_mode_flag);
+    if (work_mode_flag == HRS_MODE) {
+#ifdef HRS_ALG_LIB
+        hx3011_hrs_disable();
+#endif
+    } else if (work_mode_flag == SPO2_MODE) {
+#ifdef HRS_ALG_LIB
+        hx3011_spo2_disable();
+#endif
+    } else {
+        hx3011_ppg_timer_cfg(false);
+        hx3011_agc_timer_cfg(false);
+    }
+    gpio_write(HX3011_LDO_EN_IO, 0);// 拉低供电IO
+    return 1;
+}
+
+// 控制HX3011切换低功耗模式
+void hx3011_switch_low_power()
+{
+    line_inf
+    // printf("hx3011_sniff_time_id = %d", hx3011_sniff_time_id);
+    if (!hx3011_sniff_mode) {
+        if (hx3011_sniff_time_id) {
+            sys_timer_del(hx3011_sniff_time_id);
+            hx3011_sniff_time_id = 0;
+            line_inf
+        }
+        return ;
+    }
+    if (hx3011_low_power_mode) {
+        hx3011_exit_low_power();
+        hx3011_sniff_time_id = sys_timeout_add(NULL, hx3011_switch_low_power, 60000);//30000);   //算法至少要20s采集数据才能出数据。
+
+    } else {
+        hx3011_enter_low_power();
+        hx3011_sniff_time_id = sys_timeout_add(NULL, hx3011_switch_low_power, LOW_POWER_INTERVAL_TIME * 10000);//60000);
+    }
+    printf("hx3011_sniff_time_id = %d", hx3011_sniff_time_id);
+}
+
+// HX3011进入sniff模式
+int hx3011_switch_sniff(bool en)
+{
+    line_inf
+    printf("hx3011_switch_sniff(%d)\n", en);
+    hx3011_sniff_mode = en;
+    if (hx3011_sniff_mode) {
+        if (!hx3011_sniff_time_id) {
+            // hx3011_sniff_time_id = sys_timer_add(NULL, hx3011_switch_low_power, 1000);//60000);
+            hx3011_sniff_time_id = sys_timeout_add(NULL, hx3011_switch_low_power, 1000);
+        }
+    } else {
+        hx3011_exit_low_power();
+        if (hx3011_sniff_time_id) {
+            sys_timer_del(hx3011_sniff_time_id);
+            hx3011_sniff_time_id = 0;
+            line_inf
+        }
+    }
+    printf("hx3011_sniff_time_id = %d", hx3011_sniff_time_id);
+    return 1;
+}
 
 static int sensor_ctl(u8 cmd, void *arg)
 {

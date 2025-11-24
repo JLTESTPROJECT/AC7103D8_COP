@@ -5,7 +5,7 @@
 #pragma code_seg(".icsd_anc_user.text")
 #endif
 #include "app_config.h"
-#include "icsd_anc_user.h"
+#include "audio_anc_includes.h"
 #include "adc_file.h"
 #include "app_tone.h"
 #include "clock_manager/clock_manager.h"
@@ -13,9 +13,6 @@
 #include "audio_config.h"
 #include "audio_adc.h"
 #include "cvp_node.h"
-#if TCFG_AUDIO_ANC_ENABLE
-#include "audio_anc.h"
-#endif
 #if TCFG_USER_TWS_ENABLE
 #include "bt_tws.h"
 #endif
@@ -24,7 +21,12 @@
 	(((defined TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN) && TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN) || \
 	((defined TCFG_AUDIO_ANC_REAL_TIME_ADAPTIVE_ENABLE) && TCFG_AUDIO_ANC_REAL_TIME_ADAPTIVE_ENABLE) || \
 	((defined TCFG_AUDIO_ANC_EAR_ADAPTIVE_EN) && TCFG_AUDIO_ANC_EAR_ADAPTIVE_EN)))
-#include "icsd_adt_app.h"
+
+#if 1
+#define user_log printf
+#else
+#define user_log(...)
+#endif
 
 struct audio_mic_hdl {
     struct audio_adc_output_hdl adc_output;
@@ -41,13 +43,13 @@ extern const u8 const_adc_async_en;
 int audio_mic_en(u8 en, audio_mic_param_t *mic_param,
                  void (*data_handler)(void *priv, s16 *data, int len))
 {
-    printf("audio_mic_en : %d", en);
+    user_log("audio_mic_en : %d", en);
     if (en) {
         if (audio_mic) {
             printf("audio_mic re-malloc error\n");
             return -1;
         }
-        audio_mic = zalloc(sizeof(struct audio_mic_hdl));
+        audio_mic = anc_malloc("ICSD_ADC", sizeof(struct audio_mic_hdl));
         if (audio_mic == NULL) {
             printf("audio mic zalloc failed\n");
             return -1;
@@ -64,7 +66,7 @@ int audio_mic_en(u8 en, audio_mic_param_t *mic_param,
         audio_adc_file_init();
         for (int i = 0; i < AUDIO_ADC_MAX_NUM; i++) {
             if (mic_ch & BIT(i)) {
-                printf("adc_mic%d open, sr:%d, gain:%d\n", i, sr, mic_param->mic_gain[i]);
+                user_log("adc_mic%d open, sr:%d, gain:%d\n", i, sr, mic_param->mic_gain[i]);
                 adc_file_mic_open(&audio_mic->mic_ch, AUDIO_ADC_MIC(i));
                 audio_adc_mic_set_gain(&audio_mic->mic_ch, AUDIO_ADC_MIC(i), mic_param->mic_gain[i]);
                 mic_num ++;
@@ -76,25 +78,31 @@ int audio_mic_en(u8 en, audio_mic_param_t *mic_param,
         } else {
             adc_buf_size = mic_param->adc_irq_points * ((adc_hdl.bit_width == ADC_BIT_WIDTH_16) ? 2 : 4) * mic_param->adc_buf_num * mic_num;
         }
-        printf("adc irq points %d, adc_buf_size : %d", mic_param->adc_irq_points, adc_buf_size);
+        user_log("adc irq points %d, adc_buf_size : %d", mic_param->adc_irq_points, adc_buf_size);
         /* audio_mic->adc_buf = esco_adc_buf; */
-        audio_mic->adc_buf = zalloc(adc_buf_size);
-        if (audio_mic->adc_buf == NULL) {
-            printf("audio->adc_buf mic zalloc failed\n");
-            audio_mic_pwr_ctl(MIC_PWR_OFF);
-            free(audio_mic);
-            audio_mic = NULL;
-            return -1;
-        }
-
         audio_adc_mic_set_sample_rate(&audio_mic->mic_ch, sr);
-        /* audio_adc_fixed_digital_set_buffs(); */
-        int err = audio_adc_mic_set_buffs(&audio_mic->mic_ch, audio_mic->adc_buf,
-                                          mic_param->adc_irq_points * 2, mic_param->adc_buf_num);
-        if (err) {
-            free(audio_mic->adc_buf);
-            audio_mic->adc_buf = NULL;
+        //gali
+#if ANC_CHIP_VERSION == ANC_VERSION_BR28
+        audio_adc_fixed_digital_set_buffs();
+#else
+        if (!adc_hdl.hw_buf) {
+            audio_mic->adc_buf = anc_malloc("ICSD_ADC", adc_buf_size);
+            if (audio_mic->adc_buf == NULL) {
+                printf("audio->adc_buf mic zalloc failed\n");
+                audio_mic_pwr_ctl(MIC_PWR_OFF);
+                anc_free(audio_mic);
+                audio_mic = NULL;
+                return -1;
+            }
+            int err = audio_adc_mic_set_buffs(&audio_mic->mic_ch, audio_mic->adc_buf,
+                                              mic_param->adc_irq_points * 2, mic_param->adc_buf_num);
+            if (err) {
+                anc_free(audio_mic->adc_buf);
+                audio_mic->adc_buf = NULL;
+            }
         }
+#endif
+
         audio_mic->adc_output.handler = data_handler;
         audio_adc_add_output_handler(&adc_hdl, &audio_mic->adc_output);
         audio_adc_mic_start(&audio_mic->mic_ch);
@@ -111,14 +119,17 @@ int audio_mic_en(u8 en, audio_mic_param_t *mic_param,
                 audio_anc_mic_mult_flag_set(0, 1);
             }
 #endif
-#if ICSD_ADT_SHARE_ADC_ENABLE
+#ifdef TCFG_AUDIO_ADC_ENABLE_ALL_DIGITAL_CH
             audio_adc_mic_ch_close(&audio_mic->mic_ch, audio_mic->mic_ch_map);
 #else
+            //依赖ADC底层驱动修改 gali debug
+            /* audio_adc_mic_ch_close(&audio_mic->mic_ch, audio_mic->mic_ch_map); */
             audio_adc_mic_close(&audio_mic->mic_ch);
 #endif
             audio_adc_del_output_handler(&adc_hdl, &audio_mic->adc_output);
             if (audio_mic->adc_buf) {
-                /* free(audio_mic->adc_buf);  */
+                /* anc_free(audio_mic->adc_buf);  */
+                anc_mem_clear(audio_mic->adc_buf); //adc_buf 在audio_adc.c释放，这里只做记录清除
                 audio_mic->adc_buf = NULL;
             }
 #if TCFG_AUDIO_ANC_ENABLE
@@ -134,7 +145,7 @@ int audio_mic_en(u8 en, audio_mic_param_t *mic_param,
             {
                 audio_mic_pwr_ctl(MIC_PWR_OFF);
             }
-            free(audio_mic);
+            anc_free(audio_mic);
             audio_mic = NULL;
         }
     }
@@ -190,7 +201,7 @@ void icsd_adt_task_play_tone_cb(void *priv)
 
 static int icsd_adt_tone_play_cb(void *priv, enum stream_event event)
 {
-    printf("%s : %d", __func__, (int)event);
+    user_log("%s : %d", __func__, (int)event);
     if (event != STREAM_EVENT_STOP) {
         return 0;
     }
@@ -284,7 +295,7 @@ void *icsd_adt_src_init(int in_rate, int out_rate, int (*handler)(void *, void *
     //audio_resample_hw_set_output_handler(src_hdl, 0, handler);
     //return src_hdl;
 
-    void *src_hdl = zalloc(sizeof(struct audio_src_handle));
+    void *src_hdl = anc_malloc("ICSD_SRC", sizeof(struct audio_src_handle));
     audio_hw_src_open(src_hdl, 1, 1);
     audio_hw_src_set_rate(src_hdl, in_rate, out_rate);
     audio_src_set_output_handler(src_hdl, 0, handler);
@@ -307,7 +318,7 @@ void icsd_adt_src_close(void *resample)
 {
     //audio_resample_hw_close(resample);
     audio_hw_src_close(resample);
-    free(resample);
+    anc_free(resample);
 }
 
 void tws_tx_unsniff_req()
@@ -332,14 +343,22 @@ void icsd_set_tws_t_sniff(u16 slot)
     /* set_tws_t_sniff(slot); */
 }
 
-static u8 talk_mic_ch_cfg_read_flag = 0;
 u8 icsd_get_talk_mic_ch(void)
 {
+#ifdef TCFG_AUDIO_ANC_TALK_MIC
+    if (TCFG_AUDIO_ANC_TALK_MIC != MIC_NULL) {
+        return BIT(TCFG_AUDIO_ANC_TALK_MIC);
+    } else {
+        return 0;
+    }
+#else
+    static u8 talk_mic_ch_cfg_read_flag = 0;
     if (!talk_mic_ch_cfg_read_flag) {
         talk_mic_ch_cfg_read_flag = 1;
         cvp_param_cfg_read();
     }
     return cvp_get_talk_mic_ch();
+#endif
 }
 
 u8 icsd_get_ref_mic_L_ch(void)

@@ -399,12 +399,6 @@ static int audio_main_adc_mic_open(struct voice_mic_data *voice)
         return -ENOMEM;
     }
 
-#if TCFG_AUDIO_ANC_ENABLE && (!TCFG_AUDIO_DYNAMIC_ADC_GAIN)
-    /* MAIN_ADC_GAIN = anc_mic_gain_get(); */
-#elif TCFG_AUDIO_ANC_ENABLE && TCFG_AUDIO_DYNAMIC_ADC_GAIN
-    anc_dynamic_micgain_start(MAIN_ADC_GAIN);
-#endif/*TCFG_AUDIO_ANC_ENABLE && (!TCFG_AUDIO_DYNAMIC_ADC_GAIN)*/
-
     if (const_adc_async_en) {
         /*是否4个adc通道都打开，音箱使用*/
         voice->main_adc->adc_ch_num = AUDIO_ADC_MAX_NUM;
@@ -479,9 +473,6 @@ static int audio_main_adc_mic_open(struct voice_mic_data *voice)
 static void audio_main_adc_mic_close(struct voice_mic_data *voice, u8 all_channel)
 {
     if (voice->main_adc) {
-#if TCFG_AUDIO_ANC_ENABLE && TCFG_AUDIO_DYNAMIC_ADC_GAIN
-        anc_dynamic_micgain_stop();
-#endif/*TCFG_AUDIO_ANC_ENABLE && TCFG_AUDIO_DYNAMIC_ADC_GAIN*/
         if (all_channel) {
             audio_adc_mic_close(&voice->main_adc->mic_ch);
         }

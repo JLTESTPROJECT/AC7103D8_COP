@@ -7,6 +7,35 @@
 #include "timer.h"
 #include "asm/math_fast_function.h"
 
+//============算法库轻量信息打印使能=========
+#define ICSD_ADT_LOG_EN				0//ADT公共部分
+#define ICSD_HOWL_LOG_EN 		    0//啸叫检测
+#define ICSD_RTANC_LOG_EN			1//实时自适应
+
+//============算法库打印使能=================
+#define ADT_PRINTF_EN			 	0 //ADT资源
+#define VDT_PRINTF_EN			 	0 //智能免摘
+#define WAT_PRINTF_EN			 	0 //广域点击
+#define CMP_PRINTF_EN			 	0 //自适应CMP
+#define AEQ_PRINTF_EN			 	0 //自适应EQ
+#define AFQ_PRINTF_EN			 	0 //AFQ
+#define AVC_PRINTF_EN			 	0 //AVC
+#define DOT_PRINTF_EN			 	0 //松紧度检测
+#define EIN_PRINTF_EN			 	0 //
+#define HOWL_PRINTF_EN			 	0 //啸叫检测
+#define RTANC_RTPRINTF_EN		 	0 //实时自适应ANC RT
+#define RTANC_HZPRINTF_EN		 	0 //实时自适应ANC HZ
+#define ADJDCC_PRINTF_EN			0 //自适应DCC
+
+//===========风噪调试使能====================
+#define WDT_PRINTF_EN			 	0 //算法打印
+#define ICSD_WDT_LOG_EN             0 //离线log打印
+#define WDT_LFF_TLK_DEBUG_EN		0 //LFF_TLK模式离线调试打印
+#define WDT_LFF_LFB_DEBUG_EN		0 //LFF_LFB模式离线调试打印
+#define WDT_LFF_RFF_DEBUG_EN		0 //LFF_RFF模式离线调试打印
+
+
+
 #define ICSD_WIND_HEADSET           1
 #define ICSD_WIND_TWS		        2
 
@@ -15,10 +44,14 @@
 #define ICSD_WIND_LFF_LFB           3
 #define ICSD_WIND_LFF_LFB_TALK      4
 #define ICSD_WIND_RFF_TALK      	5
+#define ICSD_WIND_LFF_LFB_RFF       6
 
 
 unsigned long jiffies_usec(void);
 
+//TOOL_FUNCTION
+#define TFUNCTION_WDT				BIT(0) //风噪检测
+#define TFUNCTION_RTANC				BIT(1) //实时自适应ANC
 
 enum {
     DEBUG_FUNCTION_ICSD = 0,
@@ -28,12 +61,14 @@ enum {
 enum {
     WIND_DATA = 0,
     WIND_ALG,
+    RTANC_ALG,
 };
 
 
 enum {
     norm_rtanc = 0,	//正常模式
     tidy_rtanc,		//轻量模式，节省RAM
+    mini_rtanc,
 };
 
 enum {
@@ -64,6 +99,11 @@ enum {
 };
 
 enum {
+    RT_ANC_CHL = 0,
+    RT_ANC_CHR,
+};
+
+enum {
     ADT_TWS = 0,
     ADT_HEADSET,
 };
@@ -87,6 +127,7 @@ enum {
     WAT_GET_MAX_RANGE,
     WAT_SEND_MAX_RANGE,
     ADT_WIND_DATA_SYNC,
+    ADT_WIND_LVL_SYNC,
     LIB_DEMO_TWS,
     LIB_WIND_TWS,
     ADT_TWS_TONE_PLAY,
@@ -167,6 +208,31 @@ struct aeq_default_seg_tab {
     struct aeq_seg_info *seg;
 };
 
+typedef struct {
+    u8      nums;           // 耳道参数
+    u8      mem_len;        // MEMLEN
+    u8      l_idx0;         // default:1
+    u8      l_idx1;         // default:7
+    u8      h_idx0;         // default:7
+    u8      h_idx1;         // default:15
+    u8      msc_idx0;       // default:2
+    u8      msc_idx1;       // default:7
+    u8      *mem_list;      // down sample list
+    u8      sel_idx;        // sz_sel_idx
+    float   msc_thr0[3];
+    float   msc_thr1[3];
+    float   msc_thr2[3];
+    float   *msc;
+    float   *sz_in;
+    float   *sz_table_cmp;  // 耳道参数
+    float   *sz_table;      // 耳道参数
+    float   *ff_filter;     // 耳道参数
+    float   *ff_gfq;        // total_gain+gfq
+    float   sz_out[120];
+    float   buf_db[25];     // mem_len/2
+    float   buf[50];        // mem_len
+} __sz_sel_mem;
+
 
 #define ADT_DMA_BUF_LEN     	512
 #define ADT_FFT_LENS   			256
@@ -174,8 +240,8 @@ struct aeq_default_seg_tab {
 #define TARLEN2   				(120)// + 318)
 #define TARLEN2_L				0 //40
 #define DRPPNT2  				0 //10
-#define MEMLEN                  50
-#define MSELEN                  (44*2)
+#define MEMLEN                  (25*2)
+#define MSELEN                  (25*2)
 
 #define FS 375000
 
@@ -198,8 +264,6 @@ typedef struct {
 //LIB调用的算术函数
 float angle_float(float x, float y);
 
-unsigned int hw_fft_config(int N, int log2N, int is_same_addr, int is_ifft, int is_real);
-void hw_fft_run(unsigned int fft_config, const int *in, int *out);
 void  icsd_common_version();
 
 //---------------------------
@@ -243,9 +307,10 @@ void icsd_cal_wz_float(float *ab, float gain, int tap, float *freq, float fs, fl
 void icsd_fgq2hz_v2(float total_gain, float *fgq, u8 *type, u8 order, float *freq, float *hz, int len, float fs);
 void icsd_gfq2hz_v2(float total_gain, float *gfq, u8 *type, u8 order, float *freq, float *hz, int len, float fs);
 
-void icsd_biquad2ab_out_2(float gain, float f, float q, u8 type, float fs, double *a0, double *a1, double *a2, double *b0, double *b1, double *b2);
+u8 icsd_biquad2ab_out_2(float gain, float f, float q, u8 type, float fs, double *a0, double *a1, double *a2, double *b0, double *b1, double *b2);
 void icsd_biquad2ab_double_v2(float gain, float f, float q, double *a0, double *a1, double *a2, double *b0, double *b1, double *b2, u8 type, float fs);
 void icsd_biquad2ab_out_v2(float gain, float f, float fs, float q, double *a0, double *a1, double *a2, double *b0, double *b1, double *b2, u8 type);
+void icsd_biquad2ab_out_v3(float gain, float f, float fs, float q, double *a0, double *a1, double *a2, double *b0, double *b1, double *b2, u8 type);
 void icsd_biquad2ab_double_pn(float gain, float f, float q, double *a0, double *a1, double *a2,
                               double *b0, double *b1, double *b2, u8 type);
 //
@@ -335,6 +400,21 @@ void icsd_de_free();
 void icsd_sde_malloc();
 void icsd_sde_free();
 
+void sz_select_from_memory(__sz_sel_mem *hdl);
 
 void icsd_common_ancdma_4ch_cic8(int *r_ptr, s16 *__wptr_dma1_h, s16 *__wptr_dma1_l, s16 *__wptr_dma2_h, s16 *__wptr_dma2_l, u16 inpoints);
+
+void fbx2_szcmp_cal(double *fb1_coeff, float fb1_gain, u8 fb1_tap, double *fb2_coeff, float fb2_gain, u8 fb2_tap, float *sz1, float *sz_cmp_factor, float *sz_cmp);
+
+float icsd_anc_v2_HpEst_part2(float *out0_sum, float *out1_sum, float *out2_sum, float *output, float *mscohere);
+void icsd_anc_v2_HpEst_dsf_part1(s16 *input0, s16 *input1, float *_out0_sum, float *_out1_sum, float *_out2_sum, int *in_cur, float *in_cur0);
+void htarget_v2(float *Hpz, float *Hsz, float *Hflt, int len);
+float sz_frequency_response_check_v2(float *output);
+float pz_frequency_response_check_v2(float *output);
+void szest_form_bypass_v2(float *input1, float *input2, float *sz_out, int len, float *hz_cmp, float _bypass_volume);
+u8 cal_tig_idx(float *target, float *target_sv, int cmp_num);
+u16 target_dither_decision(float *tg_ori, float *tg_flt, int len);
+void icsd_target_joint_v2(float *target_mat, float *target_est, int len, int begin_idx, int end_idx);
+
+extern char lib_common_version[];
 #endif

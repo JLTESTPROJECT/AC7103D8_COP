@@ -1,14 +1,16 @@
-#ifndef AUDIO_ANC_H
-#define AUDIO_ANC_H
+#ifndef _AUDIO_ANC_H_
+#define _AUDIO_ANC_H_
 
 #include "generic/typedef.h"
-#include "asm/anc.h"
+#include "anc.h"
 #include "anc_btspp.h"
 #include "anc_uart.h"
 #include "app_config.h"
 #include "in_ear_detect/in_ear_manage.h"
 #include "audio_anc_common.h"
 #include "audio_config_def.h"
+#include "audio_anc_platform.h"
+
 #if (TCFG_AUDIO_ANC_EAR_ADAPTIVE_VERSION == ANC_EXT_V2)
 #include "icsd_anc_v2_app.h"
 #endif
@@ -16,8 +18,6 @@
 #if TCFG_AUDIO_ANC_ADAPTIVE_CMP_EN
 #include "icsd_cmp_app.h"
 #endif
-
-#include "audio_anc_fade_ctr.h"
 
 /*******************ANC User Config***********************/
 #define ANC_COEFF_SAVE_ENABLE		1	/*ANC滤波器表保存使能*/
@@ -31,6 +31,8 @@
 #define ANC_MODE_FADE_LVL			1	/*降噪模式淡入步进*/
 #define ANC_LR_LOWPOWER_EN	  	    0	/*ANC立体声省功耗使能, 开启之后ANC可用滤波器数会减少*/
 
+#define ANC_DUT_MIC_CMP_GAIN_ENABLE 1   /*产测补偿ANC MIC增益使能； 仅支持多场景滤波器*/
+
 #if TCFG_AUDIO_DAC_CONNECT_MODE == DAC_OUTPUT_LR
 /*立体声方案*/
 #define ANC_MODE_SWITCH_DELAY_MS	400	/*ANC 模式切换延时: 处理开ADC不稳定导致,切模式有po声, 单位ms */
@@ -38,6 +40,15 @@
 /*TWS方案*/
 #define ANC_MODE_SWITCH_DELAY_MS	60	/*ANC 模式切换延时: 处理开ADC不稳定导致,切模式有po声, 单位ms */
 #endif
+
+/*
+   ANC 多MIC阵列配置(仅支持TWS)
+ */
+#define AUDIO_ANC_MIC_ARRAY_ENABLE	 0	/*ANC 多MIC阵列使能*/
+
+//ANC MIC阵列数量配置：TWS单边(如左耳)MIC数量
+#define AUDIO_ANC_MIC_ARRAY_FF_NUM	 1	/*FF MIC数量 range [1,2]*/
+#define AUDIO_ANC_MIC_ARRAY_FB_NUM	 2  /*FB MIC数量 range [1,2]*/
 
 /*
    ANC多场景滤波器配置
@@ -81,7 +92,7 @@
    ANC场景增益自适应配置
    (场景是变量，与耳道自适应功能相互独立)
  */
-#define ANC_ADAPTIVE_EN		    	0						/*ANC增益自适应使能*/
+#define ANC_ADAPTIVE_EN                     (TCFG_AUDIO_ANC_ENV_ADAPTIVE_GAIN_LITE_ENABLE | TCFG_AUDIO_ANC_ENV_ADAPTIVE_VOLUME_LITE_ENABLE)
 
 
 #if (TCFG_ANC_MUSIC_ANTI_CLIPPING_MODE == ANC_CLIPPING_MODE_DYNAMIC_ANC_GAIN)
@@ -90,14 +101,13 @@
 #define ANC_MUSIC_DYNAMIC_GAIN_EN					0		/*音乐动态ANC增益使能*/
 #endif
 
-#define ANC_MUSIC_DYNAMIC_GAIN_SINGLE_FB			0		/*JL708N固定为0,支持单独调FB fade gain*/
-
 /*
  	ANC啸叫检测功能配置，检测啸叫时压低增益，定时恢复至正常增益
+	调试打印：lib_media_config.c -> log_tag_const_d_ANC_HW_HOWLING_DET
  */
 #define ANC_HOWLING_DETECT_EN				0		/*啸叫检测使能*/
-#define ANC_HOWLING_MSG_DEBUG				0		/*啸叫调试流程打印*/
 
+#define ANC_HOWLING_DETECT_CHANNEL			0		/*啸叫检测通道；0 FF MIC ; 1 FB MIC*/
 /*1、检测配置*/
 #define ANC_HOWLING_DETECT_CORR_THR			200		/*啸叫灵敏度设置, 越小(越灵敏，容易误触发), range [100 - 255]; default 200 */
 #define ANC_HOWLING_DETECT_PWR_THR			1200	/*啸叫阈值设置, 用于解决小声啸叫不触发的问题，越小(容易误触发),  range [100 - 32767]; default 1200*/
@@ -123,9 +133,6 @@
 //************************************************************************//
 #define AUDIO_ANC_WIDE_AREA_TAP_EVENT_SYNC      1//广域点击左右耳同步使能
 
-/*支持开免摘的anc模式*/
-#define SPEAK_TO_CHAT_ANC_MODE_ENABLE			(ANC_OFF_BIT | ANC_ON_BIT | ANC_TRANS_BIT)
-
 //****************** ICSD ADT 相关功能配置 end ************************//
 //
 /*ANC工具配对码使能*/
@@ -134,15 +141,28 @@
 
 /*******************ANC User Config End*******************/
 
+//CMP SZ补偿使能
+#define AUDIO_ANC_ADAPTIVE_CMP_SZ_FACTOR   (AUDIO_ANC_MIC_ARRAY_ENABLE && (AUDIO_ANC_MIC_ARRAY_FB_NUM == 2) && (ANC_CHIP_VERSION == ANC_VERSION_BR52))
+
+#define AUDIO_ANC_STEREO_ENABLE	(TCFG_AUDIO_DAC_CONNECT_MODE == DAC_OUTPUT_LR)
+
+#if AUDIO_ANC_MIC_ARRAY_ENABLE
+#define TCFG_AUDIO_ANC_CH 	(ANC_L_CH | ANC_R_CH)
+
+#else
 #if TCFG_AUDIO_DAC_CONNECT_MODE == DAC_OUTPUT_MONO_L
 #define TCFG_AUDIO_ANC_CH 	ANC_L_CH
 #elif TCFG_AUDIO_DAC_CONNECT_MODE == DAC_OUTPUT_MONO_R
+#if ANC_CHIP_VERSION == ANC_VERSION_BR56
+//JL710系列，当配置DAC R时，ANC L直接映射到DAC R
 #define TCFG_AUDIO_ANC_CH 	ANC_L_CH
+#else
+#define TCFG_AUDIO_ANC_CH 	ANC_R_CH
+#endif
 #else
 #define TCFG_AUDIO_ANC_CH 	(ANC_L_CH | ANC_R_CH)
 #endif/*TCFG_AUDIO_DAC_CONNECT_MODE == DAC_OUTPUT_MONO_L*/
-
-#define  TCFG_AUDIO_ANC_MAX_ORDER 	10	//最大滤波器个数
+#endif
 
 /*ANC模式调试信息*/
 static const char *anc_mode_str[] = {
@@ -194,6 +214,9 @@ enum {
     ANC_MSG_COEFF_UPDATE,		//无缝切换滤波器
     ANC_MSG_AFQ_CMD,
     ANC_MSG_46KOUT_DEMO,
+    ANC_MSG_RTANC_SZ_OUTPUT,
+    ANC_MSG_ENV_NOISE_LVL,
+    ANC_MSG_AVC_NOISE_LVL,
 };
 
 /*ANC MIC动态增益调整状态*/
@@ -203,18 +226,24 @@ enum {
     ANC_MIC_DY_STA_STOP,		/*停止状态*/
 };
 
+enum {
+    ANC_CHECK_RTANC_UPDATE = 0,  //RTANC更新
+    ANC_CHECK_RTANC_SAVE   = 1,  //RTANC_SAVE
+    ANC_CHECK_SWITCH_DEF   = 2,  //默认参数
+    ANC_CHECK_UPDATE       = 3,  //效果更新
+};
+
+enum ANC_EXT_IOC {
+    ANC_EXT_IOC_INIT = 1,
+    ANC_EXT_IOC_EXIT,
+    ANC_EXT_IOC_SUSPEND,
+    ANC_EXT_IOC_RESUME,
+};
+
 #define ANC_CONFIG_LFF_EN ((TCFG_AUDIO_ANC_TRAIN_MODE & (ANC_HYBRID_EN | ANC_FF_EN)) && (TCFG_AUDIO_ANC_CH & ANC_L_CH))
 #define ANC_CONFIG_LFB_EN ((TCFG_AUDIO_ANC_TRAIN_MODE & (ANC_HYBRID_EN | ANC_FB_EN)) && (TCFG_AUDIO_ANC_CH & ANC_L_CH))
 #define ANC_CONFIG_RFF_EN ((TCFG_AUDIO_ANC_TRAIN_MODE & (ANC_HYBRID_EN | ANC_FF_EN)) && (TCFG_AUDIO_ANC_CH & ANC_R_CH))
 #define ANC_CONFIG_RFB_EN ((TCFG_AUDIO_ANC_TRAIN_MODE & (ANC_HYBRID_EN | ANC_FB_EN)) && (TCFG_AUDIO_ANC_CH & ANC_R_CH))
-
-#if (TCFG_AUDIO_ANC_TRAIN_MODE == ANC_HYBRID_EN) && (TCFG_AUDIO_ANC_CH == (ANC_L_CH | ANC_R_CH))
-#error "JL710N doesn't support HEADSET ANC HYBRID"
-#endif
-
-#if (TCFG_AUDIO_ANC_TRAIN_MODE == ANC_FF_EN) && (TCFG_AUDIO_ANC_CH == (ANC_L_CH | ANC_R_CH))
-#error "JL710N doesn't support HEADSET ANC FF"
-#endif
 
 /*ANC记忆信息*/
 typedef struct {
@@ -232,7 +261,7 @@ typedef struct {
 #if (TCFG_AUDIO_ANC_CH & ANC_L_CH)
     float l_target[TARLEN2 + TARLEN2_L];
 #endif
-#if (TCFG_AUDIO_ANC_CH & ANC_R_CH)
+#if AUDIO_ANC_STEREO_ENABLE
     float r_target[TARLEN2 + TARLEN2_L];
 #endif
     u8 result;
@@ -248,11 +277,11 @@ typedef struct {
     anc_fr_t lcmp[ANC_ADAPTIVE_CMP_ORDER];
 #endif/*ANC_EAR_ADAPTIVE_CMP_EN*/
 #endif/*ANC_CONFIG_LFB_EN*/
-#if ANC_CONFIG_RFF_EN
+#if ANC_CONFIG_RFF_EN && AUDIO_ANC_STEREO_ENABLE
     float rff_gain;
     anc_fr_t rff[ANC_ADAPTIVE_FF_ORDER];
 #endif/*ANC_CONFIG_RFF_EN*/
-#if ANC_CONFIG_RFB_EN
+#if ANC_CONFIG_RFB_EN && AUDIO_ANC_STEREO_ENABLE
     float rfb_gain;
     anc_fr_t rfb[ANC_ADAPTIVE_FB_ORDER];
 #if ANC_EAR_ADAPTIVE_CMP_EN
@@ -282,6 +311,12 @@ u8 anc_status_get(void);
 
 u8 anc_mode_get(void);
 
+void anc_user_mode_set(u8 mode);
+
+u8 anc_user_mode_get(void);
+
+u8 anc_real_mode_get(void);
+
 u8 anc_mode_switch_lock_get(void);
 
 void anc_mode_switch_lock_clean(void);
@@ -298,27 +333,26 @@ u8 audio_anc_ffmic_gain_get(void);
 /*获取anc模式，fb_mic的增益*/
 u8 audio_anc_fbmic_gain_get(void);
 
-/*获取anc模式，指定mic的增益, mic_sel:目标MIC通道*/
+/*获取anc模式，指定mic的增益档位, mic_sel:目标MIC通道n*/
 u8 audio_anc_mic_gain_get(u8 mic_sel);
-
-/*用于某些需要等anc完全关闭才能开启的场景，如通话与anc的mic复用*/
-void anc_mode_switch_sem_create();
-void anc_mode_switch_sem_post();
-void anc_mode_switch_sem_pend();
-void anc_mode_switch_sem_del();
 
 /*阻塞方式等待anc模式切换完成*/
 void anc_mode_switch_pend(u8 mode, u8 tone_play);
 
+/*获取anc mic是否使能, mic_sel:目标MIC通道n*/
+u8 audio_anc_mic_en_get(u8 mic_sel);
+
+/*获取anc模式，指定mic的增益值(dB), mic_ch:目标MIC通道BIT(n), is_talk_mic:是否查询talk_mic*/
+s8 audio_anc_mic_gain_get_dB(u8 mic_ch, u8 is_talk_mic);
+
 /*ANC模式切换(切换到指定模式)，并配置是否播放提示音*/
 int anc_mode_switch(u8 mode, u8 tone_play);
+
+int anc_mode_switch_base(u8 mode, u8 tone_play);
 
 /*在anc任务里面切换anc模式，
  *避免上一次切换没有完成，这次切换被忽略的情况*/
 void anc_mode_switch_in_anctask(u8 mode, u8 tone_play);
-
-/*ANC模式同步(tws模式)*/
-void anc_mode_sync(u8 *data);
 
 void anc_poweron(void);
 
@@ -380,11 +414,11 @@ void anc_param_fill(u8 cmd, anc_gain_t *cfg);
 /*ANC_DUT audio模块使能函数，用于分离功耗*/
 void audio_anc_dut_enable_set(u8 enablebit);
 
-/*设置fb  mic为复用mic*/
-void audio_anc_mic_mana_fb_mult_set(u8 mult_flag);
+/*设置对应的mic为anc 复用mic, , mic_ch ff:0 ; fb:1*/
+void audio_anc_mic_mult_flag_set(u32 mic_ch, u8 mult_flag);
 
-/*获取fb mic复用MIC标志，左右耳有一个复用则认为被复用*/
-u8 audio_anc_mic_mana_fb_mult_get(void);
+/*获取对应的mic是否为anc 复用mic，左右耳有一个复用则认为被复用, , mic_ch ff:0 ; fb:1*/
+u8 audio_anc_mic_mult_flag_get(u32 mic_ch);
 
 void audio_anc_post_msg_music_dyn_gain(void);
 
@@ -423,6 +457,9 @@ u8 audio_anc_mult_scene_max_get(void);
 /*多滤波器-场景循环切换*/
 void audio_anc_mult_scene_switch(u8 tone_flag);
 
+/*多滤波器-场景ID TWS同步*/
+void audio_anc_mult_scene_id_sync(u16 scene_id);
+
 int audio_anc_db_cfg_read(void);
 
 void anc_mode_switch_deal(u8 mode);
@@ -434,12 +471,13 @@ extern void sys_auto_shut_down_disable(void);
 
 int anc_cfg_online_deal(u8 cmd, anc_gain_t *cfg);
 u32 get_anc_gains_sign();
-u32 get_anc_gains_alogm();
 void set_anc_gains_alogm(u32 alogm);
-u32 get_anc_gains_trans_alogm();
 void *get_anc_lfb_coeff();
 float get_anc_gains_l_fbgain();
 u8 get_anc_l_fbyorder();
+void *get_anc_rfb_coeff();
+float get_anc_gains_r_fbgain();
+u8 get_anc_r_fbyorder();
 void *get_anc_lff_coeff();
 float get_anc_gains_l_ffgain();
 u8 get_anc_l_ffyorder();
@@ -457,6 +495,8 @@ void audio_anc_mode_set(u8 mode);
 /*获取ANC alogm参数，type 滤波器类型 */
 u32 audio_anc_gains_alogm_get(enum ANC_IIR_TYPE type);
 
+audio_anc_t *audio_anc_param_get(void);
+
 void audio_ear_adaptive_en_set(u8 en);
 
 /*耳道自适应互斥功能恢复*/
@@ -469,7 +509,11 @@ void audio_ear_adaptive_train_app_suspend(void);
    前置条件:1、更新前后的滤波器个数一致
    			2、需在 "非ANC_OFF" 模式下调用
  */
-void audio_anc_coeff_smooth_update(void);
+void audio_anc_coeff_smooth_update(void);		//更新全部滤波器
+void audio_anc_coeff_ff_smooth_update(void);	//只更新FF滤波器
+void audio_anc_coeff_fb_smooth_update(void);	//只更新FB滤波器
+
+void audio_anc_coeff_fade_set(u8 coeff_type, u8 fade_fast, u8 fade_slow);
 
 /*
    ANC 驱动复位（包括滤波器），会淡出淡出
@@ -479,7 +523,38 @@ void audio_anc_coeff_smooth_update(void);
  */
 void audio_anc_param_reset(u8 fade_en);
 
+void audio_anc_howldet_fade_set(u16 gain);
+
 u8 anc_btspp_train_again(u8 mode, u32 dat);
 
+void audio_anc_coeff_check_crc(u8 from);
 
-#endif/*AUDIO_ANC_H*/
+void audio_anc_switch_latch_mode_set(u8 mode);
+
+void audio_anc_tone_adaptive_disable(u8 device);
+
+void audio_anc_tone_adaptive_enable(u8 device);
+
+void audio_anc_drc_toggle_set(u8 toggle);
+
+/*音量自适应ioctl*/
+int audio_adt_avc_ioctl(int cmd, int arg);
+
+int audio_anc_avc_thr_to_lvl(int avc_thr);
+
+void audio_anc_avc_lvl_sync_info(u8 *data, int len);
+
+/*环境自适应ioctl*/
+int audio_adt_env_ioctl(int cmd, int arg);
+
+int audio_anc_env_thr_to_lvl(int wind_thr);
+
+void audio_anc_env_lvl_sync_info(u8 *data, int len);
+
+void audio_anc_env_avc_thr_to_lvl_sync(int noise_thr);
+
+void audio_anc_stereo_mix_set(u8 en);
+
+u8 audio_anc_stereo_mix_get(void);
+
+#endif/*_AUDIO_ANC_H_*/

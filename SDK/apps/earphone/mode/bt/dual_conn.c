@@ -580,7 +580,7 @@ static void page_device_msg_handler()
     list_for_each_entry(info, &g_dual_conn.page_head, entry) {
         device_num++;
     }
-    if (device_num >= 2) {
+    if (device_num >= TCFG_BT_SUPPORT_CONN_NUM) {
         return;
     }
 
@@ -595,7 +595,7 @@ static void page_device_msg_handler()
         }
         int ret = add_device_2_page_list(mac_addr, TCFG_BT_POWERON_PAGE_TIME * 1000);
         if (ret == 0) {
-            if (++device_num >= 2) {
+            if (++device_num >= TCFG_BT_SUPPORT_CONN_NUM) {
                 break;
             }
         }

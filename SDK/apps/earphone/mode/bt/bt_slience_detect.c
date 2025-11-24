@@ -31,7 +31,7 @@ struct detect_handler {
     void *file;
 };
 
-static struct detect_handler *g_detect_hdl[2] = {NULL, NULL};
+static struct detect_handler *g_detect_hdl[3] = {NULL, NULL, NULL};
 
 #if TCFG_A2DP_PREEMPTED_ENABLE
 
@@ -46,7 +46,7 @@ static struct dual_detect_handler *g_dual_detect = NULL;
 
 static struct detect_handler *get_detect_handler(u8 *bt_addr)
 {
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < TCFG_BT_SUPPORT_CONN_NUM; i++) {
         if (g_detect_hdl[i] && memcmp(g_detect_hdl[i]->bt_addr, bt_addr, 6) == 0) {
             return g_detect_hdl[i];
         }
@@ -56,7 +56,7 @@ static struct detect_handler *get_detect_handler(u8 *bt_addr)
 
 static struct detect_handler *create_detect_handler()
 {
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < TCFG_BT_SUPPORT_CONN_NUM; i++) {
         if (!g_detect_hdl[i]) {
             g_detect_hdl[i] = zalloc(sizeof(struct detect_handler));
             return g_detect_hdl[i];
@@ -67,7 +67,7 @@ static struct detect_handler *create_detect_handler()
 
 static void close_energy_detect(u8 codec_type)
 {
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < TCFG_BT_SUPPORT_CONN_NUM; i++) {
         if (g_detect_hdl[i] && g_detect_hdl[i]->codec_type == codec_type) { //判断要关闭的类型是否还在使用
             return;
         }
@@ -85,7 +85,7 @@ static void a2dp_slience_detect(void *_detect)
     if (tws_api_get_role() == TWS_ROLE_SLAVE) {
         return;
     }
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < TCFG_BT_SUPPORT_CONN_NUM; i++) {
         if (detect == g_detect_hdl[i]) {
             goto __check;
         }
@@ -174,6 +174,13 @@ __check:
 
         if (energy >= 10) {
 #if TCFG_BT_DUAL_CONN_ENABLE &&  TCFG_A2DP_PREEMPTED_ENABLE
+            if (!g_dual_detect) {
+                puts("g_dual_detect null waring\n");
+                a2dp_media_free_packet(detect->file, packet);
+                /* putchar('#'); */
+                continue;
+
+            }
             /* printf("g_dual_detect->is_receive_avrcp_play_cmd = %d\n", g_dual_detect->is_receive_avrcp_play_cmd); */
             if (!g_dual_detect->use_bt_background_detect_delay_time) {
                 if (++detect->unmute_packet_cnt < unmute_packet_num) {
@@ -305,7 +312,7 @@ void bt_stop_a2dp_slience_detect(u8 *bt_addr)
     struct detect_handler *detect;
     u8 codec_type = 0;
 
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < TCFG_BT_SUPPORT_CONN_NUM; i++) {
         detect = g_detect_hdl[i];
         if (!detect) {
             continue;
@@ -345,7 +352,7 @@ void bt_stop_a2dp_slience_detect(u8 *bt_addr)
 void bt_reset_a2dp_slience_detect()
 {
     struct detect_handler *detect;
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < TCFG_BT_SUPPORT_CONN_NUM; i++) {
         detect = g_detect_hdl[i];
         if (!detect || detect->slience_timer == 0) {
             return;
@@ -360,7 +367,7 @@ void bt_reset_a2dp_slience_detect()
 u8 bt_a2dp_slience_detect_num()
 {
     u8 detect_num = 0;
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < TCFG_BT_SUPPORT_CONN_NUM; i++) {
         if (g_detect_hdl[i]) {
             detect_num++;
         }
@@ -384,7 +391,7 @@ int bt_slience_get_detect_addr(u8 *bt_addr)
 {
     struct detect_handler *detect;
 
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < TCFG_BT_SUPPORT_CONN_NUM; i++) {
         detect = g_detect_hdl[i];
         if (!detect) {
             continue;

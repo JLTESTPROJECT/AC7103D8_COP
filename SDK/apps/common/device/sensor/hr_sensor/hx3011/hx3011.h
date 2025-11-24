@@ -5,8 +5,10 @@
 
 #include "app_config.h"
 
+#define HX3011_LDO_EN_IO IO_PORTB_02
+
 //#include "tyhx_mems.h"
-//#define DEBUG_PPG_ONLY     // 只用IR 判断佩带和非佩戴, 靠近感应功能关闭,  但是hx3011_PROX.C要合入编译
+#define DEBUG_PPG_ONLY     // 只用IR 判断佩带和非佩戴, 靠近感应功能关闭,  但是hx3011_PROX.C要合入编译
 /********************* alg_swi *********************
 HRS_ALG_LIB   心率功能
 SPO2_ALG_LIB  血氧功能
@@ -29,7 +31,7 @@ NEW_GSEN_SCHME     DEMO调试使用， 客户关闭
 #define HRS_ALG_LIB
 #define SPO2_ALG_LIB
 //#define HRV_ALG_LIB
-//#define CHECK_TOUCH_LIB
+#define CHECK_TOUCH_LIB
 //#define CHECK_LIVING_LIB
 //#define SAR_ALG_LIB
 #define BP_CUSTDOWN_ALG_LIB
@@ -117,9 +119,9 @@ typedef struct {
 #define LIS3DH_IIC_CLK   18
 #define LIS3DH_IIC_SDA   16
 #define EXT_INT_PIN      1
-#define GREEN_LED_SLE    1
+#define GREEN_LED_SLE    2
 #define RED_LED_SLE      4
-#define IR_LED_SLE       2
+#define IR_LED_SLE       1
 #define RED_AGC_OFFSET   12
 #define IR_AGC_OFFSET    12
 #define GREEN_AGC_OFFSET    8
@@ -187,13 +189,13 @@ typedef struct {
 #define LIS3DH_IIC_CLK   13
 #define LIS3DH_IIC_SDA   14
 #define EXT_INT_PIN      11
-#define GREEN_LED_SLE    1
+#define GREEN_LED_SLE    2
 #define RED_LED_SLE      4
-#define IR_LED_SLE       2
-#define RED_AGC_OFFSET   64
-#define IR_AGC_OFFSET    64
-#define GREEN_AGC_OFFSET 8
-#define HR_GREEN_AGC_OFFSET 10
+#define IR_LED_SLE       1
+#define RED_AGC_OFFSET   32
+#define IR_AGC_OFFSET    32
+#define GREEN_AGC_OFFSET 5
+#define HR_GREEN_AGC_OFFSET 5
 
 #else
 #define HRS4100_IIC_CLK  9
@@ -345,4 +347,11 @@ void heart_rate_meas_timeout_handler(void *p_context);
 
 int16_t hx3918xxx_read_two_reg_low_triple(uint8_t addh, uint8_t addl);
 void display_refresh(void);
+
+// 3011进入低功耗
+int hx3011_enter_low_power();
+// 3011退出低功耗
+int hx3011_exit_low_power();
+// 3011切换低功耗模式
+int hx3011_switch_sniff(bool en);
 #endif

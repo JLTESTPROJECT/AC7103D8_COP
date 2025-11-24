@@ -269,10 +269,6 @@ objs += \
 	$(ROOT)/audio/common/icsd/adt/icsd_adt_config.o \
 	$(ROOT)/audio/common/icsd/adt/icsd_adt_alg.o \
 	$(ROOT)/audio/common/icsd/adt/icsd_adt_demo.o \
-	$(ROOT)/audio/common/icsd/anc/icsd_anc_app.o \
-	$(ROOT)/audio/common/icsd/anc/icsd_anc_board.o \
-	$(ROOT)/audio/common/icsd/anc/icsd_anc_data.o \
-	$(ROOT)/audio/common/icsd/anc/icsd_anc_interactive.o \
 	$(ROOT)/audio/common/icsd/common/icsd_common.o \
 	$(ROOT)/audio/common/icsd/dot/icsd_dot_app.o \
 	$(ROOT)/audio/common/icsd/dot/icsd_dot.o \
@@ -320,6 +316,13 @@ objs += \
 	  $(ROOT)/audio/anc/audio_anc_debug_tool.o \
 	  $(ROOT)/audio/anc/audio_anc_mult_scene.o \
 	  $(ROOT)/audio/anc/audio_anc_common.o \
+	  $(ROOT)/audio/anc/anc_memory.o \
+	  $(ROOT)/audio/anc/audio_anc_develop.o \
+	  $(ROOT)/audio/anc/audio_anc_hw_src.o \
+	  $(ROOT)/audio/anc/audio_anc_manager.o \
+	  $(ROOT)/audio/anc/audio_anc.o \
+	  $(ROOT)/audio/anc/icsd_anc_user.o \
+	  $(ROOT)/audio/anc/audio_anc_lvl_sync.o \
 
 #endif
 
@@ -596,7 +599,6 @@ objs += \
 
 
 
-
 objs += \
 	$(ROOT)/apps/common/ui/pwm_led/led_ui_api.o \
 	$(ROOT)/apps/common/ui/pwm_led/led_ui_tws_sync.o
@@ -686,6 +688,9 @@ objs += \
 
 objs += \
     $(ROOT)/apps/common/third_party_profile/custom_protocol_demo/custom_protocol.o
+
+objs += \
+    $(ROOT)/apps/common/third_party_profile/hid_iso/hid_iso.o
 
 objs += \
     $(ROOT)/apps/common/third_party_profile/app_ble_ancs_ams/app_ble_ancs_ams.o
@@ -972,6 +977,12 @@ objs += \
 
 objs += \
 	$(ROOT)/apps/common/third_party_profile/jieli/rcsp/server/functions/sensors/nfc_data_opt.o
+
+objs += \
+    $(ROOT)/apps/common/third_party_profile/jieli/rcsp/server/functions/sensors/ear_sports_data_opt.o
+objs += \
+    $(ROOT)/apps/common/third_party_profile/jieli/rcsp/server/functions/sensors/health_long_detect.o \
+    $(ROOT)/apps/common/third_party_profile/jieli/rcsp/server/functions/sensors/ear_sport_info_opt.o
 
 objs += \
 	$(ROOT)/apps/common/third_party_profile/jieli/rcsp/server/functions/sensors/sensor_log_notify.o \
@@ -1381,8 +1392,7 @@ objs += \
 
 #if EXPORT_PLATFORM_ANC_ENABLE
 objs += \
-      $(ROOT)/audio/cpu/br56/audio_anc.o \
-	  $(ROOT)/audio/cpu/br56/icsd_anc_user.o \
+      $(ROOT)/audio/cpu/br56/audio_anc_platform.o
 
 #endif
 

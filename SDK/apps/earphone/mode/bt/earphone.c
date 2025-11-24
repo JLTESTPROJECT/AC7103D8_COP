@@ -59,17 +59,7 @@
 #include "adv_1t2_setting.h"
 #endif
 
-#if TCFG_AUDIO_ANC_ENABLE
-#include "audio_anc.h"
-#endif/*TCFG_AUDIO_ANC_ENABLE*/
-
-#if TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN
-#include "icsd_adt_app.h"
-#endif /*TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN*/
-
-#if TCFG_ANC_BOX_ENABLE
-#include "app_ancbox.h"
-#endif
+#include "audio_anc_includes.h"
 
 #include "bt_tws.h"
 #include "bt_event_func.h"
@@ -105,7 +95,7 @@
 
 #if TCFG_APP_BT_EN
 
-#if ((THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN | GFPS_EN | MMA_EN | FMNA_EN | REALME_EN | SWIFT_PAIR_EN | DMA_EN | ONLINE_DEBUG_EN | CUSTOM_DEMO_EN | XIMALAYA_EN | AURACAST_APP_EN | MULTI_CLIENT_EN | JL_SBOX_EN)) || \
+#if ((THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN | GFPS_EN | MMA_EN | FMNA_EN | REALME_EN | SWIFT_PAIR_EN | DMA_EN | ONLINE_DEBUG_EN | CUSTOM_DEMO_EN | XIMALAYA_EN | AURACAST_APP_EN | MULTI_CLIENT_EN | JL_SBOX_EN | HID_ISO_EN)) || \
 		(TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN | LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN | LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)))
 #include "multi_protocol_main.h"
 #endif
@@ -184,6 +174,29 @@ void bt_get_btstack_device(u8 *addr_a, void **device_a, void **device_b)
 
     *device_a = btstack_get_conn_device(addr_a);
     *device_b = *device_a == device[0] ? device[1] : device[0];
+}
+void bt_get_btstack_device3(u8 *addr_a, void **device_a, void **device_b, void **device_c)
+{
+    int i;
+    void *device[3] = { NULL, NULL, NULL };
+    btstack_get_conn_devices(device, 3);
+    *device_a = NULL;
+    *device_b = NULL;
+    *device_c = NULL;
+
+    *device_a = btstack_get_conn_device(addr_a);
+    for (i = 0; i < 3; i++) {
+        if (device[i] && (device[i] != (*device_a))) {
+            *device_b = device[i];
+        }
+
+    }
+    for (i = 0; i < 3; i++) {
+        if (device[i] && (device[i] != (*device_a) && (device[i] != (*device_b)))) {
+            *device_c = device[i];
+        }
+
+    }
 }
 
 bool bt_in_phone_call_state(void *device)
@@ -378,6 +391,7 @@ void user_read_remote_name_handle(u8 status, u8 *addr, u8 *name)
 }
 void bt_function_select_init()
 {
+    int support_set_conn_num = 2;
     /* set_edr_wait_conn_run_slot(1500,8,16,10); */
 
 #if 0//3mb set
@@ -387,6 +401,9 @@ void bt_function_select_init()
 #if TCFG_BT_DUAL_CONN_ENABLE
     g_bt_hdl.bt_dual_conn_config = DUAL_CONN_SET_TWO;//DUAL_CONN_SET_TWO:默认可以连接1t2  DUAL_CONN_SET_ONE:默认只支持一个连接
     syscfg_read(CFG_TWS_DUAL_CONFIG, &(g_bt_hdl.bt_dual_conn_config), 1);
+#if TCFG_BT_DUAL_1T3_CONN_ENABLE
+    support_set_conn_num = 3;
+#endif
 #else
     g_bt_hdl.bt_dual_conn_config = DUAL_CONN_CLOSE;
 #endif
@@ -406,9 +423,9 @@ void bt_function_select_init()
     log_info("app_auracast en");
     g_bt_hdl.bt_dual_conn_config = DUAL_CONN_SET_ONE;
 #endif
-    bt_set_user_ctrl_conn_num((get_bt_dual_config() == DUAL_CONN_CLOSE) ? 1 : 2);
-    set_lmp_support_dual_con((get_bt_dual_config() == DUAL_CONN_CLOSE) ? 1 : 2);
-    bt_set_auto_conn_device_num((get_bt_dual_config() == DUAL_CONN_SET_TWO) ? 2 : 1);
+    bt_set_user_ctrl_conn_num((get_bt_dual_config() == DUAL_CONN_CLOSE) ? 1 : support_set_conn_num);
+    set_lmp_support_dual_con((get_bt_dual_config() == DUAL_CONN_CLOSE) ? 1 : support_set_conn_num);
+    bt_set_auto_conn_device_num((get_bt_dual_config() == DUAL_CONN_SET_TWO) ? support_set_conn_num : 1);
 
     bt_set_support_msbc_flag(TCFG_BT_MSBC_EN);
 
@@ -583,7 +600,7 @@ static int bt_connction_status_event_handler(struct bt_event *bt)
         }
 #endif
 
-#if ((THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN | GFPS_EN | MMA_EN | FMNA_EN | REALME_EN | SWIFT_PAIR_EN | DMA_EN | ONLINE_DEBUG_EN | CUSTOM_DEMO_EN | XIMALAYA_EN | AURACAST_APP_EN | MULTI_CLIENT_EN | JL_SBOX_EN)) || \
+#if ((THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN | GFPS_EN | MMA_EN | FMNA_EN | REALME_EN | SWIFT_PAIR_EN | DMA_EN | ONLINE_DEBUG_EN | CUSTOM_DEMO_EN | XIMALAYA_EN | AURACAST_APP_EN | MULTI_CLIENT_EN | JL_SBOX_EN | HID_ISO_EN)) || \
 		(TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN | LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN | LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)))
         multi_protocol_bt_init();
 #endif
@@ -618,6 +635,7 @@ static int bt_connction_status_event_handler(struct bt_event *bt)
 
         break;
 
+    case BT_STATUS_THIRD_CONNECTED:
     case BT_STATUS_SECOND_CONNECTED:
         bt_clear_current_poweron_memory_search_index(0);
     case BT_STATUS_FIRST_CONNECTED:
@@ -632,6 +650,7 @@ static int bt_connction_status_event_handler(struct bt_event *bt)
         break;
     case BT_STATUS_FIRST_DISCONNECT:
     case BT_STATUS_SECOND_DISCONNECT:
+    case BT_STATUS_THIRD_DISCONNECT:
         log_info("BT_STATUS_DISCONNECT\n");
         if (app_var.goto_poweroff_flag) {
             break;
@@ -657,7 +676,13 @@ static int bt_connction_status_event_handler(struct bt_event *bt)
         break;
     case BT_STATUS_RECONN_OR_CONN:
         log_info("++++++++ BT_STATUS_RECONN_OR_CONN +++++++++  \n");
+#if TCFG_BT_SUPPORT_MAP
+#if (defined TCFG_BT_SUPPORT_MAP_MESSAGE && (TCFG_BT_SUPPORT_MAP_MESSAGE==1))
+        bt_cmd_prepare(USER_CTRL_MAP_SET_NOTIFICATION, 0, NULL);
+#else
         bt_cmd_prepare(USER_CTRL_MAP_READ_TIME, 0, NULL);
+#endif
+#endif
         break;
     default:
         log_info(" BT STATUS DEFAULT\n");
@@ -985,7 +1010,7 @@ static void bt_no_background_exit_check(void *priv)
     bt_ble_exit();
 #endif
 
-#if ((THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN | GFPS_EN | MMA_EN | FMNA_EN | REALME_EN | SWIFT_PAIR_EN | DMA_EN | ONLINE_DEBUG_EN | CUSTOM_DEMO_EN | XIMALAYA_EN | AURACAST_APP_EN | MULTI_CLIENT_EN | JL_SBOX_EN)) || \
+#if ((THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN | GFPS_EN | MMA_EN | FMNA_EN | REALME_EN | SWIFT_PAIR_EN | DMA_EN | ONLINE_DEBUG_EN | CUSTOM_DEMO_EN | XIMALAYA_EN | AURACAST_APP_EN | MULTI_CLIENT_EN | JL_SBOX_EN | HID_ISO_EN)) || \
 		(TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN | LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN)))
     multi_protocol_bt_exit();
 #endif
@@ -1393,7 +1418,7 @@ int bt_app_msg_handler(int *msg)
 
 struct app_mode *app_enter_bt_mode(int arg)
 {
-    int msg[16];
+    int msg[16] = {0};
     struct bt_event *event;
     struct app_mode *next_mode;
 

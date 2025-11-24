@@ -324,6 +324,8 @@ typedef enum {
     USER_CTRL_MAP_READ_DRAFT,
     //MAP停止读取
     USER_CTRL_MAP_STOP_READING,
+
+    USER_CTRL_MAP_SET_NOTIFICATION,
     USER_CTRL_MAP_CMD_END,
 
     //PAN功能发送命令
@@ -461,6 +463,8 @@ typedef enum {
     BT_STATUS_TRIM_OVER,        /*测试盒TRIM完成*/
     BT_STATUS_PHONE_NAME,   /*获取来电号码name*/
     BT_STATUS_CALL_MIC_VOL_CHANGE,
+    BT_STATUS_THIRD_CONNECTED,        /*第三台连接成功*/
+    BT_STATUS_THIRD_DISCONNECT,        /*第三台断开连接*/
 } STATUS_FOR_USER;
 
 typedef enum {
@@ -867,6 +871,7 @@ u8 btstack_get_inband_ringtone_flag_for_addr(u8 *addr);
 void bt_api_esco_status(u8 *addr, u8 status);
 /*可以获取传入地址之外的另一个设备地址信息,没有返回NULL*/
 u8 *btstack_get_other_dev_addr(u8 *addr);
+u8 *btstack_get_other2_dev_addr(u8 *addr, u8 *other_addr); //get third conn
 /*上电会根据配置读取连接过的设备地址,保持在一个数组
  * 这个接口根据数组位置获取地址出来,返回真表示获取成功，addr是获取到的地址值*/
 bool btstack_get_remote_addr(u8 *addr, u8 index);

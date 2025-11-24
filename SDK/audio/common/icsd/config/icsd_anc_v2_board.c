@@ -513,7 +513,7 @@ void icsd_anc_config_board_init(__icsd_anc_config_data *SD_CFG)
         de_biquad_printf(SD_CFG->adpt_cfg.Biquad_init_L, SD_CFG->adpt_cfg.IIR_NUM_FLEX + SD_CFG->adpt_cfg.IIR_NUM_FIX);
 #endif
 
-#if TCFG_AUDIO_ANC_CH == (ANC_L_CH | ANC_R_CH)
+#if AUDIO_ANC_STEREO_ENABLE
         /***************************************************/
         /*************** right channel config **************/
         /***************************************************/

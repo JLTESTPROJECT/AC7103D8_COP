@@ -16,12 +16,16 @@
 
 int (*avc_printf)(const char *format, ...) = _avc_printf;
 
-float avc_alpha_db = 0.995; //debug
+float avc_alpha_db = 0.9; //debug
 void avc_config_init(__avc_config *_avc_config)
 {
     /* _avc_config->alpha_db = 0x995; */
-    _avc_config->alpha_db = avc_alpha_db;
-    _avc_config->db_cali  = 12;
+    _avc_config->alpha_db   = avc_alpha_db;
+    _avc_config->alpha_db_l = 0.4;
+    _avc_config->db_cali  = 0;
+    _avc_config->sc_cali  = 4;
+    _avc_config->dac_cali = 0;
+    _avc_config->flen     = 16;
 
 }
 
@@ -34,6 +38,9 @@ struct avc_function *AVC_FUNC = (struct avc_function *)(&AVC_FUNC_t);
 float spldb_lvl_thr[] = {0, 20, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80};
 u8 lvl_delta_max[]    = {0,  0,  0,  1, 1,  2,  2,  3,  3, 3, 4, 4, 4};
 u8 lvl_max[]          = {0,  2,  2,  3, 4,  4,  5,  5,  6, 6, 7, 7, 8};
+
+const float tidy_scale = 0.8733;
+const float tidy_offset = 25.6;
 
 const u16 phone_call_dig_vol_tab[] = {
     0,	//0

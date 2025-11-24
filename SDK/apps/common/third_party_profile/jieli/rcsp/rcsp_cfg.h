@@ -158,6 +158,9 @@ RCSP_BTMATE_EN
 // 耳机SDK可配置工具版本 RCSP功能配置
 #elif (RCSP_MODE == RCSP_MODE_EARPHONE)
 #if !TCFG_THIRD_PARTY_PROTOCOLS_SIMPLIFIED
+#define JL_RCSP_EAR_SENSORS_DATA_OPT                            0   // 耳机传感器功能
+#define HEALTH_ALL_DAY_CHECK_ENABLE                             0   // 全天健康检测功能
+
 #define RCSP_ADV_EN												1
 #define RCSP_DEVICE_STATUS_ENABLE								1		//设备状态信息功能
 #define RCSP_BT_CONTROL_ENABLE									0		//bt控制功能

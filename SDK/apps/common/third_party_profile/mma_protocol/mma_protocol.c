@@ -291,6 +291,7 @@ static int xm_bt_status_event_handler(int *msg)
         break;
     case BT_STATUS_SECOND_CONNECTED:
     case BT_STATUS_FIRST_CONNECTED:
+    case BT_STATUS_THIRD_CONNECTED:
         __this->poweron_reconn = 0;
         xm_set_adv_interval(SUBS_PAIR_ADV_INTERVAL); //连接上手机间隔改为220ms，防止fast pair validator测试fail
         xm_set_pair_state(1);

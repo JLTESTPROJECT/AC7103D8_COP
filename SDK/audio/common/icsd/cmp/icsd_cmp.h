@@ -9,7 +9,7 @@
 #include "icsd_cmp_config.h"
 
 extern int (*cmp_printf)(const char *format, ...);
-#if 0
+#if CMP_PRINTF_EN
 #define _cmp_printf printf                  //打开自适应ANC参数调试信息
 #else
 #define _cmp_printf icsd_printf_off
@@ -33,4 +33,5 @@ void icsd_cmp_set_infmt(struct icsd_cmp_infmt *fmt);
 void icsd_cmp_force_exit();
 _cmp_output *icsd_cmp_run(float *target, __adpt_cmp_cfg *cmp_cfg);
 
+extern char lib_cmp_version[];
 #endif

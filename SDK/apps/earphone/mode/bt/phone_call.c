@@ -69,7 +69,6 @@
 #define ESCO_DUMP_PACKET_ADJUST		1	/*配置使能*/
 #define ESCO_DUMP_PACKET_DEFAULT	0
 #define ESCO_DUMP_PACKET_CALL		60 /*0~0xFF*/
-#define SYNC_TONE_PHONE_RING_TIME   300
 
 static u8 esco_dump_packet = ESCO_DUMP_PACKET_CALL;
 

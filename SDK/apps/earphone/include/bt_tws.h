@@ -7,7 +7,14 @@
 
 #define TWS_FUNC_ID_VBAT_SYNC       TWS_FUNC_ID('V', 'B', 'A', 'T')
 #define TWS_FUNC_ID_CHARGE_SYNC     TWS_FUNC_ID('C', 'H', 'G', 'S')
-#define TWS_FUNC_ID_AI_SYNC         TWS_FUNC_ID('A', 'I', 'P', 'A')
+#define TWS_FUNC_ID_BOX_SYNC        TWS_FUNC_ID('B', 'O', 'X', 'S')
+#define TWS_FUNC_ID_AI_DMA_RAND     TWS_FUNC_ID('A', 'I', 'D', 'M')
+#define TWS_FUNC_ID_AI_SPEECH_STOP  TWS_FUNC_ID('A', 'I', 'S', 'T')
+#define TWS_FUNC_ID_APP_MODE  		TWS_FUNC_ID('M', 'O', 'D', 'E')
+#define TWS_FUNC_ID_AI_SYNC			TWS_FUNC_ID('A', 'I', 'P', 'A')
+#define TWS_FUNC_ID_EAR_DETECT_SYNC	TWS_FUNC_ID('E', 'D', 'E', 'T')
+#define TWS_FUNC_ID_LL_SYNC_STATE	TWS_FUNC_ID('L', 'L', 'S', 'S')
+#define TWS_FUNC_ID_TUYA_STATE      TWS_FUNC_ID('T', 'U', 'Y', 'A')
 
 #define    BT_TWS_UNPAIRED                      0x0001	// TWS未配对
 #define    BT_TWS_PAIRED                        0x0002	// TWS已配对

@@ -50,7 +50,7 @@ static struct charge_calibration_info info;
 static void app_charge_calibration_reset_sys(void *priv)
 {
     log_info("charge_calibration_reset_sys!\n");
-    cpu_reset();
+    charge_system_reset();
 }
 
 int app_charge_calibration_event_handler(int *msg)

@@ -387,10 +387,6 @@ c_SRC_FILES += \
 	audio/common/icsd/adt/icsd_adt_config.c \
 	audio/common/icsd/adt/icsd_adt_alg.c \
 	audio/common/icsd/adt/icsd_adt_demo.c \
-	audio/common/icsd/anc/icsd_anc_app.c \
-	audio/common/icsd/anc/icsd_anc_board.c \
-	audio/common/icsd/anc/icsd_anc_data.c \
-	audio/common/icsd/anc/icsd_anc_interactive.c \
 	audio/common/icsd/common/icsd_common.c \
 	audio/common/icsd/dot/icsd_dot_app.c \
 	audio/common/icsd/dot/icsd_dot.c \
@@ -441,6 +437,13 @@ c_SRC_FILES += \
 	  audio/anc/audio_anc_debug_tool.c \
 	  audio/anc/audio_anc_mult_scene.c \
 	  audio/anc/audio_anc_common.c \
+	  audio/anc/anc_memory.c \
+	  audio/anc/audio_anc_develop.c \
+	  audio/anc/audio_anc_hw_src.c \
+	  audio/anc/audio_anc_manager.c \
+	  audio/anc/audio_anc.c \
+	  audio/anc/icsd_anc_user.c \
+	  audio/anc/audio_anc_lvl_sync.c \
 
 #endif
 #endif
@@ -805,7 +808,6 @@ c_SRC_FILES += \
     apps/common/device/storage_device/norflash/norflash.c
 #endif
 #endif
-
 // *INDENT-OFF*
 
 // 注意：仅在BR27和BR28的soundbox工程开始才使用这个UI结构
@@ -949,6 +951,11 @@ c_SRC_FILES += \
 #if (THIRD_PARTY_PROTOCOLS_SEL & CUSTOM_DEMO_EN)
 c_SRC_FILES += \
     apps/common/third_party_profile/custom_protocol_demo/custom_protocol.c
+#endif
+
+#if (THIRD_PARTY_PROTOCOLS_SEL & HID_ISO_EN)
+c_SRC_FILES += \
+    apps/common/third_party_profile/hid_iso/hid_iso.c
 #endif
 
 #if (THIRD_PARTY_PROTOCOLS_SEL & ANCS_AMS_MODE_EN)
@@ -1342,6 +1349,16 @@ c_SRC_FILES += \
 #if (JL_RCSP_SENSORS_DATA_OPT && JL_RCSP_NFC_DATA_OPT)
 c_SRC_FILES += \
 	apps/common/third_party_profile/jieli/rcsp/server/functions/sensors/nfc_data_opt.c
+#endif
+
+#if (JL_RCSP_EAR_SENSORS_DATA_OPT)
+c_SRC_FILES += \
+    apps/common/third_party_profile/jieli/rcsp/server/functions/sensors/ear_sports_data_opt.c
+#if (HEALTH_ALL_DAY_CHECK_ENABLE)
+c_SRC_FILES += \
+    apps/common/third_party_profile/jieli/rcsp/server/functions/sensors/health_long_detect.c \
+    apps/common/third_party_profile/jieli/rcsp/server/functions/sensors/ear_sport_info_opt.c
+#endif
 #endif
 
 #if (JL_RCSP_SENSORS_DATA_OPT)
@@ -1906,8 +1923,7 @@ c_SRC_FILES += \
 
 #if EXPORT_PLATFORM_ANC_ENABLE
 c_SRC_FILES += \
-      audio/cpu/br56/audio_anc.c \
-	  audio/cpu/br56/icsd_anc_user.c \
+      audio/cpu/br56/audio_anc_platform.c
 
 #endif
 

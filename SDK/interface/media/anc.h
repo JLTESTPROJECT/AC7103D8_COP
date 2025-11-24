@@ -1,10 +1,11 @@
-#ifndef _ANC_H_
-#define _ANC_H_
+#ifndef _ANC_BASE_H_
+#define _ANC_BASE_H_
 
 #include "generic/typedef.h"
 #include "system/task.h"
 #include "media/audio_def.h"
 #include "audio_adc.h"
+#include "asm/anc_platform.h"
 
 enum {
     ANCDB_ERR_CRC = 1,
@@ -44,6 +45,12 @@ enum {
     ANC_MIC_TYPE_LFB,
     ANC_MIC_TYPE_RFF,
     ANC_MIC_TYPE_RFB,
+};
+
+//ANC滤波器更新类型
+enum {
+    ANC_COEFF_TYPE_FF = BIT(0),		//FF滤波器
+    ANC_COEFF_TYPE_FB = BIT(1),		//FB滤波器
 };
 
 typedef enum {
@@ -110,16 +117,6 @@ typedef enum {
 } ANC_alogm_t;		//ANC算法模式
 
 typedef enum {
-    A_MIC0 = 0x0,			//模拟MIC0 对应IO-0(PA1 PA2)
-    A_MIC1,                 //模拟MIC1 对应IO-0(PB10 PB9)
-    D_MIC0,                 //数字MIC0(plnk_dat0_pin-上升沿采样)
-    D_MIC1,                 //数字MIC1(plnk_dat1_pin-上升沿采样)
-    D_MIC2,                 //数字MIC2(plnk_dat0_pin-下降沿采样)
-    D_MIC3,                 //数字MIC3(plnk_dat1_pin-下降沿采样)
-    MIC_NULL = 0XFF,		//没有定义相关的MIC
-} ANC_mic_type_t;
-
-typedef enum {
     ANC_POW_SEL_R_DAC_REF =	0x02,	//功率输出R DAC+REFMIC
     ANC_POW_SEL_R_DAC_ERR,			//功率输出R DAC+ERRMIC
     ANC_POW_SEL_L_DAC_REF,			//功率输出L DAC+REFMIC
@@ -178,19 +175,11 @@ enum ANC_IIR_TYPE {
     ANC_TRANS_TYPE = BIT(3),	//TRANS
 };
 
-//6组滤波器组合(FF/FB/SZ), 无缝切换需要用到双倍滤波器，大于3组需使用96M 时钟
-enum ANC_CORE_MDOE {
-    ANC_MONO_HYBRID = 0,
-    ANC_MONO_HYBRID_ADJ,
-    ANC_MONO_FFX1,
-    ANC_MONO_FFX2,
-    ANC_STEREO_FF,
-    ANC_MONO_FBX1,
-    ANC_MONO_FBX2,
-    ANC_STEREO_FB,
-    ANC_MONO_FB_ADJ,
+enum ANC_DCC_TRIM_MODE {
+    ANC_DCC_TRIM_CLOSE = 0,	//关闭trim, 使用普通模式
+    ANC_DCC_TRIM_START,		//triming
+    ANC_DCC_TRIM_USE,		//已有trim值
 };
-
 
 /*ANC模式使能位*/
 #define ANC_OFF_BIT				BIT(1)	/*降噪关闭使能*/
@@ -261,9 +250,6 @@ enum ANC_CORE_MDOE {
 /*ANC 测试模式类型*/
 #define ANC_TEST_TYPE_PCM			0	//MIC_SPK数据以PCM导出
 #define ANC_TEST_TYPE_FFT			1	//SZ数据累加FFT导出
-
-/*ANC芯片版本定义(只读)*/
-#define ANC_CHIP_VERSION			ANC_VERSION_BR56
 
 /*ANC CFG读写标志*/
 #define ANC_CFG_READ		 		0x01
@@ -357,134 +343,22 @@ typedef struct {
     void (*dma_done_cb)(void);
 } anc_adt_param_t;
 
-#define ANC_GAINS_VERSION 		0X7100  //结构体版本号信息
-//DCC结构
-typedef struct {
-    u8  norm_dc_par; 	// range 0-15;    default 0
-    u8  pwr_dc_par;   	// range 0-15;    default 2
-    u8  amp1_dc_par;  	// range 0-15;    default 0
-    u8  amp2_dc_par;  	// range 0-15;    default 6
-    u16 pwr_thr;     	// range 0-65535; default 12000
-    u16 amp_thr;     	// range 0-65535; default 12000
+struct anc_mic_gain_cmp_cfg {
+    u8 en;	  			//MIC 补偿值使能控制  range 0-1;	   default 0;
+    float lff_gain;		//ANCL FFmic 补偿增益(产测使用), range 0.0316(-30dB) - 31.622(+30dB); default 1.0(0dB)
+    float lfb_gain;		//ANCL FBmic 补偿增益(产测使用), range 0.0316(-30dB) - 31.622(+30dB); default 1.0(0dB)
+    float rff_gain;		//ANCR FFmic 补偿增益(产测使用), range 0.0316(-30dB) - 31.622(+30dB); default 1.0(0dB)
+    float rfb_gain;		//ANCR FBmic 补偿增益(产测使用), range 0.0316(-30dB) - 31.622(+30dB); default 1.0(0dB)
+};
 
-    u8  adj_dc_par1;  	// range 0-15;    default 0    // allow writing at any time
-    u8  adj_dc_par2;  	// range 0-15;    default 6
-    u8  adj_incr_step;	// range 0-7;     default 0
-    u8  adj_upd_sample;	// range 0-7;     default 0
-} anc_core_dcc_t;
-
-//DRC结构
-typedef struct {
-    u16 threshold;		//drc threshold                              range 0-1023;  default 531
-    u8  ratio;    		//drc ratio                                  range 4-255;   default 255
-    u8  mkg;      		//drc makeup-gain                            range 0-6;     default 0
-    u8  knee;     		//drc kneewidth                     	     range 4-255;   default 64
-    u8  att_time; 		//drc attack time                            range 0-19;    default 3
-    u8  rls_time; 		//drc release time                           range 0-19;    default 13
-    u8  bypass;   		//DRC bypass: 0@not bypass DRC, 1@bypass DRC range 0-1;     default 1
-} anc_core_drc_t;
-
-typedef struct {
-//cfg
-    u16 version;		//当前结构体版本号
-    u8 dac_gain;		//dac模拟增益 			range 0-3;   default 3
-    u8 l_ffmic_gain;	//ANCL FFmic增益 		range 0-7;   default 2
-    u8 l_fbmic_gain;	//ANCL FBmic增益		range 0-7;   default 2
-    u8 r_ffmic_gain;	//ANCR FFmic增益		range 0-7;	 default 2
-    u8 r_fbmic_gain;	//ANCR FBmic增益		range 0-7;	 default 2
-    u8 cmp_en;			//音乐补偿使能			range 0-1;   default 1
-
-    u8 drc_en;		    //DRC使能				range 0-7;   default 0
-    u8 ahs_en;		    //AHS使能				range 0-1;   default 0
-    u8 gain_sign; 		//ANC各类增益的符号     range 0-255; default 0
-    u8 noise_lvl;		//训练的噪声等级		range 0-255; default 0
-
-    u8 ff_alogm;		//ANC FF算法因素		range 0-7;	default 5
-    u8 fb_alogm;		//ANC FB算法因素		range 4-7;	default 5
-    u8 cmp_alogm;    	//ANC CMP算法因素		range 0-7;	default 5
-    u8 trans_alogm;    	//通透 算法因素			range 0-7;	default 5
-
-    float l_ffgain;	    //ANCL FF增益			range 0.0316(-30dB) - 31.622(+30dB); default 1.0(0dB)
-    float l_fbgain;	    //ANCL FB增益			range 0.0316(-30dB) - 31.622(+30dB); default 1.0(0dB)
-    float l_transgain;  //ANCL 通透增益			range 0.0316(-30dB) - 31.622(+30dB); default 1.0(0dB)
-    float l_cmpgain;	//ANCL 音乐补偿增益		range 0.0316(-30dB) - 31.622(+30dB); default 1.0(0dB)
-    float r_ffgain;	    //ANCR FF增益			range 0.0316(-30dB) - 31.622(+30dB); default 1.0(0dB)
-    float r_fbgain;	    //ANCR FB增益			range 0.0316(-30dB) - 31.622(+30dB); default 1.0(0dB)
-    float r_transgain;  //ANCR 通透增益			range 0.0316(-30dB) - 31.622(+30dB); default 1.0(0dB)
-    float r_cmpgain;	//ANCR 音乐补偿增益		range 0.0316(-30dB) - 31.622(+30dB); default 1.0(0dB)
-
-    anc_core_drc_t drc_top_ff;  	//8  byte
-    anc_core_drc_t drc_top_fb;  	//8  byte
-    anc_core_drc_t drc_top_trans;  	//8  byte
-    anc_core_drc_t drc_core_ff;		//8  byte
-    anc_core_drc_t drc_core_fb;		//8  byte
-    anc_core_drc_t drc_core_trans; 	//8  byte
-    anc_core_drc_t drc_dac_mux;		//8  byte
-
-    anc_core_dcc_t dcc_ff;		//12 byte
-    anc_core_dcc_t dcc_fb;		//12 byte
-
-    u8 ahs_dly;			  //AHS_DLY				range 0-15;	   default 1;
-    u8 ahs_tap;			  //AHS_TAP				range 0-255;   default 100;
-    u8 ahs_wn_shift;	  //AHS_WN_SHIFT		range 0-15;	   default 9;
-    u8 ahs_wn_sub;	  	  //AHS_WN_SUB  		range 0-1;	   default 1;
-    u16 ahs_shift;		  //AHS_SHIFT   		range 0-65536; default 210;
-    u16 ahs_u;			  //AHS步进				range 0-65536; default 4000;
-    s16 ahs_gain;		  //AHS增益				range -32767-32767;default -1024;
-    u8 ahs_nlms_sel;	  //AHS_NLMS			range 0-1;	   default 0;
-    u8 developer_mode;	  //GAIN开发者模式		range 0-1;	   default 0;
-
-    float audio_drc_thr;  //Audio DRC阈值       range -6.0-0;  default -6.0dB;
-
-    u8 dcc_mode;		  //DCC模式			    range 0-2;	   default 0;
-    u8 adaptive_ref_en;	  //耳道自适应-金机曲线参考使能
-    u8 mic_cmp_gain_en;	  //MIC 补偿值使能控制  range 0-1;	   default 0;
-    u8 reserve_1;		  //预留位
-
-    float adaptive_ref_fb_f;	//FB参考F最深点位置中心值   range 80-200; default 135
-    float adaptive_ref_fb_g;	//FB参考G最深点深度   range 12-22; default 18
-    float adaptive_ref_fb_q;	//FB参考Q最深点降噪宽度  range 0.4-1.2; default 0.6
-
-    float l_ffmic_cmp_gain;		//ANCL FFmic 补偿增益(产测使用), range 0.0316(-30dB) - 31.622(+30dB); default 1.0(0dB)
-    float l_fbmic_cmp_gain;		//ANCL FBmic 补偿增益(产测使用), range 0.0316(-30dB) - 31.622(+30dB); default 1.0(0dB)
-    float r_ffmic_cmp_gain;		//ANCR FFmic 补偿增益(产测使用), range 0.0316(-30dB) - 31.622(+30dB); default 1.0(0dB)
-    float r_fbmic_cmp_gain;		//ANCR FBmic 补偿增益(产测使用), range 0.0316(-30dB) - 31.622(+30dB); default 1.0(0dB)
-
-    //相关性检测 HD param
-    u8 hd_en;				//啸叫检测使能		range 0-1;	   default 1;
-    u8 hd_corr_thr;			//相关性检测阈值	range 0-255;   default 232;
-    u16 hd_corr_gain;		//相关性预设增益	range 0-1024	default 512;
-    u8 hd_corr_dly;			//相关性检测延时	range 2-30;	   default 30;
-
-    //功率检测全频带，增益可预设
-    u8 hd_pwr_rate;			//功率检测回音处理前后比例		 	range 0-3; 	   default 2;
-    u8 hd_pwr_ctl_gain_en;	//功率检测是否使用预设的增益使能 	range 0-1; 	   default 0;
-    u8 hd_pwr_ctl_ahsrst_en;//功率检测是否复位AHS 			 	range 0-1; 	   default 1;
-    u16 hd_pwr_thr;			//功率检测阈值设置,增益自动 	 	range 0-32767; default 18000;
-    u16 hd_pwr_ctl_gain;	//功率检测预设增益 				 	range 0-16384; default 1638;
-
-    //可选带宽 增益自动调节
-    u8 hd_pwr_ref_ctl_en;	//参考功率检测自动调增益使能 		range 0-1; 	   default 0;
-    u8 hd_pwr_err_ctl_en;	//误差功率检测自动调增益使能 		range 0-1;     default 0;
-    u16 hd_pwr_ref_ctl_hthr;	//参考功率检测H_THR,触发中断 	range 0-32767; default 2000;
-    u16 hd_pwr_ref_ctl_lthr1;	//参考功率检测L1_THR 		 	range 0-32767; default 1000;
-    u16 hd_pwr_ref_ctl_lthr2;	//参考功率检测L2_THR,小于L1_THR range 0-32767; default 200;
-
-    u16 hd_pwr_err_ctl_hthr;	//误差功率检测H_THR,触发中断 	range 0-32767; default 2000;
-    u16 hd_pwr_err_ctl_lthr1;	//误差功率检测L1_THR 		 	range 0-32767; default 1000;
-    u16 hd_pwr_err_ctl_lthr2;	//误差功率检测L2_THR,小于L1_THR range 0-32767; default 200;
-    u8 reserve_2;
-    u8 reserve_3;
-
-} anc_gain_param_t;
-
-/*ANCIF配置区滤波器系数 anc_gains.bin*/
-typedef struct {
-    anc_gain_param_t gains;
-    //236 + 20byte(header)
-    u8 reserve[236 - 204];		//204 = 176 + 28(howl param)
-    // u8 reserve[236 - 176];	//工具端说明大小
-} anc_gain_t;
+//DCC TRIM相关数据结构
+struct anc_dcc_trim_cfg {
+    u8 mode;
+    int lff_dcc;
+    int lfb_dcc;
+    int rff_dcc;
+    int rfb_dcc;
+};
 
 //ANC param主要结构
 typedef struct {
@@ -503,8 +377,6 @@ typedef struct {
     u8 fade_time_lvl;				//淡入时间等级，越大时间越长
     u8 mic_type[4];					//ANC mic类型控制位
     u8 dut_audio_enablebit;			//ANC_DUT 音频使能控制,用于分离模块功耗
-    u8 drc_toggle;					//drc 开关
-    u8 dcc_adaptive_toggle;			//自适应dcc 开关
     u8 adc_ch;						//adc数字通道
     u8 adaptive_mode;				//ANC场景自适应模式
     u8 anc_lvl;						//ANC等级
@@ -529,16 +401,11 @@ typedef struct {
     u8 lr_lowpower_en;				//ANCLR(立体声)配置省功耗使能
     u8 anc_coeff_mode;				/*ANC coeff模式-0 普通coeff; 1 自适应coeff*/
     u8 test_type;					//ANC测试模式类型，获取SZ频响 or 获取SPK_MIC PCM数据
-    u8 ff_cic_shift;				//FF CIC输出粗调增益
-    u8 fb_cic_shift;				//FB CIC输出粗调增益
-    u8 train_fb_to_ff;				//ANC TRAIN FBMIC复用FF的通道测试
-
-    u8 ff_use_alogm;				//FF当前使用的算法模式
-    u8 fb_use_alogm;				//FB当前使用的算法模式
-    u8 sz_use_alogm;				//SZ当前使用的算法模式
 
     u8 howling_detect_toggle;		//ANC 啸叫检测使能控制，用于在线切换
     u8 howling_detect_ch;			//ANC 啸叫检测通道配置
+
+    u8 stereo_to_mono_mix;          //ANC 双->单声道控制
 
     u16 anc_fade_gain;				//ANC淡入淡出增益
     u16 drc_fade_gain;				//DRC淡出增益
@@ -582,6 +449,8 @@ typedef struct {
     anc_ear_adaptive_param_t *adaptive;
     anc_adt_param_t *adt;
     struct anc_sz_fft_t sz_fft;
+    struct anc_mic_gain_cmp_cfg mic_cmp;
+
     void (*train_callback)(u8, u8);
     void (*pow_callback)(anc_ack_msg_t *msg_t, u8 setp);
     int (*cfg_online_deal_cb)(u8, anc_gain_t *);
@@ -591,6 +460,32 @@ typedef struct {
     void (*mult_gain_set)(u8 gain_id, void *buf, int len);
 
     u8 adt_state;//智能免摘开启状态
+
+
+    //gali br52/br50/br56
+    u8 drc_toggle;					//drc 开关
+    u8 dcc_adaptive_toggle;			//自适应dcc 开关
+
+    u8 ff_cic_shift;				//FF CIC输出粗调增益
+    u8 fb_cic_shift;				//FB CIC输出粗调增益
+    u8 train_fb_to_ff;				//ANC TRAIN FBMIC复用FF的通道测试
+
+    u8 ff_use_alogm;				//FF当前使用的算法模式
+    u8 fb_use_alogm;				//FB当前使用的算法模式
+    u8 sz_use_alogm;				//SZ当前使用的算法模式
+
+    // fade_time = (1/fs) * (slow+1）* [16384 / (2^fast)]
+    u8 ff_filter_fade_fast;		    //滤波器切换快步进, def 0
+    u8 ff_filter_fade_slow;			//滤波器切换慢步进, def 3
+
+    u8 fb_filter_fade_fast;		    //滤波器切换快步进, def 0
+    u8 fb_filter_fade_slow;			//滤波器切换慢步进, def 3
+
+    struct anc_dcc_trim_cfg dcc_trim;
+
+    //gali br28
+    u8 drc_dcc_en;					//drc动态调整DCC使能
+    void (*adc_set_buffs_cb)(void);
 } audio_anc_t;
 
 //ANC场景自适应相关结构体
@@ -603,6 +498,7 @@ struct anc_power_adaptive_cfg {
     audio_anc_t *param;				//ANC句柄
     void (*fade_gain_set)(u16 gain);
     void (*event_cb)(u8 lvl, enum ANC_ADAPTIVE_FADE_EVENT event);
+    void (*pow_output_cb)(int pow);
 };
 
 #define ANC_DB_HEAD_LEN		20/*ANC配置区数据头长度*/
@@ -726,7 +622,15 @@ u8 anc_fade_ctr_ch_check(u8 ch);
 
 u8 anc_api_get_fade_en(void);
 
+//更新所有滤波器
 void anc_coeff_online_update(audio_anc_t *param, u8 hd_reset_en);
+
+//更新FF滤波器
+void anc_coeff_ff_online_update(audio_anc_t *param);
+
+//更新FB滤波器
+void anc_coeff_fb_online_update(audio_anc_t *param);
+
 
 int anc_coeff_size_count(audio_anc_t *param);
 
@@ -896,8 +800,6 @@ int audio_anc_sz_fft_outbuf_get(u8 **p);
 void audio_anc_sz_fft_outbuf_release(void);
 void audio_anc_sz_fft_trigger(void);
 
-void audio_anc_common_param_init(void);
-
 void anc_user_train_process(audio_anc_t *param);
 
 /*ANC DMA SEL通道映射*/
@@ -931,19 +833,20 @@ void anc_dma_on(u8 out_sel, int *buf, int irq_point);
  */
 void anc_dma_on_double(u8 out_sel, int *buf, int irq_point);
 
-/*
- ANC DMA 4通道初始化 double (PINGPONG BUFF, 持续收数)
-	param:	ch1_out_sel DMA通道ch1 sel(ch 0/1 数据)
-			ch2_out_sel DMA通道ch2 sel(ch 2/3 数据)
-			buf ANC DMA BUF
-			irq_point ANC DMA IRQ_POINT
- */
-void anc_dma_on_double_4ch(u8 ch1_out_sel, u8 ch2_out_sel, int *buf, int irq_point);
-
 /* 注册ANC DMA输出回调函数 */
 void audio_anc_dma_add_output_handler(const char *name, void (*output)(void));
 
 /* 删除ANC DMA输出回调函数 */
 void audio_anc_dma_del_output_handler(const char *name);
 
-#endif/*_ANC_H_*/
+void audio_anc_biquad2ab_double(anc_fr_t *iir, double *out_coeff, u8 order, int alogm);
+
+/*读取ANC dc值*/
+int audio_anc_dc_vld_read(u8 mic_type);
+
+//BR28
+/*更新DRC 动态DCC使能设置*/
+void anc_drc_dcc_en_set(audio_anc_t *param);
+
+
+#endif/*_ANC_BASE_H_*/

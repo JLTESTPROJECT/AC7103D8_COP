@@ -146,6 +146,7 @@ static int ui_bt_stack_msg_handler(int *msg)
         break;
     case BT_STATUS_FIRST_DISCONNECT:
     case BT_STATUS_SECOND_DISCONNECT:
+    case BT_STATUS_THIRD_DISCONNECT:
         break;
     case BT_STATUS_SNIFF_STATE_UPDATE:
         break;

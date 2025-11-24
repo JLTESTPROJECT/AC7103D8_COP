@@ -65,7 +65,11 @@
 #include "debug.h"
 
 
-#define SECONDE_PHONE_IN_RING_COEXIST   1
+#if TCFG_BT_DUAL_1T3_CONN_ENABLE
+#define SECONDE_PHONE_IN_RING_COEXIST   0		// 二次来电是否启动铃声叠加
+#else
+#define SECONDE_PHONE_IN_RING_COEXIST   1		// 二次来电是否启动铃声叠加
+#endif
 #if TCFG_BT_INBAND_RING == 0
 #undef  SECONDE_PHONE_IN_RING_COEXIST
 #define SECONDE_PHONE_IN_RING_COEXIST   0
@@ -314,10 +318,14 @@ int bt_phone_income(u8 after_conn, u8 *bt_addr)
         g_bt_hdl.phone_income_flag = 1;
 
         if (bt_stack_get_incoming_call_num() > 1) {
+#if TCFG_BT_DUAL_1T3_CONN_ENABLE
+            r_printf("1t3 no ring coexist! %d\n", __LINE__);
+#else
             //第一次来电被置上一次。第二次再来就有值了
             if (!g_bt_hdl.inband_ringtone) { //后来电的手机支持铃声同步，就不播ring提示音
                 sys_timeout_add(g_bt_hdl.phone_ring_addr, phone_second_call_ring_play_start, 2000);
             }
+#endif
         } else {
             if (g_bt_hdl.inband_ringtone) {
                 if (after_conn == 2) { //强制播本地铃声
@@ -361,7 +369,10 @@ int bt_phone_hangup(u8 *bt_addr)
 #endif
     g_bt_hdl.phone_ring_sync_tws = 0;
     lmp_private_esco_suspend_resume(4);
-
+#if TCFG_BT_DUAL_1T3_CONN_ENABLE
+    r_printf("1t3 no ring coexist! %d\n", __LINE__);
+    return 0;
+#endif
     /*
      * 挂断的时候会清除了一些标识并且会stop了提示音
      * 判断如果另一个手机还在来电并且不支持inband ring，那就恢复一个嘟嘟声提示音

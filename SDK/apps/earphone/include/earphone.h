@@ -134,6 +134,7 @@ const struct key_remap_table *get_key_remap_table();
 struct app_mode *app_enter_bt_mode(int arg);
 
 void bt_get_btstack_device(u8 *addr_a, void **device_a, void **device_b);
+void bt_get_btstack_device3(u8 *addr_a, void **device_a, void **device_b, void **device_c);
 
 bool bt_in_phone_call_state(void *device);
 

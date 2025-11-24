@@ -45,9 +45,7 @@
 #include "pwm_led/led_ui_api.h"
 #include "dual_bank_updata_api.h"
 #include "effect/effects_dev.h"
-#if TCFG_AUDIO_WIDE_AREA_TAP_ENABLE
-#include "icsd_adt_app.h"
-#endif
+#include "audio_anc_includes.h"
 #include "mix_record_api.h"
 #include "lib_update_config.h"
 #include "app_mode_sink.h"
@@ -185,17 +183,23 @@ const struct task_info task_info_table[] = {
 #if TCFG_AUDIO_ANC_ENABLE
     {"anc",                 3,     0,   512,   128 },
 #if TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN
-    {"icsd_anc",            5,     0,   512,   128 },
-    {"icsd_adt",            2,     0,   512,   128 },
-    {"icsd_src",            3,     0,   512,   256 },
+    {"icsd_anc_0",          5,     0,   256,   128 },
+    {"icsd_anc_1",          5,     1,   256,   128 },
+    {"icsd_adt_0",          2,     0,   256,   128 },
+    {"icsd_adt_1",          2,     1,   256,   128 },
+    {"icsd_src",            4,     0,   256,   256 },
     {"speak_to_chat",       2,     0,   512,   128 },
 #endif
 #if TCFG_AUDIO_ANC_REAL_TIME_ADAPTIVE_ENABLE
-    {"rt_anc",              3,     0,   512,   128 },
-    {"rt_de",              	1,     0,   512,   128 },
+    {"rt_anc_0",            3,     0,   512,   128 },
+    {"rt_anc_1",            3,     1,   512,   128 },
+    {"rt_de",              	1,     1,   512,   128 },
 #endif
 #if TCFG_AUDIO_ANC_ENABLE && (TCFG_AUDIO_ANC_EXT_VERSION == ANC_EXT_V2)
-    {"afq_common",         	1,     0,   512,   128 },
+    {"afq_common",         	1,     1,   512,   128 },
+#endif
+#if AUDIO_ANC_DATA_EXPORT_VIA_UART
+    {"anc_dev",         	1,     0,   512,   128 },
 #endif
 #endif
 
@@ -554,6 +558,12 @@ struct app_mode *app_mode_switch_handler(int *msg)
     default:
         return NULL;
     }
+#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE && TCFG_APP_LINEIN_EN && ((defined TCFG_LINEIN_DETECT_ENABLE) && (TCFG_LINEIN_DETECT_ENABLE == 0))
+    if ((msg[1] == APP_MSG_GOTO_NEXT_MODE) && (msg[2] == APP_KEY_MSG_FROM_TWS) && (next_mode->name == APP_MODE_LINEIN)) {
+        g_printf("local_tws goto_next_mode msg_from_tws dont goto linein\n");
+        return NULL;
+    }
+#endif
     g_mode_switch_arg = arg;
 
 #if TCFG_APP_BT_EN && TCFG_BT_BACKGROUND_ENABLE

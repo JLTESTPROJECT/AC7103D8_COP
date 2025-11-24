@@ -162,7 +162,7 @@ set UPDATE_COMPRESS_ENABLE=1
 set UPDATE_COMPRESS_ENABLE=0
 #endif
 
-#if TCFG_AUDIO_ANC_EAR_ADAPTIVE_EN
+#if TCFG_AUDIO_ANC_EXT_TOOL_ENABLE
 copy anc_ext.bin download\earphone\ALIGN_DIR\.
 #else
 del download\earphone\ALIGN_DIR\anc_ext.bin

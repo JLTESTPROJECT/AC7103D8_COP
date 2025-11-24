@@ -2,7 +2,7 @@
 #ifndef _ICSD_ANC_INTERACTIVE_H_
 #define _ICSD_ANC_INTERACTIVE_H_
 
-#include "asm/anc.h"
+#include "anc.h"
 #include "icsd_anc_v2.h"
 
 struct anc_ear_adaptive_train_cfg {

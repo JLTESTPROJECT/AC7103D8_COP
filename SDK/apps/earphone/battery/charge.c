@@ -93,13 +93,18 @@ static void charge_close_deal(void)
     batmgr_send_msg(BAT_MSG_CHARGE_CLOSE, 0);
 }
 
+void app_charge_system_reset(void)
+{
+    //充电采用LV0的复位
+    system_reset(CHARGE_FLAG);
+}
 
 void app_charge_power_off_keep_mode()
 {
     //兼容一些充电仓5v输出慢的时候会导致无法充电的问题
     if (get_lvcmp_det()) {
         log_info("...charge ing...\n");
-        cpu_reset();
+        app_charge_system_reset();
     }
 
     log_info("get_charge_online_flag:%d %d\n", get_charge_online_flag(), get_ldo5v_online_hw());
@@ -108,7 +113,7 @@ void app_charge_power_off_keep_mode()
     } else {
         charge_check_and_set_pinr(1);
 #if TCFG_CHARGE_OFF_POWERON_EN
-        cpu_reset();
+        app_charge_system_reset();
 #else
         power_set_soft_poweroff();
 #endif
@@ -193,7 +198,7 @@ void charge_ldo5v_in_deal(void)
     if (get_charge_poweron_en() == 0) {
         if (!app_in_mode(APP_MODE_IDLE)) {
             if (abandon == 0) {
-                sys_enter_soft_poweroff(POWEROFF_RESET);
+                sys_enter_soft_poweroff(POWEROFF_POWER_RESET);
             }
         } else {
             charge_start();
@@ -210,7 +215,7 @@ void charge_ldo5v_in_deal(void)
 _check_reset:
     //防止耳机低电时,插拔充电有几率出现关机不充电问题
     if (app_var.goto_poweroff_flag) {
-        cpu_reset();
+        app_charge_system_reset();
     }
 }
 

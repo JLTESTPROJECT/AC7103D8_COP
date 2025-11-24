@@ -442,7 +442,7 @@ const  int  silk_fsW_enable = 1;  //支持16-24k采样率
 #endif
 
 const int LC3_PLC_EN = TCFG_LC3_PLC_TYPE; 	//plc类型配
-const char config_lib_lc3_enc_ltpf_idx_enable = ((LC3_PLC_EN == AUD_PLC_ADVANCED_MODE || LC3_PLC_EN == AUD_PLC_ULTRA_MODE) ? 1 : 0);    //是否编码ltpf参数,影响aplc效果. 速度要求比较高,编解码需要mips 都会增多.解码自动解析ltpf参数
+const char config_lib_lc3_enc_ltpf_idx_enable = ((LC3_PLC_EN == AUD_PLC_ADVANCED_MODE || LC3_PLC_EN == AUD_PLC_ULTRA_MODE) ? 1 : 0);
 
 const int LC3_PLC_FADE_OUT_START_POINT = 480;   //丢包后维持音量的点数.
 const int LC3_PLC_FADE_OUT_POINTS = 1200;       //丢包维持指定点数后,淡出的速度,音量从满幅到0需要的点数.

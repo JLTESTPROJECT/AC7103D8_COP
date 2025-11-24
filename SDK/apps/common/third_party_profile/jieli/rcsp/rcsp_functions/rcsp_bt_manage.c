@@ -34,6 +34,8 @@
 #include "rcsp_ch_loader_download.h"
 #include "clock_manager/clock_manager.h"
 #include "update.h"
+#include "ear_sports_data_opt.h"
+#include "health_long_detect.h"
 
 #if RCSP_MODE == RCSP_MODE_EARPHONE
 #include "earphone.h"
@@ -181,6 +183,7 @@ static int rcsp_bt_status_event_handler(struct bt_event *bt)
     switch (bt->event) {
     case BT_STATUS_SECOND_CONNECTED:
     case BT_STATUS_FIRST_CONNECTED:
+    case BT_STATUS_THIRD_CONNECTED:
 #if TCFG_USER_TWS_ENABLE
         if ((tws_api_get_role() == TWS_ROLE_MASTER) || (bt_rcsp_spp_conn_num() > 0)) {
             bt_ble_adv_ioctl(BT_ADV_SET_EDR_CON_FLAG, SECNE_CONNECTED, 1);
@@ -202,6 +205,7 @@ static int rcsp_bt_status_event_handler(struct bt_event *bt)
         break;
     case BT_STATUS_FIRST_DISCONNECT:
     case BT_STATUS_SECOND_DISCONNECT:
+    case BT_STATUS_THIRD_DISCONNECT:
 #if RCSP_ADV_EN
         bt_adv_seq_change();
         if (!app_var.goto_poweroff_flag) {
@@ -242,6 +246,12 @@ static int rcsp_bt_status_event_handler(struct bt_event *bt)
     case BT_STATUS_PHONE_HANGUP:
         rcsp_printf("BT_STATUS_PHONE_HANGUP\n");
         rcsp_device_status_update(COMMON_FUNCTION, BIT(RCSP_DEVICE_STATUS_ATTR_TYPE_PHONE_SCO_STATE_INFO));
+        break;
+    case BT_STATUS_RECONN_OR_CONN:
+#if HEALTH_ALL_DAY_CHECK_ENABLE
+        // health_all_day_detect_switch(1);
+        restore_on_boot();
+#endif
         break;
     }
     return 0;
@@ -363,6 +373,15 @@ static void rcsp_bt_tws_event_handler(int *msg)
 
 #if (RCSP_ADV_FIND_DEVICE_ENABLE && TCFG_USER_TWS_ENABLE)
         find_decice_tws_connect_handle(0, NULL);
+#endif
+
+#if JL_RCSP_EAR_SENSORS_DATA_OPT
+        // TWS连接同步健康检测状态
+#if TCFG_USER_TWS_ENABLE
+        if (!tws_api_get_role()) {
+            tws_sync_health_detect_work_status();
+        }
+#endif
 #endif
 
         break;

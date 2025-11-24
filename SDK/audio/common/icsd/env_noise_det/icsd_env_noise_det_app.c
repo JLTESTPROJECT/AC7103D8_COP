@@ -1,30 +1,42 @@
 #include "app_config.h"
-#if ((defined TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN) && TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN && \
-	 TCFG_AUDIO_ANC_ENABLE && TCFG_AUDIO_ANC_ENV_ADAPTIVE_GAIN_ENABLE)
+#if TCFG_AUDIO_ANC_ENABLE
+#include "audio_anc_includes.h"
+#if ((TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN && TCFG_AUDIO_ANC_ENV_ADAPTIVE_GAIN_ENABLE) || \
+        (ANC_ADAPTIVE_EN && TCFG_AUDIO_ANC_ENV_ADAPTIVE_GAIN_LITE_ENABLE))
 #include "system/includes.h"
-#include "icsd_adt_app.h"
-#include "audio_anc.h"
-#include "asm/anc.h"
 #include "tone_player.h"
 #include "audio_config.h"
-#include "icsd_anc_user.h"
 #include "sniff.h"
-
-#if TCFG_AUDIO_ANC_REAL_TIME_ADAPTIVE_ENABLE
-#include "rt_anc_app.h"
-#endif
+#include "icsd_adt.h"
 
 #if 1
-#define env_log printf
+#define env_log	printf
 #else
 #define env_log(...)
+#endif/*log_en*/
+
+struct audio_env_hdl {
+    void *env_thr_hdl;
+    struct audio_anc_lvl_sync *lvl_sync_hdl;
+};
+struct audio_env_hdl *env_hdl = NULL;
+
+/* 噪声阈值表 */
+#if TCFG_AUDIO_ANC_ENV_ADAPTIVE_GAIN_ENABLE
+//标准模式阈值表
+const int env_thr_table[] = {0, 40, 80};
+#else
+//轻量模式阈值表
+const int env_thr_table[] = {0, 60, 120};
 #endif
 
+#if TCFG_AUDIO_ANC_ENV_ADAPTIVE_GAIN_ENABLE
 /*打开anc增益自适应*/
 int audio_anc_env_adaptive_gain_open()
 {
     env_log("%s", __func__);
     u8 adt_mode = ADT_ENV_NOISE_DET_MODE;
+    audio_icsd_adt_env_noise_det_set(AUDIO_ANC_ENV_NOISE_DET_GAIN_ADAPTIVE);
     return audio_icsd_adt_sync_open(adt_mode);
 }
 
@@ -33,6 +45,7 @@ int audio_anc_env_adaptive_gain_close()
 {
     env_log("%s", __func__);
     u8 adt_mode = ADT_ENV_NOISE_DET_MODE;
+    audio_icsd_adt_env_noise_det_clear(AUDIO_ANC_ENV_NOISE_DET_GAIN_ADAPTIVE);
     int ret = audio_icsd_adt_sync_close(adt_mode, 0);
     return ret;
 }
@@ -55,33 +68,7 @@ void audio_anc_env_adaptive_gain_demo()
         audio_anc_env_adaptive_gain_close();
     }
 }
-
-static wind_lvl_det_t anc_env_noise_det = {
-    .lvl1_thr = 30,         //阈值1
-    .lvl2_thr = 60,         //阈值2
-    .lvl3_thr = 70,         //阈值3
-    .lvl4_thr = 80,         //阈值4
-    .lvl5_thr = 90,         //阈值5
-    .dithering_step = 1,    //消抖风噪等级间距
-    .last_lvl = 0,
-    .cur_lvl = 0,
-};
-
-static wind_info_t anc_env_noise_lvl_fade = {
-    .time = 1000, //ms
-    .fade_timer = 0,
-    .wind_cnt = 0,
-    .wind_eng = 0,
-    .last_lvl = 0,
-    .preset_lvl = 0,
-    .fade_in_cnt = 0,
-    .fade_out_cnt = 0,
-    .lvl_unchange_cnt = 0,
-    .wind_process_flag = 0,
-    .fade_in_time = 4, //设置噪声等级变大检测时间，单位s，误差1s
-    .fade_out_time = 4, //设置噪声等级变小检测时间，单位s，误差1s
-    .ratio_thr = 0.9f,
-};
+#endif
 
 static struct anc_fade_handle anc_env_gain_fade = {
     .timer_ms = 100, //配置定时器周期
@@ -95,21 +82,12 @@ static struct anc_fade_handle anc_env_gain_fade = {
 /*重置环境自适应增益的初始参数*/
 void audio_anc_env_adaptive_fade_param_reset(void)
 {
-    anc_env_noise_det.last_lvl = 0;
-    anc_env_noise_det.cur_lvl = 0;
-
-    if (anc_env_noise_lvl_fade.fade_timer) {
-        sys_s_hi_timer_del(anc_env_noise_lvl_fade.fade_timer);
-        anc_env_noise_lvl_fade.fade_timer = 0;
+    if (env_hdl && env_hdl->env_thr_hdl) {
+        audio_threshold_det_lvl_reset(env_hdl->env_thr_hdl, ARRAY_SIZE(env_thr_table) - 1); //还原最高档位
     }
-    anc_env_noise_lvl_fade.fade_in_cnt = 0;
-    anc_env_noise_lvl_fade.fade_out_cnt = 0;
-    anc_env_noise_lvl_fade.lvl_unchange_cnt = 0;
-    anc_env_noise_lvl_fade.wind_process_flag = 0;
-    anc_env_noise_lvl_fade.last_lvl = 0;
-
     if (anc_env_gain_fade.timer_id) {
-        sys_s_hi_timer_del(anc_env_gain_fade.timer_id);
+        sys_timer_del(anc_env_gain_fade.timer_id);
+        // sys_s_hi_timer_del(anc_env_gain_fade.timer_id);
         anc_env_gain_fade.timer_id = 0;
     }
     anc_env_gain_fade.cur_gain = 16384;
@@ -122,37 +100,66 @@ void audio_anc_env_adaptive_fade_gain_set(int fade_gain, int fade_time)
     audio_anc_gain_fade_process(&anc_env_gain_fade, ANC_FADE_MODE_ENV_ADAPTIVE_GAIN, fade_gain, fade_time);
 }
 
-/*环境噪声处理*/
-int audio_env_noise_event_process(u8 spldb_iir)
+static int audio_anc_env_enable_check()
 {
-    u8 anc_env_noise_lvl = 0;
+#if TCFG_AUDIO_ANC_ENV_ADAPTIVE_GAIN_ENABLE
+    return (audio_icsd_adt_env_noise_det_get() & AUDIO_ANC_ENV_NOISE_DET_GAIN_ADAPTIVE);
+#elif TCFG_AUDIO_ANC_ENV_ADAPTIVE_GAIN_LITE_ENABLE
+    return 1;
+#endif
+    return 1;
+}
 
-    /* env_log("spldb_iir %d", spldb_iir); */
-
-    /*anc模式下才改anc增益*/
+int audio_anc_env_thr_to_lvl(int env_thr)
+{
+    if (!env_hdl) {
+        return -1;
+    }
+    if (!audio_anc_env_enable_check()) {
+        return -1;
+    }
     if (anc_mode_get() != ANC_OFF) {
-        /*划分环境噪声等级*/
-        anc_env_noise_lvl = get_icsd_anc_wind_noise_lvl(&anc_env_noise_det, spldb_iir);
+        int env_lvl = audio_threshold_det_run(env_hdl->env_thr_hdl, env_thr);
+#if ICSD_ENV_LVL_PRINTF
+        printf("env_det-env_thr: %d, env_lvl: %d\n", env_thr, env_lvl);
+#endif
+        return env_lvl;
+    }
+    return -1;
+}
 
-        /*做淡入淡出时间处理，返回0表示不做处理维持原来的增益不变*/
-        anc_env_noise_lvl = audio_anc_wind_noise_process_fade(&anc_env_noise_lvl_fade, anc_env_noise_lvl);
-        if (anc_env_noise_lvl == 0) {
-            return -1;
-        }
-    } else {
+void audio_anc_env_lvl_sync_info(u8 *data, int len)
+{
+    if (!env_hdl) {
+        return;
+    }
+    audio_anc_lvl_sync_info(env_hdl->lvl_sync_hdl, data, len);
+}
+
+/*环境噪声处理*/
+int audio_env_noise_event_process(u8 env_lvl)
+{
+    if (!env_hdl) {
+        return -1;
+    }
+    if (!audio_anc_env_enable_check()) {
+        return -1;
+    }
+    /*anc模式下才改anc增益*/
+    if (anc_mode_get() == ANC_OFF) {
         return -1;
     }
 
     u16 anc_fade_gain = 16384;
     u16 anc_fade_time = 3000; //ms
     /*根据风噪等级改变anc增益*/
-    switch (anc_env_noise_lvl) {
+    switch (env_lvl) {
     case ANC_WIND_NOISE_LVL0:
-        anc_fade_gain = 1500;
+        anc_fade_gain = (u16)(eq_db2mag(-20.0f) * ANC_FADE_GAIN_MAX_FLOAT);
         anc_fade_time = 3000;
         break;
     case ANC_WIND_NOISE_LVL1:
-        anc_fade_gain = 8192;
+        anc_fade_gain = (u16)(eq_db2mag(-6.0f) * ANC_FADE_GAIN_MAX_FLOAT);;
         anc_fade_time = 3000;
         break;
     case ANC_WIND_NOISE_LVL2:
@@ -181,18 +188,91 @@ int audio_env_noise_event_process(u8 spldb_iir)
     if (anc_env_gain_fade.target_gain == anc_fade_gain) {
         return anc_fade_gain;
     }
-
-    env_log("ENV_NOISE_STATE:RUN, lvl %d, gain %d\n", anc_env_noise_lvl, anc_fade_gain);
-
-    u8 data[5] = {0};
-    data[0] = SYNC_ICSD_ADT_SET_ANC_FADE_GAIN;
-    data[1] = anc_fade_gain & 0xff;
-    data[2] = (anc_fade_gain >> 8) & 0xff;
-    data[3] = ANC_FADE_MODE_ENV_ADAPTIVE_GAIN;
-    data[4] = anc_fade_time / 100; //缩小100倍传参
-    audio_icsd_adt_info_sync(data, 5);
-
+    env_log("ENV_NOISE_STATE:RUN, lvl %d, [anc_fade] %d\n", env_lvl, anc_fade_gain);
+    audio_anc_env_adaptive_fade_gain_set(anc_fade_gain, anc_fade_time);
     return anc_fade_gain;
 }
 
-#endif /*(defined TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN) && TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN*/
+static void audio_anc_env_lvl_sync_cb(void *_hdl)
+{
+    struct audio_anc_lvl_sync *hdl = (struct audio_anc_lvl_sync *)_hdl;
+#if TCFG_AUDIO_ANC_ENV_ADAPTIVE_GAIN_ENABLE
+    int err = os_taskq_post_msg(SPEAK_TO_CHAT_TASK_NAME, 2, ANC_MSG_ENV_NOISE_LVL, hdl->cur_lvl);
+
+#elif TCFG_AUDIO_ANC_ENV_ADAPTIVE_GAIN_LITE_ENABLE
+    int err = os_taskq_post_msg("anc", 2, ANC_MSG_ENV_NOISE_LVL, hdl->cur_lvl);
+
+#endif
+    if (err != OS_NO_ERR) {
+        printf("audio_anc_env_lvl_sync_cb err %d\n", err);
+    }
+}
+
+static void audio_env_ioc_init()
+{
+    if (env_hdl) {
+        return;
+    }
+    env_hdl = anc_malloc("ANC_ENV", sizeof(struct audio_env_hdl));
+    if (!env_hdl) {
+        return;
+    }
+
+    //阈值检测
+    struct threshold_det_param param = {0};
+    param.thr_table = env_thr_table;
+    param.thr_lvl_num = ARRAY_SIZE(env_thr_table);
+    param.thr_debounce = 10;
+#if TCFG_AUDIO_ANC_ENV_ADAPTIVE_GAIN_ENABLE
+    param.run_interval = avc_run_interval * 11;
+    param.lvl_up_hold_time = 1000;
+    param.lvl_down_hold_time = 1000;
+#elif TCFG_AUDIO_ANC_ENV_ADAPTIVE_GAIN_LITE_ENABLE
+    param.run_interval = ANC_ADAPTIVE_POWER_DET_TIME / 2;
+    param.lvl_up_hold_time = ANC_ADAPTIVE_POWER_DET_TIME / 2;
+    param.lvl_down_hold_time = ANC_ADAPTIVE_POWER_DET_TIME / 2;
+#endif
+    param.default_lvl = ARRAY_SIZE(env_thr_table) - 1; //默认最高档位
+    env_hdl->env_thr_hdl = audio_threshold_det_open(&param);
+
+    //档位同步
+    struct audio_anc_lvl_sync_param lvl_sync_param = {0};
+    lvl_sync_param.sync_result_cb = audio_anc_env_lvl_sync_cb;
+    lvl_sync_param.sync_check = 1;
+    lvl_sync_param.high_lvl_sync = 1;
+    lvl_sync_param.default_lvl = ARRAY_SIZE(env_thr_table) - 1; //默认最高档位
+    lvl_sync_param.name = ANC_LVL_SYNC_ENV;
+    env_hdl->lvl_sync_hdl = audio_anc_lvl_sync_open(&lvl_sync_param);
+}
+
+static void audio_env_ioc_exit()
+{
+    if (env_hdl) {
+        if (env_hdl->env_thr_hdl) {
+            audio_threshold_det_close(env_hdl->env_thr_hdl);
+            env_hdl->env_thr_hdl = NULL;
+        }
+        if (env_hdl->lvl_sync_hdl) {
+            audio_anc_lvl_sync_close(env_hdl->lvl_sync_hdl);
+            env_hdl->lvl_sync_hdl = NULL;
+        }
+        anc_free(env_hdl);
+        env_hdl = NULL;
+    }
+}
+
+int audio_adt_env_ioctl(int cmd, int arg)
+{
+    switch (cmd) {
+    case ANC_EXT_IOC_INIT:
+        audio_env_ioc_init();
+        break;
+    case ANC_EXT_IOC_EXIT:
+        audio_env_ioc_exit();
+        break;
+    }
+    return 0;
+}
+
+#endif
+#endif

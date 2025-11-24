@@ -54,7 +54,7 @@ static void app_idle_enter_softoff(void)
 #if TCFG_CHARGE_ENABLE
     if (get_lvcmp_det() && (0 == get_charge_full_flag())) {
         log_info("charge inset, system reset!\n");
-        cpu_reset();
+        app_charge_system_reset();
     }
 #endif
 
@@ -152,7 +152,7 @@ int idle_app_msg_handler(int *msg)
 
 struct app_mode *app_enter_idle_mode(int arg)
 {
-    int msg[16];
+    int msg[16] = {0};
     struct app_mode *next_mode;
 
     idle_mode_enter(arg);

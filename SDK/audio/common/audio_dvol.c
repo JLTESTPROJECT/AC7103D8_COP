@@ -380,7 +380,7 @@ void audio_digital_vol_set(dvol_handle *dvol, u16 vol)
 
 #if AUDIO_DVOL_OFFSET_ENABLE
     /*音量改变时，更新音量dB偏移的音量大小*/
-    if (dvol->offset) {
+    if (dvol->offset_dB) {
         audio_digital_vol_offset_dB_set(dvol, dvol->offset_dB);
     }
 #endif
@@ -415,7 +415,7 @@ void audio_digital_vol_set_no_fade(dvol_handle *dvol, u8 vol)
 
 #if AUDIO_DVOL_OFFSET_ENABLE
     /*音量改变时，更新音量dB偏移的音量大小*/
-    if (dvol->offset) {
+    if (dvol->offset_dB) {
         audio_digital_vol_offset_dB_set(dvol, dvol->offset_dB);
     }
 #endif

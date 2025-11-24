@@ -239,6 +239,7 @@ static int bt_background_btstack_event_filter(struct bt_event *event)
     // 需要切换蓝牙的命令
     case BT_STATUS_FIRST_DISCONNECT:
     case BT_STATUS_SECOND_DISCONNECT:
+    case BT_STATUS_THIRD_DISCONNECT:
         //关机导致的断开不可以回去蓝牙，否则后台关机会有问题
         if (app_var.goto_poweroff_flag) {
             break;
@@ -276,6 +277,7 @@ static int bt_background_btstack_event_filter(struct bt_event *event)
 
     case BT_STATUS_SECOND_CONNECTED:
     case BT_STATUS_FIRST_CONNECTED:
+    case BT_STATUS_THIRD_CONNECTED:
 #if TCFG_BT_BACKGROUND_GOBACK
 #if !USER_SUPPORT_DUAL_A2DP_SOURCE
         if (!check_page_mode_active()) {        //如果是回连过程中不返回

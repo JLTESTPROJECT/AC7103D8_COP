@@ -106,6 +106,12 @@ const char log_tag_const_i_ANC_ADAPTIVE  = CONFIG_DEBUG_LIB(0);
 const char log_tag_const_d_ANC_ADAPTIVE  = CONFIG_DEBUG_LIB(0);
 const char log_tag_const_e_ANC_ADAPTIVE  = CONFIG_DEBUG_LIB(1);
 
+const char log_tag_const_v_THR_DET  = CONFIG_DEBUG_LIB(0);
+const char log_tag_const_c_THR_DET  = CONFIG_DEBUG_LIB(0);
+const char log_tag_const_i_THR_DET  = CONFIG_DEBUG_LIB(0);
+const char log_tag_const_d_THR_DET  = CONFIG_DEBUG_LIB(0);
+const char log_tag_const_e_THR_DET  = CONFIG_DEBUG_LIB(1);
+
 const char log_tag_const_v_JLSTREAM = CONFIG_DEBUG_LIB(0);
 const char log_tag_const_c_JLSTREAM = CONFIG_DEBUG_LIB(0);
 const char log_tag_const_i_JLSTREAM = CONFIG_DEBUG_LIB(1);

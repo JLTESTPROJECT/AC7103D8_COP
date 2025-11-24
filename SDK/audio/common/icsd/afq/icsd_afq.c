@@ -13,14 +13,12 @@
 
 #if (TCFG_AUDIO_FREQUENCY_GET_ENABLE && \
 	 TCFG_AUDIO_ANC_EXT_VERSION == ANC_EXT_V2)
+#include "audio_anc_includes.h"
 #include "tone_player.h"
 #include "adv_adaptive_noise_reduction.h"
-#include "audio_anc.h"
-#include "asm/audio_src.h"
+#include "audio_src.h"
 #include "clock_manager/clock_manager.h"
 #include "icsd_afq.h"
-#include "icsd_afq_app.h"
-
 
 #if 0
 #define afq_log printf
@@ -112,18 +110,41 @@ int dsf8_wptr = 0;
 void icsd_afq_dsf8_data_2ch(s16 *dsf_out_h, s16 *dsf_out_l)
 {
     printf("afq dsf8 save:%d\n", dsf8_wptr);
+    if ((dsf8_wptr + (AFQ_DMA_DOUBLE_LEN / 8)) > ((AFQ_DMA_DOUBLE_LEN / 8) * AFQ_DMA_DOUBLE_CNT)) {
+        return;
+    }
     s16 *wptr_h = &DSF8_DEBUG_H[dsf8_wptr];
     s16 *wptr_l = &DSF8_DEBUG_L[dsf8_wptr];
     memcpy(wptr_h, dsf_out_h, (AFQ_DMA_DOUBLE_LEN / 8) * 2);
     memcpy(wptr_l, dsf_out_l, (AFQ_DMA_DOUBLE_LEN / 8) * 2);
     dsf8_wptr += AFQ_DMA_DOUBLE_LEN / 8;
+#if 0
+    wdt_close();
     if (dsf8_wptr >= ((AFQ_DMA_DOUBLE_LEN / 8) * AFQ_DMA_DOUBLE_CNT)) {
         AFQ_FUNC->local_irq_disable();
         for (int i = 0; i < (AFQ_DMA_DOUBLE_LEN / 8) * AFQ_DMA_DOUBLE_CNT; i++) {
             printf("DSF8:H/L:%d                            %d\n", DSF8_DEBUG_H[i], DSF8_DEBUG_L[i]);
         }
     }
+#endif
 }
+
+void icsd_afq_dsf8_printf(u8 mode)
+{
+    mem_stats();
+    if (mode == 1) {
+        wdt_close();
+        AFQ_FUNC->local_irq_disable();
+        for (int i = 0; i < (AFQ_DMA_DOUBLE_LEN / 8) * AFQ_DMA_DOUBLE_CNT; i++) {
+            printf("DSF8:H/L:%d                            %d\n", DSF8_DEBUG_H[i], DSF8_DEBUG_L[i]);
+        }
+        AFQ_FUNC->local_irq_enable();
+    } else {
+        dsf8_wptr = 0;
+    }
+
+}
+
 void icsd_afq_dsf8_data_4ch(s16 *dsf_out_h, s16 *dsf_out_l, s16 *dsf_out_h_r, s16 *dsf_out_l_r)
 {
     printf("afq dsf8 save\n");

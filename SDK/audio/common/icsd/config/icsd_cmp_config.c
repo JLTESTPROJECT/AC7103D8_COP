@@ -145,8 +145,8 @@ void icsd_cmp_cfg_set(__adpt_cmp_cfg *cmp_cfg, void *_ext_cfg, u8 ch, u8 order)
         }
     }
 
-    cmp_cfg->vrange_m[flex_idx * 6 + 0] = -cmp_gains->lower_limit_gain;
-    cmp_cfg->vrange_m[flex_idx * 6 + 1] = -cmp_gains->upper_limit_gain;
+    cmp_cfg->vrange_m[flex_idx * 6 + 0] = -cmp_gains->upper_limit_gain;
+    cmp_cfg->vrange_m[flex_idx * 6 + 1] = -cmp_gains->lower_limit_gain;
 
 
     cmp_cfg->iir_num_flex = flex_idx;

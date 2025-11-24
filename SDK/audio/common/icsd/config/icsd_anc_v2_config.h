@@ -14,10 +14,6 @@ extern const float fs_bypass;
 extern double bbbaa_bypass[1 * 5];
 
 //
-extern const float tg_cmp[];
-extern const float errweight[];
-extern const float ref_spl_thr[];
-extern const float err_spl_thr[];
 extern const u8 mem_list[];
 
 
@@ -49,6 +45,8 @@ extern const float left_sz_table[];
 extern const float right_pz_table[];
 extern const float right_sz_table[];
 
+extern const s16 cmp_fgq_table[];
+extern const s16 eq_fgq_table[];
 
 struct icsd_rtanc_tool_data {
     int h_len;//60
@@ -114,18 +112,23 @@ struct icsd_anc_v2_tool_data {
 // anc tool buffer
 typedef struct {
     // target配置
-    int   cmp_en;
-    int   target_cmp_num;
-    u8    pnc_times;
-
+    u8   pnc_times;
+    u8	 high_fgq_fix;
+    u8   de_alg_sel;
+    u8   test_mode;
+    u8   biquad_type[10];
+    u8   fb_biquad_type[10];
+    u8   mem_curve_nums;
+    u8   cmp_biquad_type[10];
+    int  cmp_en;
+    int  target_cmp_num;
+    int  IIR_NUM_FLEX;
+    int  IIR_NUM_FIX;
     float  pz_gain;
     float *target_sv;
     float *target_cmp_dat;
 
     // 算法配置
-    u8    biquad_type[10];
-    u8    fb_biquad_type[10];
-    u8    cmp_biquad_type[10];
     float Vrange_H[62];
     float Vrange_M[62];
     float Vrange_L[62];
@@ -146,11 +149,8 @@ typedef struct {
     float total_gain_adj_begin;
     float total_gain_adj_end;
     float gain_limit_all;
-    int   IIR_NUM_FLEX;
-    int   IIR_NUM_FIX;
 
     // 耳道记忆曲线配置
-    u8    mem_curve_nums;
     float *pz_table;
     float *sz_table;
     float *pz_coef_table;
@@ -159,8 +159,17 @@ typedef struct {
     float *sz_table_cmp;
     float *ff_filter;
 
-    u8 high_fgq_fix;
-    u8 de_alg_sel;
+    // 产测相关
+    float *vrange_gold;
+    float *biquad_gold;
+    float *weight_gold;
+    float *mse_gold;
+    float *degree_set_gold;
+    float *sz_angle_rangel;
+    float *sz_angle_rangeh;
+    float *gfq_default;
+
+
 } adpt_anc_cfg;
 
 
@@ -196,6 +205,7 @@ typedef struct {
 
     adpt_anc_cfg adpt_cfg;
     adpt_anc_cfg adpt_cfg_r;
+
 } __icsd_anc_config_data;
 extern __icsd_anc_config_data	*SD_CFG;       // ANC
 extern __icsd_anc_config_data	*RTANC_SD_CFG;
@@ -221,5 +231,9 @@ enum {
 void anc_buffer_init(float *freq, float fs, float flen, __icsd_pnc_cmp *_pnc_cmp, struct icsd_ff_candidate_v2 *FF_CANDI_V2, struct icsd_De_param_v2 *DE_PARAM_V2, struct icsd_target_param *tar_param, adpt_anc_cfg *adpt_cfg);
 
 void icsd_anc_v2_sz_pz_cmp_calculate(struct sz_pz_cmp_cal_param *p);
+
+int icsd_anc_sz_select_from_memory(float *out_iir, float *sz, float *msc, int sz_points);
+
+void fgq_getfrom_table(s16 *fgq_table, u8 idx, float *fgq);
 
 #endif/*_SD_ANC_LIB_V2_H*/

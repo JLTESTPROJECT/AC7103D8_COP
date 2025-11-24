@@ -17,10 +17,12 @@ static int swift_pair_bt_status_event_handler(int *msg)
         break;
     case BT_STATUS_SECOND_CONNECTED:
     case BT_STATUS_FIRST_CONNECTED:
+    case BT_STATUS_THIRD_CONNECTED:
         swift_pair_exit_pair_mode();
         break;
     case BT_STATUS_FIRST_DISCONNECT:
     case BT_STATUS_SECOND_DISCONNECT:
+    case BT_STATUS_THIRD_DISCONNECT:
         swift_pair_enter_pair_mode();
         break;
     case BT_STATUS_PHONE_INCOME:

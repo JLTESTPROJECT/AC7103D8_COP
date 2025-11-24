@@ -43,6 +43,7 @@ static int tone_btstack_event_handler(int *_event)
     switch (event->event) {
     case BT_STATUS_FIRST_CONNECTED:
     case BT_STATUS_SECOND_CONNECTED:
+    case BT_STATUS_THIRD_CONNECTED:
 #if TCFG_TEST_BOX_ENABLE
         if (testbox_get_status()) {
             break;
@@ -77,6 +78,7 @@ static int tone_btstack_event_handler(int *_event)
         break;
     case BT_STATUS_FIRST_DISCONNECT:
     case BT_STATUS_SECOND_DISCONNECT:
+    case BT_STATUS_THIRD_DISCONNECT:
         /*
          * 关机不播断开提示音
          */

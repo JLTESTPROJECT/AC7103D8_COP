@@ -92,7 +92,7 @@ static int poweron_mode_exit()
 
 struct app_mode *app_enter_poweron_mode(int arg)
 {
-    int msg[16];
+    int msg[16] = {0};
     struct app_mode *next_mode;
 
     poweron_mode_init();

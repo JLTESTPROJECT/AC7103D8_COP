@@ -9,7 +9,7 @@
 #include "icsd_common.h"
 #include "icsd_common_v2.h"
 
-#if 0
+#if AVC_PRINTF_EN
 #define _avc_printf printf
 #else
 #define _avc_printf icsd_printf_off
@@ -29,7 +29,11 @@ struct icsd_avc_infmt {
 
 typedef struct {
     float alpha_db;
+    float alpha_db_l;
     float db_cali;
+    float sc_cali;
+    float dac_cali;
+    int   flen;
 } __avc_config;
 
 struct avc_function {
@@ -56,5 +60,12 @@ void icsd_alg_avc_run(__icsd_avc_run_parm *run_parm, __icsd_avc_output *output);
 void icsd_avc_ram_clean();
 void icsd_avc_run(__icsd_avc_run_parm *_run_parm, __icsd_avc_output *_output);
 void avc_config_update(__avc_config *_avc_config);
+float icsd_adt_get_avc_spldb_iir();
+void icsd_alg_avc_debug_free();
 
+extern const float tidy_scale;
+extern const float tidy_offset;
+
+
+extern char lib_avc_version[];
 #endif

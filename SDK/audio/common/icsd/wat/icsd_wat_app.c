@@ -2,19 +2,12 @@
 #if ((defined TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN) && TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN && \
 	 TCFG_AUDIO_ANC_ENABLE && TCFG_AUDIO_WIDE_AREA_TAP_ENABLE)
 #include "system/includes.h"
-#include "icsd_adt_app.h"
-#include "audio_anc.h"
-#include "asm/anc.h"
+#include "audio_anc_includes.h"
 #include "tone_player.h"
 #include "audio_config.h"
-#include "icsd_anc_user.h"
 #include "sniff.h"
 #include "btstack/avctp_user.h"
 #include "bt_tws.h"
-
-#if TCFG_AUDIO_ANC_REAL_TIME_ADAPTIVE_ENABLE
-#include "rt_anc_app.h"
-#endif
 
 /*打开广域点击*/
 int audio_wat_click_open()

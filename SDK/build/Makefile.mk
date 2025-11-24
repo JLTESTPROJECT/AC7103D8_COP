@@ -236,6 +236,10 @@ LFLAGS := \
 	cpu/br56/liba/lib_icsd_wat.a \
 	cpu/br56/liba/lib_icsd_vdt.a \
 	cpu/br56/liba/lib_icsd_ein.a \
+	cpu/br56/liba/lib_icsd_envnl.a \
+	cpu/br56/liba/lib_icsd_avc.a \
+	cpu/br56/liba/lib_icsd_howl.a \
+	cpu/br56/liba/lib_icsd_adjdcc.a \
 	cpu/br56/liba/lib_noisegate_pro.a \
 	cpu/br56/liba/le_audio_profile.a \
 	cpu/br56/liba/lib_limiter.a \

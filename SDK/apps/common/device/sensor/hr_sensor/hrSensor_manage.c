@@ -129,9 +129,8 @@ int hr_sensor_init(void *_data)
     int retval = 0;
     platform_data = (const struct hrsensor_platform_data *)_data;
 
-
+    hrSensor_info->iic_hdl = platform_data->iic;
     if (sensor_iic_init_status == 0) {
-        hrSensor_info->iic_hdl = platform_data->iic;
         retval = iic_init(hrSensor_info->iic_hdl, get_iic_config(hrSensor_info->iic_hdl));
         if (retval < 0) {
             g_printf("\n  open iic for hrSensor err\n");
@@ -139,11 +138,9 @@ int hr_sensor_init(void *_data)
         } else {
             g_printf("\n iic open succ\n");
         }
-
-        spin_lock_init(&sensor_iic);
         sensor_iic_init_status = 1;
     }
-
+    spin_lock_init(&sensor_iic);
     retval = -EINVAL;
     list_for_each_hrsensor(hrSensor_hdl) {
         printf("%s==%s", hrSensor_hdl->logo, platform_data->hrSensor_name);
@@ -168,6 +165,11 @@ int hr_sensor_init(void *_data)
     return 0;
 }
 
+u8 hr_sensor_measure_wear_start(u8 manual, u8 sport)
+{
+    hrsensor_seting_info seting = {manual, sport};
+    return hr_sensor_io_ctl(HR_SENSOR_LP_DETECTION, &seting);
+}
 
 u8 hr_sensor_measure_hr_start(u8 manual, u8 sport)
 {
@@ -192,5 +194,52 @@ u8 hr_sensor_measure_spo2_stop(void)
     return hr_sensor_io_ctl(SPO2_SENSOR_DISABLE, NULL);
 }
 
+// 获取心率传感器数据接口实现
+hrsensor_data_t hr_sensor_get_data(void)
+{
+    hrsensor_data_t data = {0};
 
+#if TCFG_HRSENSOR_ENABLE
+    // 对于HX3918传感器
+#if TCFG_HX3918_ENABLE
+    data.heart_rate = hrsresult.lastesthrs;
+    data.spo2 = hrsresult.lastestspo2;
+    data.wear_status = hrsresult.wearstatus;
+    data.data_valid = (hrsresult.lastesthrs > 0 || hrsresult.lastestspo2 > 0) ? 1 : 0;
+
+#elif TCFG_HX3011_ENABLE
+    // 对于HX3011传感器
+    data.heart_rate = hrsresult.lastesthrs;
+    data.spo2 = hrsresult.lastestspo2;
+    data.wear_status = hrsresult.wearstatus;
+    data.data_valid = (hrsresult.lastesthrs > 0 || hrsresult.lastestspo2 > 0) ? 1 : 0;
+#endif
+#endif
+
+    // printf("func:%s, lastesthrs:%d, lastestspo2:%d, wearstatus:%d\n", __FUNCTION__, hrsresult.lastesthrs, hrsresult.lastestspo2, hrsresult.wearstatus);
+    // printf("func:%s, heart_rate:%d, spo2:%d, wear_status:%d, data_valid:%d\n", __FUNCTION__, data.heart_rate, data.spo2, data.wear_status, data.data_valid);
+
+    return data;
+}
+
+u16 hr_sensor_get_heart_rate(void)
+{
+    hrsensor_data_t data = hr_sensor_get_data();
+    // printf("%s, wear_status:%d, heart_rate:%d\n", __FUNCTION__, data.wear_status, data.heart_rate);
+    return data.heart_rate;
+}
+
+u8 hr_sensor_get_spo2(void)
+{
+    hrsensor_data_t data = hr_sensor_get_data();
+    // printf("%s, wear_status:%d, spo2:%d\n", __FUNCTION__, data.wear_status, data.spo2);
+    return data.spo2;
+}
+
+u8 hr_sensor_get_wear_status(void)
+{
+    hrsensor_data_t data = hr_sensor_get_data();
+    // printf("%s, wear_status:%d\n", __FUNCTION__, data.wear_status);
+    return data.wear_status;
+}
 #endif

@@ -23,12 +23,12 @@
 #include "app_action.h"
 #include "app_main.h"
 #include "app_ancbox.h"
-#include "audio_anc_common.h"
 #include "app_power_manage.h"
 #include "app_chargestore.h"
 #include "anc_btspp.h"
 #include "audio_config.h"
 #include "btstack/avctp_user.h"
+#include "audio_anc_includes.h"
 
 #if AUDIO_ENC_MPT_SELF_ENABLE
 #include "audio_enc_mpt_self.h"
@@ -44,18 +44,6 @@
 
 #if TCFG_SPEAKER_EQ_NODE_ENABLE
 #include "effects/audio_spk_eq.h"
-#endif
-
-#if TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN
-#include "icsd_adt_app.h"
-#endif
-
-#if ANC_MULT_ORDER_ENABLE
-#include "audio_anc_mult_scene.h"
-#endif/*ANC_MULT_ORDER_ENABLE*/
-
-#if TCFG_AUDIO_ANC_EXT_TOOL_ENABLE
-#include "anc_ext_tool.h"
 #endif
 
 #define LOG_TAG_CONST       APP_ANCBOX
@@ -848,12 +836,6 @@ int app_ancbox_event_handler(int *msg)
     case CMD_ANC_STATUS:
     case CMD_ANC_TOOLS_SYNC:
         putchar('S');
-#if TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN
-        /*关闭所有模块*/
-        if (audio_icsd_adt_is_running()) {
-            audio_icsd_adt_close_all();
-        }
-#endif
 #if TCFG_CHARGESTORE_PORT == LDOIN_BIND_IO
         if (!app_in_mode(APP_MODE_IDLE)) {
             os_time_dly(1);

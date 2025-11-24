@@ -13,8 +13,6 @@ struct anc_howling_detect_cfg {
     void (*fade_gain_set)(u16 gain);
 };
 
-//啸叫检测打印控制变量
-extern const u8 CONST_ANC_HOWLING_MSG_DEBUG;
 //啸叫检测初始化
 void anc_howling_detect_init(struct anc_howling_detect_cfg *cfg);
 //啸叫检测使能控制, 支持在线开关

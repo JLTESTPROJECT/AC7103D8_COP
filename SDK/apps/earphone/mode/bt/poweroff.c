@@ -26,6 +26,7 @@
 #if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN)))
 #include "app_le_connected.h"
 #endif
+#include "health_long_detect.h"
 
 
 #if (TCFG_USER_TWS_ENABLE == 0)
@@ -125,6 +126,7 @@ static int poweroff_btstack_event_handler(int *_event)
     switch (bt->event) {
     case BT_STATUS_SECOND_CONNECTED:
     case BT_STATUS_FIRST_CONNECTED:
+    case BT_STATUS_THIRD_CONNECTED:
         sys_auto_shut_down_disable();
         break;
     }
@@ -155,11 +157,15 @@ static void wait_exit_btstack_flag(void *_reason)
             log_info("cpu_reset!!!\n");
             cpu_reset();
             break;
-        case POWEROFF_POWER_KEEP:
 #if TCFG_CHARGE_ENABLE
-            app_charge_power_off_keep_mode();
-#endif
+        case POWEROFF_POWER_RESET:
+            log_info("system_reset!!!\n");
+            app_charge_system_reset();
             break;
+        case POWEROFF_POWER_KEEP:
+            app_charge_power_off_keep_mode();
+            break;
+#endif
         }
     } else {
         if (++app_var.goto_poweroff_cnt > 200) {
@@ -174,7 +180,11 @@ static void wait_exit_btstack_flag(void *_reason)
 void sys_enter_soft_poweroff(enum poweroff_reason reason)
 {
     log_info("sys_enter_soft_poweroff: %d\n", reason);
-
+#if TCFG_HRSENSOR_ENABLE && JL_RCSP_EAR_SENSORS_DATA_OPT
+#if HEALTH_ALL_DAY_CHECK_ENABLE
+    save_on_shutdown();
+#endif
+#endif
 #if ((TCFG_OTG_MODE & OTG_SLAVE_MODE) && (TCFG_OTG_MODE & OTG_CHARGE_MODE))
     u32 otg_status = usb_otg_online(0);
     if (otg_status == SLAVE_MODE) {

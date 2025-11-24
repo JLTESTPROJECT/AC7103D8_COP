@@ -16,6 +16,7 @@
 #include "mic_effect.h"
 #include "audio_config_def.h"
 #include "audio_dac.h"
+#include "audio_anc_includes.h"
 
 static void mic_effect_ram_code_load();
 static void mic_effect_ram_code_unload();
@@ -79,6 +80,10 @@ int mic_effect_player_create(enum MIC_EFX_MODE mode)
         goto __exit0;
     }
 
+#if TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN
+    audio_icsd_adt_scene_set(ADT_SCENE_MIC_EFFECT, 1);
+    audio_icsd_adt_reset(ADT_SCENE_MIC_EFFECT);
+#endif
 
     if (mode == MIC_EFX_DHA) {
         //设置中断点数
@@ -119,6 +124,11 @@ int mic_effect_player_create(enum MIC_EFX_MODE mode)
     g_mic_effect_player = player;
     return 0;
 
+#if TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN
+    audio_icsd_adt_scene_set(ADT_SCENE_MIC_EFFECT, 0);
+    audio_icsd_adt_reset(ADT_SCENE_MIC_EFFECT);
+#endif
+
 __exit1:
     jlstream_release(player->stream);
 __exit0:
@@ -139,6 +149,11 @@ void mic_effect_player_delete()
     mic_effect_ram_code_unload();
     free(player);
     g_mic_effect_player = NULL;
+
+#if TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN
+    audio_icsd_adt_scene_set(ADT_SCENE_MIC_EFFECT, 0);
+    audio_icsd_adt_reset(ADT_SCENE_MIC_EFFECT);
+#endif
 
     jlstream_event_notify(STREAM_EVENT_CLOSE_PLAYER, (int)"mic_effect");
 }

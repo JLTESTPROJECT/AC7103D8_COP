@@ -26,11 +26,11 @@
 
 ================================================================*/
 
-//#include "asm/anc.h"
+//#include "anc.h"
 #include "audio_dac.h"
 #include "app_config.h"
 #include "icsd_anc_v2.h"
-#include "asm/anc.h"
+#include "anc.h"
 #include "icsd_anc_v2_interactive.h"
 #include "anc_ext_tool.h"
 #include "icsd_common_v2_app.h"

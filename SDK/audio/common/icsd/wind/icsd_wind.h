@@ -24,7 +24,10 @@
 #include "icsd_common.h"
 #include "icsd_common_v2.h"
 
-#if 0
+extern const u8 wdt_log_en;
+#define sd_wdt_log(format, ...)  if(wdt_log_en){{if(config_ulog_enable){printf(format, ##__VA_ARGS__);}if(config_dlog_enable){dlog_printf((-1 & ~BIT(31)), format, ##__VA_ARGS__);}}}
+
+#if WDT_PRINTF_EN
 #define _win_printf printf                  //打开智能免摘库打印信息
 #else
 #define _win_printf icsd_printf_off
@@ -32,12 +35,6 @@
 extern int (*win_printf)(const char *format, ...);
 
 
-
-
-
-//以下SDK的宏定义放到sdk外面
-#define SDK_WIND_PHONE_TYPE  ICSD_WIND_TWS
-#define SDK_WIND_MIC_TYPE    ICSD_WIND_LFF_TALK//ICSD_WIND_LFF_RFF
 
 extern const u8 ICSD_WIND_PHONE_TYPE;
 extern const u8 ICSD_WIND_MIC_TYPE;
@@ -49,7 +46,8 @@ struct icsd_win_libfmt {
 struct icsd_win_infmt {
     void *alloc_ptr;     //外部申请的ram地址
     int lib_alloc_size;  //算法ram需求大小
-    u8 TOOL_FUNCTION;
+    int TOOL_FUNCTION;
+    u16 debug_ram_size;
 };
 
 typedef struct {
@@ -74,6 +72,12 @@ typedef struct {
     s16 *data_3_ptr;
     u8 anc_mode;
     u8 wind_ft;
+    u8 wdt_type;
+    s8 lff_gain;        //dB值
+    s8 lfb_gain;
+    s8 rff_gain;
+    s8 rfb_gain;
+    s8 talk_gain;
     __wind_part1_out *part1_out;
     __wind_part1_out_rx *part1_out_rx;
 } __icsd_win_run_parm;
@@ -85,6 +89,7 @@ typedef struct {
 } __icsd_win_output;
 
 typedef struct {
+    u8 pwr_mode;
     u8 wind_lvl_scale;
     u8 icsd_wind_num_thr1;
     u8 icsd_wind_num_thr2;
@@ -94,9 +99,39 @@ typedef struct {
     float msc_mp_thr;
     float cpt_1p_thr;
     float ref_pwr_thr;
+    float tlk_pwr_thr;
 } __wind_config;
 
+typedef struct {
+    u8 wind_corr_select;
+    u8 wind_fcorr_fpoint;
+    float wind_fcorr_min_thr;
+    int wind_ref2err_cnt;
+    int wind_sat_thr;
+    float wind_lpf_alpha;
+    float wind_hpf_alpha;
+    float wind_iir_alpha;
+    u16 correrr_thr;
+    float wind_max_min_diff_thr;
+    float wind_timepwr_diff_thr0;
+    float wind_timepwr_diff_thr1;
+    float wind_ref2err_diff_thr;
+    float wind_ref2err_diffmin_thr;
+    float wind_margin_dB;
+    float wind_pwr_ref_thr;
+    float wind_pwr_err_thr;
+    u8 wind_lowfreq_point;
+    u8 wind_pwr_cnt_thr;
+    u8 icsd_wind_num_thr2;
+    u8 wind_stable_cnt_thr;
+    u8 wind_lvl_scale;
+    u8 wind_num_thr;
+    u8 wind_out_mode;
+    float wind_ref_cali_table[25];
+} __wind_lfflfb_config;
+
 struct wind_function {
+    void (*wind_lff_lfb_config)(__wind_lfflfb_config *wind_lfflfb_config);
     void (*wind_config_init)(__wind_config *_wind_config);
     void (*HanningWin_pwr_float)(float *input, int *output, int len);
     void (*HanningWin_pwr_s1)(s16 *input, int *output, int len);
@@ -111,6 +146,8 @@ struct wind_function {
     int (*icsd_adt_tws_ssync)(u8 *data, s16 len);
     void (*icsd_wind_run_part2_cmd)();
     void *(*icsd_adt_wind_part1_rx)();
+    void (*anc_debug_free)(void *pv);
+    void *(*anc_debug_malloc)(const char *name, int size);
 };
 extern struct wind_function *WIND_FUNC;
 
@@ -130,6 +167,25 @@ void icsd_wind_master_tx_data_sucess(void *_data);
 void icsd_wind_master_rx_data(void *_data);
 void icsd_wind_slave_tx_data_sucess(void *_data);
 void icsd_wind_slave_rx_data(void *_data);
-
+void *icsd_wind_reuse_ram();
+void icsd_wind_angle_run_data(s16 *talk_mic, s16 *ffl_mic);
+void icsd_wind_angle_run();
+void icsd_wind_angle_clean();
+u8   icsd_adt_get_wind_angle();
 int alg_wind_ssync(__wind_part1_out *_part1_out);
+void icsd_wdt_debug_run();
+u8 icsd_wdt_debug_start(u8 wind_lvl);
+void icsd_alg_wdt_debug_free();
+
+extern const u8 wdt_log_en;
+extern const u8 icsd_wdt_debug;
+extern const u8 wdt_debug_dlen;//ramsize = (80 * wdt_debug_dlen) byte
+extern const u8 wdt_debug_thr;
+extern const u8 wdt_debug_type;
+extern const u8 wdt_lff_tlk_debug;
+extern const float icsd_wdt_sen;
+extern const u8 wdt_lff_lfb_debug;
+extern const u8 wdt_lff_rff_debug;
+
+extern char lib_wdt_version[];
 #endif

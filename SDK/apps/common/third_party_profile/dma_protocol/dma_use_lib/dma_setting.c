@@ -236,12 +236,6 @@ void dma_set_ota_result(u8 flag)
     dma_ota_result = flag;
 }
 
-u32 dma_serial_number_int = 1723846;
-void dma_set_pid(u32 pid)
-{
-    dma_serial_number_int = pid;
-}
-
 static u8 dueros_pair_state = 0;    // 1:BLE/SPP connected   2:APP connected
 bool set_dueros_pair_state(u8 new_state, u8 init_flag)
 {
@@ -278,7 +272,7 @@ DMA_ERROR_CODE dma_app_notify_state(DMA_NOTIFY_STATE state, void *param_buf, uin
 }
 
 const u8 *bt_get_mac_addr();
-char dma_serial_number[] = "12345667";
+char dma_serial_number[20] = "12345667";
 static void serial_number_init()
 {
     memset(dma_serial_number, 0, sizeof(dma_serial_number));

@@ -99,6 +99,7 @@ static int tme_bt_status_event_handler(struct bt_event *bt)
     switch (bt->event) {
     case BT_STATUS_SECOND_CONNECTED:
     case BT_STATUS_FIRST_CONNECTED:
+    case BT_STATUS_THIRD_CONNECTED:
         TME_set_edr_connected(1); //连接过经典蓝牙标志
         break;
     }

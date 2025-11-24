@@ -8,6 +8,7 @@ enum poweroff_reason {
     POWEROFF_RESET,         //系统复位
     POWEROFF_POWER_KEEP,    //充电仓没电情况下的关机
     POWEROFF_NORMAL_TWS,    //TWS同时关机,默认播放关机提示音
+    POWEROFF_POWER_RESET,   //入舱充电复位,需要调用LV0复位
 };
 
 

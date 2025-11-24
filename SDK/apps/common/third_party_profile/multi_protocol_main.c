@@ -12,6 +12,7 @@
 #include "gfps_platform_api.h"
 #include "btstack_rcsp_user.h"
 #include "ble_rcsp_server.h"
+#include "hid_iso.h"
 
 #if (THIRD_PARTY_PROTOCOLS_SEL & XIMALAYA_EN)
 #include "xmly_protocol.h"
@@ -33,7 +34,7 @@
 extern void app_ble_ancs_ams_init();
 #endif
 
-#if ((THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN | GFPS_EN | MMA_EN | FMNA_EN | REALME_EN | SWIFT_PAIR_EN | DMA_EN | ONLINE_DEBUG_EN | CUSTOM_DEMO_EN | XIMALAYA_EN | AURACAST_APP_EN| MULTI_CLIENT_EN)) || \
+#if ((THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN | GFPS_EN | MMA_EN | FMNA_EN | REALME_EN | SWIFT_PAIR_EN | DMA_EN | ONLINE_DEBUG_EN | CUSTOM_DEMO_EN | XIMALAYA_EN | AURACAST_APP_EN| MULTI_CLIENT_EN | JL_SBOX_EN)) || \
 		(TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN | LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN | LE_AUDIO_JL_BIS_RX_EN | LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_BIS_TX_EN)))
 #define ATT_LOCAL_PAYLOAD_SIZE    (517)//(517)              //note: need >= 20
 #define ATT_SEND_CBUF_SIZE        (512*2)                   //note: need >= 20,缓存大小，可修改
@@ -336,6 +337,7 @@ static void multi_protocol_loop_process(void *parm)
     }
 }
 
+extern void *hid_iso_ble_hdl;
 static void multi_protocol_profile_init(void)
 {
     printf("multi_protocol_profile_init 0x%x %d %d\n", THIRD_PARTY_PROTOCOLS_SEL, TCFG_BT_SUPPORT_SPP, TCFG_USER_BLE_ENABLE);
@@ -382,6 +384,13 @@ static void multi_protocol_profile_init(void)
         //setup GATT client
         gatt_client_init();
     }
+#endif
+
+#if (THIRD_PARTY_PROTOCOLS_SEL & HID_ISO_EN)
+    hid_iso_init();
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
+    app_ble_no_profile_flag_set(hid_iso_ble_hdl, 1);
+#endif
 #endif
 
 #if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)

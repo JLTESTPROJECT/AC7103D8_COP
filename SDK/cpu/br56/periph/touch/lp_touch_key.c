@@ -64,26 +64,36 @@ void lp_touch_key_save_identify_algo_param(void)
     if (!__this->pdata) {
         return;
     }
+    if (__this->lpctmu_cfg.ch_wkp_en == 0) {
+        return;
+    }
+
     log_debug("save algo param\n");
 
-    int ret = 0;
-    u32 ch_idx;
-    const struct touch_key_cfg *key_cfg;
-    const struct touch_key_algo_cfg *algo_cfg;
+    u32 tia_size = lp_touch_key_identify_algorithm_get_tia_size();
+    u8 *tia_vm_buf = (u8 *)malloc(tia_size * __this->pdata->key_num);
+    u32 tia_vm_size = 0;
 
-    for (ch_idx = 0; ch_idx < __this->pdata->key_num; ch_idx ++) {
+    const struct touch_key_cfg *key_cfg;
+    for (u32 ch_idx = 0; ch_idx < __this->pdata->key_num; ch_idx ++) {
         key_cfg = &(__this->pdata->key_cfg[ch_idx]);
         if (key_cfg->eartch_en) {
             continue;
         }
-        algo_cfg = &(key_cfg->algo_cfg[key_cfg->index]);
-        u32 tia_size = lp_touch_key_identify_algorithm_get_tia_size();
         void *tia_addr = lp_touch_key_identify_algorithm_get_tia_addr(ch_idx);
-        ret = syscfg_write(VM_LP_TOUCH_KEY0_IDTY_ALGO + ch_idx, tia_addr, tia_size);
-        if (ret != tia_size) {
-            log_debug("write vm algo param error !\n");
+        if (tia_addr) {
+            memcpy(tia_vm_buf + tia_vm_size, tia_addr, tia_size);
+            tia_vm_size += tia_size;
         }
     }
+    if (tia_vm_size) {
+        int ret = syscfg_write(VM_LP_TOUCH_KEY2_IDTY_ALGO, tia_vm_buf, tia_vm_size);
+        if (ret != tia_vm_size) {
+            log_debug("write vm tia_algo param error !\n");
+        }
+    }
+    free(tia_vm_buf);
+    tia_vm_buf = NULL;
 }
 
 
@@ -181,17 +191,21 @@ void lp_touch_key_ctmu_res_deal(u32 pnd_type)
     u32 ch_idx, ch;
 
     for (u32 i = 0; i < data_len; i ++) {
+#if TCFG_LP_EARTCH_KEY_ENABLE
         len = lpctmu_get_res_kfifo_data((u16 *)&ch_res, 1);
         if (len == 0) {
             return;
         }
-#if TCFG_LP_EARTCH_KEY_ENABLE
         ch = (ch_res >> 13) & 0x7;
         ch_res &= 0x1fff;
         ch_idx = lp_touch_key_get_idx_by_cur_ch(ch);
 #else
         ch_idx = lpctmu_get_ch_idx_by_res_kfifo_out();
         ch = lp_touch_key_get_cur_ch_by_idx(ch_idx);
+        len = lpctmu_get_res_kfifo_data((u16 *)&ch_res, 1);
+        if (len == 0) {
+            return;
+        }
 #endif
 
         key_cfg = &(__this->pdata->key_cfg[ch_idx]);
@@ -334,6 +348,25 @@ void lp_touch_key_task(void *p)
     u16 ref_lim_h;
     u32 algo_valid;
 
+    u32 tia_size = lp_touch_key_identify_algorithm_get_tia_size();
+    u8 *tia_vm_buf = (u8 *)malloc(tia_size * __this->pdata->key_num);
+    u32 tia_vm_size = 0;
+    for (u32 ch_idx = 0; ch_idx < __this->pdata->key_num; ch_idx ++) {
+        key_cfg = &(__this->pdata->key_cfg[ch_idx]);
+        if (key_cfg->eartch_en) {
+            continue;
+        }
+        tia_vm_size += tia_size;
+    }
+    u32 read_tia_succ = 0;
+    if (tia_vm_size) {
+        ret = syscfg_read(VM_LP_TOUCH_KEY2_IDTY_ALGO, tia_vm_buf, tia_vm_size);
+        if (ret == tia_vm_size) {
+            read_tia_succ = 1;
+        }
+    }
+    tia_vm_size = 0;
+
     if ((is_wakeup_source(PWR_WK_REASON_P11)) && (is_wakeup_source(PWR_WK_REASON_LPCTMU))) {
         touch_abandon_short_click_once = 1;
     } else {
@@ -395,7 +428,6 @@ void lp_touch_key_task(void *p)
         }
 #endif
 
-        u32 tia_size = lp_touch_key_identify_algorithm_get_tia_size();
         void *tia_addr = malloc(tia_size);
         lp_touch_key_identify_algorithm_set_tia_addr(ch_idx, tia_addr);
 
@@ -406,13 +438,14 @@ void lp_touch_key_task(void *p)
             lp_touch_key_identify_algorithm_init(ch_idx, algo_cfg->algo_cfg0, algo_cfg->algo_cfg2);
         } else {
             log_debug("read vm algo param\n");
-            ret = syscfg_read(VM_LP_TOUCH_KEY0_IDTY_ALGO + ch_idx, tia_addr, tia_size);
-            if (ret != tia_size) {
+            if (read_tia_succ == 0) {
                 log_debug("read vm algo param error\n");
                 __this->identify_algo_invalid |= BIT(ch_idx);
                 lp_touch_key_identify_algorithm_init(ch_idx, algo_cfg->algo_cfg0, algo_cfg->algo_cfg2);
             } else {
                 log_debug("read vm algo param succ\n");
+                memcpy(tia_addr, tia_vm_buf + tia_vm_size, tia_size);
+                tia_vm_size += tia_size;
                 algo_valid = 0;
                 ref_lim_l = -1;
                 ref_lim_h = -1;
@@ -426,6 +459,9 @@ void lp_touch_key_task(void *p)
 
         lp_touch_key_range_algo_init(ch_idx, algo_cfg);
     }
+
+    free(tia_vm_buf);
+    tia_vm_buf = NULL;
 
 #if TCFG_LP_EARTCH_KEY_ENABLE
     lp_touch_key_eartch_init();

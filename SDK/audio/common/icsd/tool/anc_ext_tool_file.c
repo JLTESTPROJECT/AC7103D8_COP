@@ -14,6 +14,7 @@
 #include "anc_ext_tool.h"
 #include "fs/resfile.h"
 #include "system/includes.h"
+#include "anc.h"
 
 #if 0
 #define anc_file_log	printf
@@ -171,7 +172,7 @@ __err:
 // 初始化函数
 struct anc_ext_subfile_head  *anc_ext_subfile_catch_init(u32 file_id)
 {
-    struct anc_ext_subfile_head *head = (struct anc_ext_subfile_head *)malloc(sizeof(struct anc_ext_subfile_head));
+    struct anc_ext_subfile_head *head = (struct anc_ext_subfile_head *)anc_malloc("ANC_EXT", sizeof(struct anc_ext_subfile_head));
     if (!head) {
         anc_file_log("Failed to allocate memory");
         return NULL;
@@ -189,7 +190,7 @@ struct anc_ext_subfile_head  *anc_ext_subfile_catch(struct anc_ext_subfile_head 
     struct anc_ext_id_head *new_id_head;
     u32 new_file_len = head->file_len + sizeof(struct anc_ext_id_head) + len;
     // 重新分配内存
-    struct anc_ext_subfile_head *new_head = (struct anc_ext_subfile_head *)malloc(new_file_len);
+    struct anc_ext_subfile_head *new_head = (struct anc_ext_subfile_head *)anc_malloc("ANC_EXT", new_file_len);
     if (new_head) {
         // 复制文件头
         memcpy(new_head, head, head->file_len);
@@ -197,7 +198,7 @@ struct anc_ext_subfile_head  *anc_ext_subfile_catch(struct anc_ext_subfile_head 
         u32 last_id_head_offset = (head->id_cnt) * sizeof(struct anc_ext_id_head);
         u32 new_id_head_offset = (head->id_cnt + 1) * sizeof(struct anc_ext_id_head);
         memcpy(new_head->data + new_id_head_offset, head->data + last_id_head_offset, head->file_len - sizeof(struct anc_ext_subfile_head) - last_id_head_offset);
-        free(head);
+        anc_free(head);
         head = new_head;
     }
     if (!head) {
@@ -225,5 +226,146 @@ struct anc_ext_subfile_head  *anc_ext_subfile_catch(struct anc_ext_subfile_head 
 
     return head;
 }
+
+//ANC配置文件 使用RES文件区 覆盖ANC_IF预留区的功能
+#if 0
+#define CFG_ANC_CFG_GAINS_FILE		FLASH_RES_PATH"ALIGN_DIR/anc_gains.bin"
+#define CFG_ANC_CFG_COEFF_FILE		FLASH_RES_PATH"ALIGN_DIR/anc_coeff.bin"
+
+#define GROUP_TYPE_ANC_CFG_GAIN		0x9881
+#define GROUP_TYPE_ANC_CFG_COEFF	0x98C1
+
+
+//获取目标文件和长度
+u8 *anc_config_rsfile_get(u8 id, u32 *file_len)
+{
+    void *fp = NULL;
+    int ret = 0;
+    u8 *file;
+    struct anc_ext_rsfile_head *f_head;
+    u16 target_type;
+    if (id == ANC_DB_COEFF) {
+        fp = resfile_open(CFG_ANC_CFG_COEFF_FILE);
+        target_type = GROUP_TYPE_ANC_CFG_COEFF;
+    } else {
+        fp = resfile_open(CFG_ANC_CFG_GAINS_FILE);
+        target_type = GROUP_TYPE_ANC_CFG_GAIN;
+    }
+
+    if (!fp) {
+        printf("[anc_cfg.bin, id = %d], read_faild\n", id);
+        return NULL;
+    }
+    struct resfile_attrs attr;
+    resfile_get_attrs(fp, &attr);
+    anc_file_log("faddr:%x,fsize:%d\n", attr.sclust, attr.fsize);
+    if (attr.sclust % 4 != 0) {
+        /* ASSERT(0, "ERR!!ANC EXT NO ALIGN 4 BYTE\n"); */
+        printf("ERR!!ANC CFG NO ALIGN 4 BYTE\n");
+        ret = 1;
+        goto __exit;
+    }
+    file = (u8 *)attr.sclust;
+    /* put_buf(file, attr.fsize); */
+
+    f_head = (struct anc_ext_rsfile_head *)file;
+
+    u32 check_total_len = f_head->total_len;
+    if ((check_total_len == 0xFFFFFFFF) || \
+        (check_total_len == 0) || \
+        (f_head->group_type != target_type) || \
+        (f_head->group_len == 10)) {
+        anc_file_log("f_head head err,total_len:%u,group_type:%x,group_len:%u\n", check_total_len, f_head->group_type, f_head->group_len);
+        ret = 1;
+        goto __exit;
+    }
+
+    anc_file_log("total_len:0x%x=%u ", f_head->total_len, f_head->total_len);
+    anc_file_log("group_crc:0x%x ", f_head->group_crc);
+    anc_file_log("group_type:0x%x ", f_head->group_type);
+    anc_file_log("group_len:0x%x=%d ", f_head->group_len, f_head->group_len);
+    anc_file_log("tag:%s\n", f_head->header);
+
+    *file_len = attr.fsize - ANC_EXT_HEAD_LEN;
+
+__exit:
+    if (ret) {
+        anc_file_log("anc_ext file get failed\n");
+        return NULL;
+    }
+    anc_file_log("f_head get succ\n");
+    resfile_close(fp);
+    return (file + ANC_EXT_HEAD_LEN);
+}
+
+/*
+    对比 资源文件 与 ANC_IF区域 的ANC配置文件，若差异，以资源文件覆盖ANC区域
+    查询耗时：2.3ms;  查询并覆盖耗时：41.8ms
+*/
+int anc_config_rsfile_read(audio_anc_t *param)
+{
+    u32 rs_gain_len, rs_coeff_len;
+    int ret = 0;
+    u8 *rs_gain = NULL;
+    u8 *rs_coeff = NULL;
+    u16 rs_crc, db_crc;
+    u8 change_flag = 0;
+
+    u32 last_jiff = jiffies_usec();
+    /*对比ANC增益系数*/
+    rs_gain = anc_config_rsfile_get(ANC_DB_GAIN, &rs_gain_len);
+    if (rs_gain) {
+        rs_crc = CRC16(rs_gain, rs_gain_len);
+        anc_gain_t *db_gain = (anc_gain_t *)anc_db_get(ANC_DB_GAIN, &param->gains_size);
+        if (db_gain) {
+            db_crc = CRC16(db_gain, param->gains_size);
+            if (rs_crc != db_crc) {
+                change_flag = 1;
+                // printf("-----------anc db gains------------");
+                // put_buf(db_gain, param->gains_size);
+                // printf("-----------anc rsfile gains------------");
+                // put_buf(rs_gain, rs_gain_len);
+                printf("anc rsfile gains diff, len %d->%d\n", param->gains_size, rs_gain_len);
+            }
+        }
+    } else {
+        printf("anc rsfile gains read empty!\n");
+    }
+
+    /*对比ANC滤波器系数*/
+    rs_coeff = anc_config_rsfile_get(ANC_DB_COEFF, &rs_coeff_len);
+    if (rs_coeff) {
+        rs_crc = CRC16(rs_coeff, rs_coeff_len);
+        anc_coeff_t *db_coeff = (anc_coeff_t *)anc_db_get(ANC_DB_COEFF, &param->coeff_size);
+        if (db_coeff) {
+            db_crc = CRC16(db_coeff, param->coeff_size);
+            if (rs_crc != db_crc) {
+                change_flag = 1;
+                // printf("-----------anc db coeff------------");
+                // put_buf(db_coeff, param->coeff_size);
+                // printf("-----------anc rsfile coeff------------");
+                // put_buf(rs_coeff, rs_coeff_len);
+                printf("anc rsfile coeff diff, len %d->%d\n", param->coeff_size, rs_coeff_len);
+            }
+        }
+    } else {
+        printf("anc rsfile coeff read empty!\n");
+    }
+
+    if (change_flag) {
+        param->write_coeff_size = rs_coeff_len;
+        ret = anc_db_put(param, rs_gain, rs_coeff);
+        if (!ret) {
+            printf("anc rsfile change succ\n");
+        } else {
+            printf("anc rsfile change fail\n");
+        }
+    }
+
+    printf("anc rsfile check time : %d\n", jiffies_usec2offset(last_jiff, jiffies_usec()));
+
+    return ret;
+}
+#endif
 
 #endif

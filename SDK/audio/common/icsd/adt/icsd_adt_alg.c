@@ -6,7 +6,7 @@
 #endif
 
 #include "app_config.h"
-#include "audio_anc.h"
+#include "audio_anc_includes.h"
 #if ((defined TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN) && TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN && \
 	 TCFG_AUDIO_ANC_ENABLE)
 
@@ -22,7 +22,6 @@
 // #define ICSD_RTAEQ_LIB        1
 
 #include "icsd_adt.h"
-#include "icsd_adt_app.h"
 
 #if ICSD_VDT_LIB
 #include "icsd_vdt.h"
@@ -47,6 +46,7 @@
 
 #if ICSD_WIND_LIB
 #include "icsd_wind.h"
+#include "icsd_wind_app.h"
 #endif
 
 #if ICSD_HOWL_LIB
@@ -56,13 +56,15 @@
 #if ICSD_ADJDCC_LIB
 #include "icsd_adjdcc.h"
 #endif
+
+u16 adt_debug_ramsize = 0;
 //===========ADJDCC============================================
-int icsd_adt_adjdcc_get_libfmt()
+int icsd_adt_adjdcc_get_libfmt(u8 type)
 {
     int add_size = 0;
 #if ICSD_ADJDCC_LIB
     struct icsd_adjdcc_libfmt libfmt;
-    icsd_adjdcc_get_libfmt(&libfmt);
+    icsd_adjdcc_get_libfmt(&libfmt, type);
     add_size = libfmt.lib_alloc_size;
 #else
     printf("ADT need to include ADJDCC LIB ! ! !\n");
@@ -71,14 +73,17 @@ int icsd_adt_adjdcc_get_libfmt()
     return add_size;
 }
 
-int icsd_adt_adjdcc_set_infmt(int _ram_addr, u8 TOOL_FUNCTION)
+int icsd_adt_adjdcc_set_infmt(int _ram_addr, int TOOL_FUNCTION, u8 type)
 {
     int set_size = 0;
 #if ICSD_ADJDCC_LIB
-    struct icsd_adjdcc_infmt  fmt;
+    struct icsd_adjdcc_infmt  fmt = {0};
     fmt.alloc_ptr = (void *)_ram_addr;
     fmt.TOOL_FUNCTION = TOOL_FUNCTION;
-    icsd_adjdcc_set_infmt(&fmt);
+    if (type != 2) {
+        fmt.adjdcc_config = adjdcc_config_init();
+    }
+    icsd_adjdcc_set_infmt(&fmt, type);
     set_size = fmt.lib_alloc_size;
 #endif
     return set_size;
@@ -90,7 +95,7 @@ u8 icsd_adt_adjdcc_run(__adt_adjdcc_run_parm *_run_parm, __adt_adjdcc_output *_o
     __icsd_adjdcc_run_parm run_parm;
     __icsd_adjdcc_output output;
     run_parm.refmic = _run_parm->refmic;
-    run_parm.errmic = _run_parm->errmic;
+    //run_parm.errmic = _run_parm->errmic;
     run_parm.len = _run_parm->len;
     icsd_alg_adjdcc_run(&run_parm, &output);
     ADT_FUNC->icsd_ADJDCC_output(output.result);
@@ -122,6 +127,7 @@ int icsd_adt_howl_set_infmt(int _ram_addr)
     fmt.alloc_ptr = (void *)_ram_addr;
     icsd_howl_set_infmt(&fmt);
     set_size = fmt.lib_alloc_size;
+    adt_debug_ramsize += fmt.debug_ram_size;
 #endif
     return set_size;
 }
@@ -134,9 +140,49 @@ void icsd_adt_howl_run(__adt_howl_run_parm *_run_parm, __adt_howl_output *_outpu
     run_parm.ref = _run_parm->ref;
     run_parm.anco = _run_parm->anco;
     icsd_alg_howl_run(&run_parm, &output);
+    _output->howl_output = output.howl_output;
     ADT_FUNC->icsd_HOWL_output(output.howl_output);
 #endif
 }
+
+u8 icsd_adt_howl_mic_sel()
+{
+    u8 ret = 0;
+#if ICSD_HOWL_LIB
+    ret = icsd_howl_mic_sel();
+#endif
+    return ret;
+}
+void icsd_adt_howl_debug_run()
+{
+#if ICSD_HOWL_LIB
+    icsd_howl_debug_run();
+#endif
+}
+void icsd_adt_howl_ft_debug_run()
+{
+#if ICSD_HOWL_LIB
+    icsd_howl_ft_debug_run();
+#endif
+}
+u8 icsd_adt_howl_debug_start(u8 howl_output)
+{
+    u8 ret = 0;
+#if ICSD_HOWL_LIB
+    ret = icsd_howl_debug_start(howl_output);
+#endif
+    return ret;
+}
+
+u8 icsd_adt_howl_ftrigger_debug_start(u8 howl_output)
+{
+    u8 ret = 0;
+#if ICSD_HOWL_LIB
+    ret = icsd_howl_ft_debug_start(howl_output);
+#endif
+    return ret;
+}
+
 //===========AVC============================================
 int icsd_adt_avc_get_libfmt(u8 type)
 {
@@ -204,6 +250,24 @@ void icsd_adt_rtanc_alg_output(void *rt_param_l, void *rt_param_r)
 #endif
 }
 
+void icsd_adt_drc_output(u8 flag, float gain, float fb_gain)
+{
+#if ICSD_RTANC_LIB
+    ADT_FUNC->icsd_DRC_output(flag, gain, fb_gain);
+#endif
+}
+
+u8 icsd_adt_drc_read(float **gain)
+{
+#if ICSD_RTANC_LIB
+    ADT_FUNC->icsd_DRC_read(gain);
+    //printf("tws_gain:local_gain:%d, remote_gain:%d\n", (int)(gain[0]), (int)(gain[1]));
+    return 1;
+#else
+    return 0;
+#endif
+}
+
 int icsd_adt_rtanc_get_libfmt(u8 rtanc_type)
 {
     int add_size = 0;
@@ -221,7 +285,7 @@ int icsd_adt_rtanc_get_libfmt(u8 rtanc_type)
     return add_size;
 }
 
-int icsd_adt_rtanc_set_infmt(int _ram_addr, void *rtanc_tool, u8 rtanc_type, u8 TOOL_FUNCTION)
+int icsd_adt_rtanc_set_infmt(int _ram_addr, void *rtanc_tool, u8 rtanc_type, int TOOL_FUNCTION, u8 part1_times)
 {
     int set_size = 0;
 #if ICSD_RTANC_LIB
@@ -233,6 +297,7 @@ int icsd_adt_rtanc_set_infmt(int _ram_addr, void *rtanc_tool, u8 rtanc_type, u8 
     rtanc_fmt.rtanc_tool = rtanc_tool;
     rtanc_fmt.rtanc_type = rtanc_type;
     rtanc_fmt.TOOL_FUNCTION = TOOL_FUNCTION;
+    rtanc_fmt.part1_times = part1_times;
     icsd_rtanc_set_infmt(&rtanc_fmt);
     set_size = rtanc_fmt.lib_alloc_size;
     extern void icsd_adt_rtanc_set_ch_num(u8 ch_num);
@@ -247,7 +312,9 @@ void icsd_adt_alg_rtanc_run_part1(__adt_anc_part1_parm *_part1_parm)
 {
 #if ICSD_RTANC_LIB
     __icsd_rtanc_part1_parm part1_parm;
+    part1_parm.part1_ch   = _part1_parm->part1_ch;
     part1_parm.dma_ch   = _part1_parm->dma_ch;
+    part1_parm.part1_cnt = _part1_parm->part1_cnt;
     part1_parm.inptr_h  = _part1_parm->inptr_h;
     part1_parm.inptr_l  = _part1_parm->inptr_l;
     part1_parm.out0_sum = _part1_parm->out0_sum;
@@ -255,6 +322,8 @@ void icsd_adt_alg_rtanc_run_part1(__adt_anc_part1_parm *_part1_parm)
     part1_parm.out2_sum = _part1_parm->out2_sum;
     part1_parm.fft_ram  = _part1_parm->fft_ram;
     part1_parm.hpest_temp = _part1_parm->hpest_temp;
+    part1_parm.dac_flag_iszero = _part1_parm->dac_flag_iszero;
+    part1_parm.p1dac_max_vld = _part1_parm->p1dac_max_vld;
     icsd_alg_rtanc_run_part1(&part1_parm);
 #endif
 }
@@ -271,20 +340,55 @@ u8 icsd_adt_alg_rtanc_run_part2(__adt_rtanc_part2_parm *_part2_parm)
     part2_parm.sz_out1_sum = _part2_parm->sz_out1_sum;
     part2_parm.sz_out2_sum = _part2_parm->sz_out2_sum;
     part2_parm.szpz_out = _part2_parm->szpz_out;
-
-    return icsd_alg_rtanc_run_part2(&part2_parm);
+    part2_parm.dac_flag_iszero  = _part2_parm->dac_flag_iszero;
+    part2_parm.LR_FLAG = _part2_parm->LR_FLAG;
+    u8 de_task = icsd_alg_rtanc_run_part2_merge(&part2_parm);
+#if ICSD_ADT_RTANC_OFFLINE_PRINTF
+    icsd_alg_rtanc_offline_printf(&part2_parm);
+#endif
+    return de_task;
 #else
     return 0;
 #endif
 }
 
-void icsd_adt_alg_rtanc_part2_parm_init()
+void icsd_adt_alg_rtanc_part2_parm_init(__adt_rtanc_part2_parm *_part2_parm)
 {
 #if ICSD_RTANC_LIB
-    icsd_alg_rtanc_part2_parm_init();
+    __icsd_rtanc_part2_parm part2_parm;
+    part2_parm.LR_FLAG = _part2_parm->LR_FLAG;
+    icsd_alg_rtanc_part2_parm_init(&part2_parm);
 #endif
 }
-
+//BIT0: CHL
+//BIT1: CHR
+u8 icsd_adt_get_rtanc_part1_ch()
+{
+    u8 part1_ch = 0;
+#if ICSD_RTANC_LIB
+    part1_ch = icsd_alg_rtanc_get_part1_ch();
+    printf("part1_ch= %d \n", part1_ch);
+#endif
+    return part1_ch;
+}
+void icsd_adt_set_rtanc_part1_ch()
+{
+#if ICSD_RTANC_LIB
+    icsd_alg_rtanc_set_part1_ch();
+#endif
+}
+void icsd_adt_rtanc_set_update_flag(u8 flag)
+{
+#if ICSD_RTANC_LIB
+    icsd_alg_rtanc_set_update_flag(flag);
+#endif
+}
+void icsd_adt_rtanc_set_part1_all0()
+{
+#if ICSD_RTANC_LIB
+    icsd_alg_rtanc_set_part1_ch_all0();
+#endif
+}
 void icsd_adt_alg_rtanc_part1_reset()
 {
 #if ICSD_RTANC_LIB
@@ -296,6 +400,22 @@ u8 icsd_adt_alg_rtanc_get_wind_lvl()
 {
 #if ICSD_WIND_LIB
     return icsd_adt_get_wind_lvl();
+#else
+    return 0;
+#endif
+}
+float icsd_adt_alg_rtanc_get_avc_spldb_iir()
+{
+#if ICSD_AVC_LIB
+    return icsd_adt_get_avc_spldb_iir();
+#else
+    return 100;
+#endif
+}
+u8 icsd_adt_alg_rtanc_get_wind_angle()
+{
+#if ICSD_WIND_LIB
+    return icsd_adt_get_wind_angle();
 #else
     return 0;
 #endif
@@ -313,10 +433,15 @@ u8 icsd_adt_alg_rtanc_get_adjdcc_result()
 void icsd_adt_alg_rtanc_de_run_l()
 {
 #if ICSD_RTANC_LIB
-    rtanc_cal_and_update_filter_l_task();
+    rtanc_cal_and_update_filter_task(0);
 #endif
 }
-
+void icsd_adt_alg_rtanc_de_run_r()
+{
+#if ICSD_RTANC_LIB
+    rtanc_cal_and_update_filter_task(1);
+#endif
+}
 void icsd_adt_rtanc_fadegain_update_run(void *_param)
 {
 #if ICSD_RTANC_LIB
@@ -489,7 +614,7 @@ int icsd_adt_wind_get_libfmt()
     return add_size;
 }
 
-int icsd_adt_wind_set_infmt(int _ram_addr, u8 TOOL_FUNCTION)
+int icsd_adt_wind_set_infmt(int _ram_addr, int TOOL_FUNCTION)
 {
     int set_size = 0;
 #if ICSD_WIND_LIB
@@ -499,6 +624,7 @@ int icsd_adt_wind_set_infmt(int _ram_addr, u8 TOOL_FUNCTION)
     printf("WIND TOOL FUNCTION:%d\n", TOOL_FUNCTION);
     icsd_wind_set_infmt(&fmt);
     set_size = fmt.lib_alloc_size;
+    adt_debug_ramsize += fmt.debug_ram_size;
 #endif
     return set_size;
 }
@@ -510,6 +636,12 @@ void icsd_adt_alg_wind_run(__adt_win_run_parm *_run_parm, __adt_win_output *_out
     __icsd_win_output output;
     run_parm.data_1_ptr = _run_parm->data_1_ptr;
     run_parm.data_2_ptr = _run_parm->data_2_ptr;
+    run_parm.wdt_type = _run_parm->wdt_type;
+    run_parm.anc_mode = _run_parm->anc_mode;
+    run_parm.lff_gain = _run_parm->lff_gain;
+    run_parm.lfb_gain = _run_parm->lfb_gain;
+    run_parm.rff_gain = _run_parm->rff_gain;
+    run_parm.rfb_gain = _run_parm->rfb_gain;
     icsd_alg_wind_run(&run_parm, &output);
     _output->wind_lvl = output.wind_lvl;
     _output->wind_alg_bt_inf = output.wind_alg_bt_inf;
@@ -585,15 +717,57 @@ u8 icsd_adt_wind_data_sync_en()
 {
     u8 en = 0;
 #if ICSD_WIND_LIB
-    if ((ICSD_WIND_PHONE_TYPE == ICSD_WIND_TWS) && (ICSD_WIND_MIC_TYPE == ICSD_WIND_LFF_RFF)) {
+    if ((ICSD_WIND_PHONE_TYPE == ICSD_WIND_TWS) && ((ICSD_WIND_MIC_TYPE == ICSD_WIND_LFF_RFF) || (ICSD_WIND_MIC_TYPE == ICSD_WIND_LFF_LFB_RFF))) {
         en = 1;
     }
 #endif
     return en;
 }
 
+void *icsd_adt_wind_reuse_ram()
+{
+#if ICSD_WIND_LIB
+    return icsd_wind_reuse_ram();
+#endif
+    return 0;
+}
 
+void icsd_adt_wind_angle_run_data(s16 *talk_mic, s16 *ffl_mic)
+{
+#if ICSD_WIND_LIB
+    icsd_wind_angle_run_data(talk_mic, ffl_mic);
+#endif
+}
 
+void icsd_adt_wind_angle_alg_run()
+{
+#if ICSD_WIND_LIB
+    icsd_wind_angle_run();
+#endif
+}
+
+void icsd_adt_wind_angle_clean()
+{
+#if ICSD_WIND_LIB
+    icsd_wind_angle_clean();
+#endif
+}
+
+void icsd_adt_wdt_debug_run()
+{
+#if ICSD_WIND_LIB
+    icsd_wdt_debug_run();
+#endif
+}
+
+u8 icsd_adt_wdt_debug_start(u8 wind_lvl)
+{
+    u8 ret = 0;
+#if ICSD_WIND_LIB
+    ret = icsd_wdt_debug_start(wind_lvl);
+#endif
+    return ret;
+}
 //===========VDT============================================
 #if ICSD_VDT_LIB
 const u8 ADT_VDT_USE_ANCDMAL = VDT_USE_ANCDMAL_DATA;
@@ -646,11 +820,38 @@ void icsd_adt_alg_vdt_run(__adt_vdt_run_parm *_run_parm, __adt_vdt_output *_outp
 #endif
 }
 
-void icsd_adt_vdt_data_init(u8 _anc_mode_ind, float ref_mgain, float err_mgain, float tlk_mgain)
+void icsd_adt_vdt_data_init(u8 _anc_mode_ind, float refl_mgain, float errl_mgain, float refr_mgain, float errr_mgain, float tlk_mgain)
 {
 #if ICSD_VDT_LIB
-    icsd_vdt_data_init(_anc_mode_ind, ref_mgain, err_mgain, tlk_mgain);
+    icsd_vdt_data_init(_anc_mode_ind, refl_mgain, errl_mgain, refr_mgain, errr_mgain, tlk_mgain, ADT_MIC_VERSION);
 #endif
+}
+
+void icsd_adt_alg_debug_free()
+{
+#if ICSD_HOWL_LIB
+    icsd_alg_howl_ftdebug_free();
+#endif
+
+#if ICSD_WIND_LIB
+    icsd_alg_wdt_debug_free();
+#endif
+
+#if ICSD_AVC_LIB
+    icsd_alg_avc_debug_free();
+#endif
+}
+
+void icsd_adt_uart2sd_open()
+{
+#if AUDIO_ANC_DATA_EXPORT_VIA_UART
+    audio_anc_develop_open(2);
+#endif
+}
+
+void icsd_adt_anc46k_outen_set(u8 en)
+{
+    ANC46K_CTL->out_en = en;
 }
 
 #endif/*TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN*/

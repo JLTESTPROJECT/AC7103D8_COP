@@ -184,7 +184,7 @@ extern void reset_PK_cb_register(void (*reset_pk)(u32 *));
 extern void reset_PK_cb_register_ext(void (*reset_pk)(u32 *, u16));
 extern void att_server_flow_enable(u8 enable);
 extern void le_device_db_init(void);
-extern bool bt_get_remote_test_flag();
+// extern bool bt_get_remote_test_flag();
 extern void transport_spp_disconnect(void);
 extern int transport_spp_flow_enable(u8 en);
 extern void transport_spp_flow_cfg(void);
