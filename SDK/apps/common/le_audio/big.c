@@ -2,7 +2,7 @@
 #include "big.h"
 #include "wireless_trans_manager.h"
 
-#if (BT_AI_SEL_PROTOCOL & (LE_AUDIO_BIS_TX_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN))
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_BIS_TX_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN))
 
 static int big_tx_init(void *priv)
 {
@@ -96,7 +96,7 @@ REGISTER_WIRELESS_DEV(big_tx_op) = {
 #endif /* (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_BIS_TX_EN|LE_AUDIO_JL_AURACAST_SINK_EN) */
 
 
-#if (BT_AI_SEL_PROTOCOL & (LE_AUDIO_BIS_RX_EN | LE_AUDIO_JL_AURACAST_SINK_EN))
+#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN)))
 
 static int big_rx_init(void *priv)
 {
@@ -133,7 +133,7 @@ static int big_rx_ioctrl(int op, ...)
         break;
 
     case WIRELESS_DEV_OP_SET_SYNC:
-        big_rx_ops.sync_set((uint16_t)va_arg(argptr, int), (uint8_t)va_arg(argptr, int));
+        /* big_rx_ops.sync_set((uint16_t)va_arg(argptr, int), (uint8_t)va_arg(argptr, int)); */
         break;
 
     case WIRELESS_DEV_OP_GET_BLE_CLK:
@@ -141,27 +141,27 @@ static int big_rx_ioctrl(int op, ...)
         break;
 
     case WIRELESS_DEV_OP_GET_SYNC:
-        big_rx_ops.sync_get((uint16_t)va_arg(argptr, int), (uint16_t *)va_arg(argptr, int), (uint32_t *)va_arg(argptr, int), (uint32_t *)va_arg(argptr, int));
+        /* big_rx_ops.sync_get((uint16_t)va_arg(argptr, int), (uint16_t *)va_arg(argptr, int), (uint32_t *)va_arg(argptr, int), (uint32_t *)va_arg(argptr, int)); */
         break;
 
     case WIRELESS_DEV_OP_ENTER_PAIR:
-        big_rx_ops.enter_pair((uint8_t)va_arg(argptr, int), (pair_callback_t *)va_arg(argptr, int), va_arg(argptr, uint32_t));
+        /* big_rx_ops.enter_pair((uint8_t)va_arg(argptr, int), (pair_callback_t *)va_arg(argptr, int), va_arg(argptr, uint32_t)); */
         break;
 
     case WIRELESS_DEV_OP_EXIT_PAIR:
-        big_rx_ops.exit_pair((uint8_t)va_arg(argptr, int));
+        /* big_rx_ops.exit_pair((uint8_t)va_arg(argptr, int)); */
         break;
 
     case WIRELESS_DEV_OP_GET_PAIR_CODE:
-        big_rx_ops.get_pair_code((uint8_t *)va_arg(argptr, int), (uint8_t)va_arg(argptr, int));
+        /* big_rx_ops.get_pair_code((uint8_t *)va_arg(argptr, int), (uint8_t)va_arg(argptr, int)); */
         break;
 
     case WIRELESS_DEV_OP_SET_PAIR_CODE:
-        big_rx_ops.set_pair_code((uint8_t *)va_arg(argptr, int));
+        /* big_rx_ops.set_pair_code((uint8_t *)va_arg(argptr, int)); */
         break;
 
     case WIRELESS_DEV_OP_GET_RSSI:
-        res = big_rx_ops.get_rssi((uint16_t)va_arg(argptr, int));
+        /* res = big_rx_ops.get_rssi((uint16_t)va_arg(argptr, int)); */
         break;
 
     default :

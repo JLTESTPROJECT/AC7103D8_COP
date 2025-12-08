@@ -17,7 +17,6 @@ extern const int CONFIG_MEDIA_MEM_DEBUG;
 extern const int config_media_tws_en;
 extern const int config_audio_cvp_ref_ch_recognize_enable;
 extern const int CONFIG_JLSTREAM_SCENE_DEBUG;
-
 /*
  *******************************************************************
  *						jlstream Configs
@@ -192,7 +191,13 @@ extern const int config_a2dp_media_stream_dump_enable;	//A2dp Media Stream Dump
 extern const int config_lea_media_stream_dump_enable;	//LE Audio Media Stream Dump
 
 
+/*
+ *******************************************************************
+ *					local_tws
+ *******************************************************************
+ */
 
+extern const int local_tws_source_play_use_enc_data;
 
 
 

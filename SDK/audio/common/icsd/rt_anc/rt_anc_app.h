@@ -52,10 +52,6 @@ int audio_adt_rtanc_set_infmt(void *rtanc_tool);
 
 void audio_adt_rtanc_output_handle(void *rt_param_l, void *rt_param_r);
 
-u8 audio_rtanc_app_func_en_get(void);
-
-int audio_rtanc_adaptive_en(u8 en);
-
 int audio_rtanc_fade_gain_suspend(struct rt_anc_fade_gain_ctr *ctr);
 
 int audio_rtanc_fade_gain_resume(void);

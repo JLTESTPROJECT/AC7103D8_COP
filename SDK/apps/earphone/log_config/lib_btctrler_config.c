@@ -477,9 +477,9 @@ const int config_btctler_le_master_multilink = 0;
 const int config_btctler_le_slave_conn_update_winden = 2500;//range:100 to 2500
 #if (defined CONFIG_CPU_BR28 || defined CONFIG_CPU_BR50 || defined CONFIG_CPU_BR52 || defined CONFIG_CPU_BR56)
 //br28 br50 br52 br56 默认开启频道监测
-const int config_bb_optimized_ctrl = VENDOR_BB_ISO_DIRECT_PUSH | BIT(11) | BIT(12) | BIT(13);
+const int config_bb_optimized_ctrl = LE_BB_OPT_FEAT_ISO_DIRECT_PUSH | BIT(11) | BIT(12) | BIT(13);
 #else
-const int config_bb_optimized_ctrl = VENDOR_BB_ISO_DIRECT_PUSH;
+const int config_bb_optimized_ctrl = LE_BB_OPT_FEAT_ISO_DIRECT_PUSH;
 #endif
 
 
@@ -520,6 +520,8 @@ const int config_btctler_single_carrier_en = 0;   // 单载波，如果是单模
 const int sniff_support_reset_anchor_point = 0;   //sniff状态下是否支持reset到最近一次通信点，用于HID
 const int sniff_long_interval = (500 / 0.625);    //sniff状态下进入long interval的通信间隔(ms)
 const int config_rf_oob = 0;
+
+const int ll_vendor_ctrl_cmd_support = 1; //1:for testbox or private transmission; 0:for ll bqb mode
 
 //#if TCFG_BT_HFP_ONLY_DISPLAY_BAT_ENABLE
 //#if TCFG_BT_SNIFF_ENABLE

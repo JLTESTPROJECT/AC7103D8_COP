@@ -17,7 +17,7 @@
 #include "rcsp_device_status.h"
 #include "JL_rcsp_api.h"
 #include "JL_rcsp_attr.h"
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
+#if (TCFG_LE_AUDIO_RCSP_USE_SAME_ACL)
 #include "bt_common.h"
 #include "app_le_connected.h"
 #endif
@@ -249,7 +249,7 @@ static u32 target_feature_ble_only(void *priv, u8 attr, u8 *buf, u16 buf_size, u
 {
     u32 rlen = 0;
 
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
+#if (TCFG_LE_AUDIO_RCSP_USE_SAME_ACL)
     u8 taddr_buf[8];
     taddr_buf[0] = 0;
     le_controller_get_mac(taddr_buf + 1);

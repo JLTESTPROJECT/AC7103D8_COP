@@ -923,10 +923,6 @@ void anc_init(void)
 
     audio_anc_mic_management(&anc_hdl->param);
 
-#if (TCFG_AUDIO_ANC_ENV_ENABLE || TCFG_AUDIO_ANC_AVC_ENABLE || TCFG_AUDIO_ANC_WIND_NOISE_DET_ENABLE)
-    audio_anc_lvl_sync_list_init();
-#endif
-
 #if ANC_ADAPTIVE_EN
     audio_anc_power_adaptive_init(&anc_hdl->param);
 #endif/*ANC_ADAPTIVE_EN*/
@@ -2043,7 +2039,8 @@ u8 anc_btspp_train_again(u8 mode, u32 dat)
     if (anc_ear_adaptive_busy_get()) {	//ANC自适应切换时，不支持获取DMA
         return 0;
     }
-#if TCFG_USER_TWS_ENABLE
+//仅TWS耳机支持工具右声道映射到左声道
+#if TCFG_USER_TWS_ENABLE && !AUDIO_ANC_STEREO_ENABLE
     switch (dat) {
     case 2:
         dat = 4;
@@ -2910,7 +2907,7 @@ void audio_anc_stereo_mix_set(u8 en)
 
 u8 audio_anc_stereo_mix_get(void)
 {
-    return anc_hdl->param.stereo_to_mono_mix;
+    return anc_hdl->stereo_to_mono_mix;
 }
 
 static void audio_anc_stereo_mix_ctr(void)

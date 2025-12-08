@@ -93,7 +93,6 @@ struct speak_to_chat_t {
     s16 tmpbuf1[256];
     s16 tmpbuf2[256];
 #endif /*ICSD_ADT_MIC_DATA_EXPORT_EN*/
-    u8 drc_flag;
     float drc_gain[4];
     u16 adt_env_adaptive_hold_id;   //环境自适应触发冷却
     int talk_mic_seq;
@@ -1899,10 +1898,10 @@ void audio_icsd_wind_detect_output_handle(u8 wind_thr)
         /*间隔200ms以上发送一次数据*/
         if (time_after(jiffies, next_period)) {
             next_period = jiffies + msecs_to_jiffies(100);
-            struct audio_anc_lvl_sync *hdl = audio_anc_lvl_sync_get_hdl_by_name(ANC_LVL_SYNC_WIND);
-            if (hdl) {
-                adt_log("wind cur_lvl %d, wind_lvl %d\n", hdl->cur_lvl, wind_lvl);
-                if (hdl->cur_lvl == wind_lvl) {
+            struct audio_anc_lvl_sync *lvl_hdl = audio_anc_lvl_sync_get_hdl_by_name(ANC_LVL_SYNC_WIND);
+            if (lvl_hdl) {
+                adt_log("wind cur_lvl %d, wind_lvl %d\n", lvl_hdl->cur_lvl, wind_lvl);
+                if (lvl_hdl->cur_lvl == wind_lvl) {
                     hdl->busy = 0;
                     return;
                 }
@@ -1974,55 +1973,53 @@ static void audio_rtanc_drc_flag_remote_set(u8 output, float gain, float fb_gain
 {
     struct speak_to_chat_t *hdl = speak_to_chat_hdl;
     if (hdl) {
-        if (output) {
-            hdl->drc_flag |= BIT(1);
-        } else {
-            hdl->drc_flag &= ~BIT(1);
-        }
         hdl->drc_gain[1] = gain;  //set remote gain
         hdl->drc_gain[3] = fb_gain;  //set remote gain
     }
-    /*adt_log("RTANC_DRC:remote_set %x, gain %d,%d, current_flag %d, gain %d,%d\n", \
+    /*adt_log("RTANC_DRC:remote_set %x, gain %d,%d, gain %d,%d\n", \
         output, (int)(gain * 100.0f), (int)(fb_gain * 100.0f), \
-        hdl->drc_flag, (int)(hdl->drc_gain[0] * 100.0f), (int)(hdl->drc_gain[2] * 100.0f));
+        (int)(hdl->drc_gain[0] * 100.0f), (int)(hdl->drc_gain[2] * 100.0f));
     */
 }
 
 //rtanc drc TWS local
 void audio_rtanc_drc_output(u8 output, float gain, float fb_gain)
 {
-    struct speak_to_chat_t *hdl = speak_to_chat_hdl;
-    if (output == 100) {
-        hdl->drc_gain[1] = 0;
-        return;
-    }
-    u8 send_data[10] = {0};
-    u8 change = 1;	//记录改变状态
-    if (hdl) {
-        if (output) {
-            if (!(hdl->drc_flag & BIT(0))) {
-                hdl->drc_flag |= BIT(0);
-                change = 1;
-            }
-        } else {
-            if (hdl->drc_flag & BIT(0)) {
-                hdl->drc_flag &= ~BIT(0);
-                change = 1;
-            }
-        }
-        hdl->drc_gain[0] = gain;  //set local gain
-        hdl->drc_gain[2] = fb_gain;  //set local gain
+    // BIT(0) -- 0:L  1:R
+    // BIT(1) -- 0:清除对方发起FF的更新标志位  1:通知对方本地FF发生更新
+    // gain --
 
-        //adt_log("RTANC_DRC:local_set %x, current_flag %x, %d, %d\n", output, hdl->drc_flag, (int)(gain), (int)(fb_gain));
-#if TCFG_USER_TWS_ENABLE
-        if (get_tws_sibling_connect_state() && change) {
-            send_data[0] = SYNC_ICSD_ADT_RTANC_DRC_RESULT;
-            send_data[1] = output;
-            memcpy(send_data + 2, (u8 *)(&gain), 4);
-            memcpy(send_data + 6, (u8 *)(&fb_gain), 4);
-            audio_icsd_adt_info_sync(send_data, 10);
+    struct speak_to_chat_t *hdl = speak_to_chat_hdl;
+    u8 send_data[10] = {0};
+
+    if ((output & BIT(0)) == 0) {
+        if (output & BIT(1)) {
+            hdl->drc_gain[1] = 0;
+            return;
         }
+
+        hdl->drc_gain[0] = gain;
+        hdl->drc_gain[2] = fb_gain;
+
+        if (hdl) {
+#if TCFG_USER_TWS_ENABLE
+            if (get_tws_sibling_connect_state()) {
+                send_data[0] = SYNC_ICSD_ADT_RTANC_DRC_RESULT;
+                send_data[1] = output;
+                memcpy(send_data + 2, (u8 *)(&gain), 4);
+                memcpy(send_data + 6, (u8 *)(&fb_gain), 4);
+                audio_icsd_adt_info_sync(send_data, 10);
+            }
 #endif
+        }
+    } else {
+        if (output & BIT(1)) {
+            hdl->drc_gain[0] = 0;
+            return;
+        }
+
+        hdl->drc_gain[1] = gain;
+        hdl->drc_gain[3] = fb_gain;
     }
 }
 
@@ -2031,7 +2028,6 @@ u8 audio_rtanc_drc_flag_get(float **gain)
     struct speak_to_chat_t *hdl = speak_to_chat_hdl;
     if (hdl) {
         *gain = &(hdl->drc_gain[0]);
-        return hdl->drc_flag;
     }
     return 0;
 }

@@ -90,6 +90,20 @@ extern void ll_set_param_aclMaxPduCToP(uint8_t aclMaxRxPdu);
 #define LOG_CLI_ENABLE
 #include "debug.h"
 
+
+#define VENDOR_PRIV_DEVICE_TYPE_REQ     0x01
+//Central -> Peripheral
+#define VENDOR_PRIV_LC3_INFO            0x03
+#define VENDOR_PRIV_OPEN_MIC            0x04
+#define VENDOR_PRIV_CLOSE_MIC           0x05
+#define VENDOR_PRIV_ACL_MUSIC_VOLUME    0x07
+#define VENDOR_PRIV_ACL_MIC_VOLUME      0x08
+#define VENDOR_PRIV_HOST_TYPE           0x10   //主机告知从机dongle连接设备类型
+//Peripheral -> Central
+#define VENDOR_PRIV_DEVICE_TYPE_RSP     0x02
+#define VENDOR_PRIV_ACL_OPID_CONTORL    0x06
+#define VENDOR_PRIV_SET_DUAL_UAC_VOL    0x20   //从机告知主机调节对应声卡的音量值
+
 /**************************************************************************************************
   Data Types
 **************************************************************************************************/
@@ -468,10 +482,12 @@ static int app_connected_conn_status_event_handler(int *msg)
             log_debug("connected_perip_connect_deal fail");
         }
 
+#if (LE_AUDIO_JL_DONGLE_UNICAST_WITH_PHONE_CONN_CONFIG & LE_AUDIO_JL_DONGLE_UNICAST_WITH_PHONE_CONN_PLAY_PREEMPTEDK)
         if (esco_player_runing()) {
             log_info("esco runing, stop cis");
             le_audio_unicast_play_remove_by_phone_call();
         }
+#endif
         //释放互斥量
         app_connected_mutex_post(&mutex, __LINE__);
         break;
@@ -766,6 +782,18 @@ static int app_connected_conn_status_event_handler(int *msg)
         hid_iso_adv_enable(1);
 #endif
 
+#if JL_UNICAST_DUAL_UAC_ENABLE
+        u8 uac_vol[2] = {0};
+        int ret = syscfg_read(CFG_JL_CIS_DUAL_UAC_VOL, uac_vol, 2);
+        //log_info("syscfg_read, uac0_vol:%d , uac1_vol:%d\n", uac_vol[0], uac_vol[1]);
+        if (ret != 2) {
+            log_info("no uac_vol\n");
+            app_var.uac0_vol = uac_vol[0] = 50;
+            app_var.uac1_vol = uac_vol[1] = 50;
+        }
+        log_info("acl conn, set_dual_uac_vol");
+        le_audio_set_dual_uac_vol(uac_vol[0], uac_vol[1]);
+#endif
         break;
     case CIG_EVENT_JL_DONGLE_DISCONNECT:
     case CIG_EVENT_PHONE_DISCONNECT:
@@ -1365,16 +1393,6 @@ void le_audio_adv_open_success(void *le_audio_ble_hdl, u8 *addr)
     log_info("le_audio_adv_open_success\n");
     memcpy(le_audio_adv_local_mac, addr, 6);
 }
-#define VENDOR_PRIV_DEVICE_TYPE_REQ     0x01
-#define VENDOR_PRIV_DEVICE_TYPE_RSP     0x02
-#define VENDOR_PRIV_LC3_INFO            0x03
-#define VENDOR_PRIV_OPEN_MIC            0x04
-#define VENDOR_PRIV_CLOSE_MIC           0x05
-//for earphone control
-#define VENDOR_PRIV_ACL_OPID_CONTORL    0x06
-#define VENDOR_PRIV_ACL_MUSIC_VOLUME    0x07
-#define VENDOR_PRIV_ACL_MIC_VOLUME      0x08
-#define VENDOR_PRIV_HOST_TYPE           0x10   //dongle主机类型
 
 enum {
     UNICAST_INDXT = 1,
@@ -1451,6 +1469,26 @@ static u16 get_conn_handle(void)
     return con_handle;
 }
 
+#if JL_UNICAST_DUAL_UAC_ENABLE
+void le_audio_set_dual_uac_vol(u8 _uac0_vol, u8 _uac1_vol)
+{
+    u8 uac_vol_max = 100;
+    u8 uac_vol_min = 0;
+    u8 valid_uac0_vol = (_uac0_vol > uac_vol_max) ? uac_vol_max :
+                        (_uac0_vol < uac_vol_min) ? uac_vol_min : _uac0_vol;
+    u8 valid_uac1_vol = (_uac1_vol > uac_vol_max) ? uac_vol_max :
+                        (_uac1_vol < uac_vol_min) ? uac_vol_min : _uac1_vol;
+    u16 con_handle = get_conn_handle();
+    if (con_handle) {
+        log_info("le_audio_set_dual_uac_vol, valid_uac0_vol:%d , valid_uac1_vol:%d\n", valid_uac0_vol, valid_uac1_vol);
+        u8 uac_vol[2] = {valid_uac0_vol, valid_uac1_vol};
+        syscfg_write(CFG_JL_CIS_DUAL_UAC_VOL, uac_vol, 2);
+        le_audio_send_priv_cmd(con_handle, VENDOR_PRIV_SET_DUAL_UAC_VOL, uac_vol, 2);
+    } else {
+        log_error("no cis conn\n");
+    }
+}
+#endif
 /* --------------------------------------------------------------------------*/
 /**
  * @brief   le audio媒体控制接口
@@ -1475,6 +1513,7 @@ void le_audio_media_control_cmd(u8 *data, u8 len)
 #elif (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_UNICAST_SINK_EN)
             le_audio_send_priv_cmd(con_handle, VENDOR_PRIV_ACL_OPID_CONTORL, data, len);
 #endif
+            break;
         case CIG_EVENT_OPID_VOLUME_DOWN:
             log_info("sync vol to master down\n");
 #if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_UNICAST_SINK_EN)
@@ -2004,9 +2043,16 @@ static void tws_sync_le_audio_config_func(u8 *data, int len)
     case LE_AUDIO_CONN_STATUES:
         puts("LE_AUDIO_CONN_STATUES\n");
         g_le_audio_hdl.cig_phone_other_conn_status = data[1];
+        log_info("cig_phone_other_conn_status:%d\n", g_le_audio_hdl.cig_phone_other_conn_status);
 #if TCFG_AUTO_SHUT_DOWN_TIME
         if (g_le_audio_hdl.cig_phone_other_conn_status & APP_CONNECTED_STATUS_CONNECT) {
             sys_auto_shut_down_disable();
+        }
+#endif
+#if TCFG_USER_TWS_ENABLE && (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_UNICAST_SINK_EN))
+        if ((is_cig_phone_conn() == 0) && (is_cig_other_phone_conn() == 0)) {
+            log_info("sync conn status, tws_dual_conn_state_handler\n");
+            tws_dual_conn_state_handler();
         }
 #endif
 #if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN)))

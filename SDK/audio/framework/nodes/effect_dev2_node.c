@@ -309,7 +309,6 @@ static void effect_dev2_adapter_release(struct stream_node *node)
 
 /*节点adapter 注意需要在sdk_used_list声明，否则会被优化*/
 REGISTER_STREAM_NODE_ADAPTER(effect_dev2_node_adapter) = {
-    .name       = "effect_dev2",
     .uuid       = NODE_UUID_EFFECT_DEV2,
     .bind       = effect_dev2_adapter_bind,
     .ioctl      = effect_dev2_adapter_ioctl,

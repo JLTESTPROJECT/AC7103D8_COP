@@ -954,7 +954,8 @@ u8 audio_cvp_v3_status(void)
 void audio_cvp_v3_talk_mic_push(s16 *buf, u16 len)
 {
     if (len != 512) {
-        printf("[error] aec point fault\n"); //aec一帧长度需要256 points,需修改文件(esco_recorder.c/pc_mic_recorder.c)的ADC中断点数
+        //aec一帧长度需要256 points,需修改文件(esco_recorder.c/pc_mic_recorder.c)的ADC中断点数
+        ASSERT(0, "CVP frame size unsupport %d samples,only support 256 samples\n", len >> 1);
 
     }
     if (cvp_v3 && cvp_v3->start) {

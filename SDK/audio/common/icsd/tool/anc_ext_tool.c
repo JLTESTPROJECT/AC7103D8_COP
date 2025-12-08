@@ -741,11 +741,11 @@ void anc_ext_tool_cmd_deal(u8 *data, u16 len, enum ANC_EXT_UART_SEL uart_sel)
 #if TCFG_AUDIO_ANC_WIND_NOISE_DET_ENABLE
     case CMD_WIND_DET_OPEN:
         anc_ext_log("CMD_WIND_DET_OPEN data %d\n", data[1]);
-        audio_icsd_wind_detect_en(1);
+        audio_icsd_wind_detect_open();
         break;
     case CMD_WIND_DET_STOP:
         anc_ext_log("CMD_WIND_DET_CLOSE\n");
-        audio_icsd_wind_detect_en(0);
+        audio_icsd_wind_detect_close();
         break;
 #endif
 #if TCFG_AUDIO_ADAPTIVE_DCC_ENABLE
@@ -1887,7 +1887,11 @@ static int anc_ext_algorithm_en_set(u8 func, u8 enable)
 #endif
 #if TCFG_AUDIO_ANC_WIND_NOISE_DET_ENABLE
     case ANC_EXT_ALGO_WIND_DET:
-        audio_icsd_wind_detect_en(enable);
+        if (enable) {
+            audio_icsd_wind_detect_open();
+        } else {
+            audio_icsd_wind_detect_close();
+        }
         break;
 #endif
 #if TCFG_AUDIO_ANC_HOWLING_DET_ENABLE
@@ -1968,6 +1972,16 @@ int anc_ext_algorithm_state_update(enum ANC_EXT_ALGO func, u8 state, u8 info)
 
     //数据上报
     anc_ext_algorithm_state_report(1);
+    return 0;
+}
+
+u8 anc_ext_algorithm_state_get(enum ANC_EXT_ALGO func)
+{
+    for (int i = 0; i < ANC_EXT_ALGO_EXIT; i++) {
+        if (tool_hdl->report_state_buf[i << 1] == func) {
+            return tool_hdl->report_state_buf[(i << 1) + 1];
+        }
+    }
     return 0;
 }
 

@@ -658,6 +658,72 @@ void audio_app_set_vol_offset_dB(float offset_dB)
     sys_timeout_add((void *)param, app_audio_set_vol_offset_timer_func, 5);
 }
 
+static void vol_offset_fade_timer(void *priv)
+{
+    struct vol_offset_fade_handle *hdl = (struct vol_offset_fade_handle *)priv;
+    if (!hdl) {
+        return;
+    }
+    float fade_step = hdl->fade_step;
+    float target_offset = hdl->target_offset;
+    if (hdl->cur_offset == target_offset) {
+        sys_timer_del(hdl->timer_id);
+        hdl->timer_id = 0;
+        printf("vol offset fade process end");
+        return ;
+    } else if (hdl->cur_offset > target_offset) {
+        hdl->cur_offset -= fade_step;
+        hdl->cur_offset = (hdl->cur_offset < target_offset) ? target_offset : hdl->cur_offset;
+    } else if (hdl->cur_offset < target_offset) {
+        hdl->cur_offset += fade_step;
+        hdl->cur_offset = (hdl->cur_offset > target_offset) ? target_offset : hdl->cur_offset;
+    }
+    audio_app_set_vol_offset_dB(hdl->cur_offset);
+    printf("vol offset fade process: cur_offset %d, target_offset %d\n", (int)hdl->cur_offset, (int)hdl->target_offset);
+}
+
+int audio_app_set_vol_offset_dB_fade_process(struct vol_offset_fade_handle *hdl, float target_offset, int fade_time_ms)
+{
+    if (!hdl) {
+        return -1;
+    }
+    if (hdl->timer_id) {
+        sys_timer_del(hdl->timer_id);
+    }
+    hdl->target_offset = target_offset;
+    if (fade_time_ms == 0) {
+        audio_app_set_vol_offset_dB(target_offset);
+        return 0;
+    }
+    float offset_diff = hdl->cur_offset - target_offset;
+    offset_diff = (offset_diff < 0) ? (offset_diff * (-1)) : offset_diff;
+    hdl->fade_step = offset_diff / (fade_time_ms / hdl->timer_ms);
+    printf("fade_step %d\n", (int)(hdl->fade_step * 100));
+    hdl->timer_id = sys_timer_add((void *)hdl, vol_offset_fade_timer, hdl->timer_ms);
+    return 0;
+}
+
+static int audio_app_set_vol_offset_dB_fade_process_qcallback(int msg1, int msgArrCount, int *msgArr)
+{
+    return audio_app_set_vol_offset_dB_fade_process((struct vol_offset_fade_handle *)msg1, (float)msgArr[0], msgArr[1]);
+}
+
+//由于有定时器，故不可在阻塞/即将删除的线程中调用，此处通过app_core调用
+int audio_app_set_vol_offset_dB_fade_process_by_app_core(struct vol_offset_fade_handle *hdl, float target_offset, int fade_time_ms)
+{
+    int argv[5] = {0};
+    argv[0] = (int)audio_app_set_vol_offset_dB_fade_process_qcallback;
+    argv[1] = 3 | BIT(10); //多参数或上BIT(10)
+    argv[2] = (int)hdl;
+    argv[3] = (int)target_offset;
+    argv[4] = (int)fade_time_ms;
+    int ret = os_taskq_post_type("app_core", Q_CALLBACK, 5, argv);
+    if (ret) {
+        printf("audio_app_set_vol_offset_dB_fade_process_by_app_core error");
+    }
+    return ret;
+}
+
 /*
 *********************************************************************
 *                  Audio Volume Get

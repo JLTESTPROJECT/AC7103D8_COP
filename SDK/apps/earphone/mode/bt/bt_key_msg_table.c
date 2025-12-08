@@ -120,14 +120,19 @@ int bt_key_power_msg_remap(int *msg)
         return APP_MSG_NULL;
     }
 
-    void *devices[2];
     void *active_device = NULL;
     void *incoming_device = NULL;
     void *outgoing_device = NULL;
     void *siri_device = NULL;
 
     int tws_state = tws_api_get_tws_state();
+#if TCFG_BT_DUAL_1T3_CONN_ENABLE
+    void *devices[3];
+    int num = btstack_get_conn_devices(devices, 3);
+#else
+    void *devices[2];
     int num = btstack_get_conn_devices(devices, 2);
+#endif
     for (int i = 0; i < num; i++) {
         int state = bt_get_phone_state(devices[i]);
         if (state == BT_CALL_ACTIVE) {
@@ -146,11 +151,6 @@ int bt_key_power_msg_remap(int *msg)
         case KEY_ACTION_DOUBLE_CLICK:
             app_msg = APP_MSG_CALL_HANGUP;
             break;
-#if 0
-        case KEY_ACTION_TRIPLE_CLICK:
-            app_msg = APP_MSG_REC_PP;
-            break;
-#endif
         default:
             break;
         }

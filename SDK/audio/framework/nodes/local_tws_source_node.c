@@ -22,10 +22,6 @@
 
 #define LOCAL_TWS_SEND_DEBUG    0
 
-#ifndef LOCAL_TWS_SOURCE_PLAYER_USE_ENC_DATA  //source 端是否解编码数据
-#define LOCAL_TWS_SOURCE_PLAYER_USE_ENC_DATA  0
-#endif
-
 struct local_tws_param_data {
     u8 frame_num;
 } __attribute__((packed));
@@ -126,9 +122,9 @@ static int local_tws_send_frame(struct local_tws_source_context *ctx, struct str
     }
 
 __exit:
-#if (!LOCAL_TWS_SOURCE_PLAYER_USE_ENC_DATA) //source端解码编码数据，会自动释放数据
-    tws_api_data_trans_buf_free(ctx);
-#endif
+    if (!local_tws_source_play_use_enc_data) { //source端解码编码数据，会自动释放数据
+        tws_api_data_trans_buf_free(ctx);
+    }
     if (!ctx->send_start) {
         ctx->send_start = 1;
     }
@@ -508,7 +504,6 @@ static void local_tws_source_release(struct stream_node *node)
 }
 
 REGISTER_STREAM_NODE_ADAPTER(local_tws_source_adapter) = {
-    .name       = "local_tws_source",
     .uuid       = NODE_UUID_LOCAL_TWS_SOURCE,
     .bind       = local_tws_source_bind,
     .ioctl      = local_tws_source_ioctl,

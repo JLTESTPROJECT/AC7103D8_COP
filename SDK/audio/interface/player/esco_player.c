@@ -176,20 +176,6 @@ int esco_player_get_btaddr(u8 *btaddr)
     }
     return 0;
 }
-int esco_player_suspend(u8 *bt_addr)
-{
-    if (g_esco_player && (memcmp(g_esco_player->bt_addr, bt_addr, 6) == 0)) {
-        jlstream_ioctl(g_esco_player->stream, NODE_IOC_SUSPEND, 0);
-    }
-    return 0;
-}
-int esco_player_start(u8 *bt_addr)
-{
-    if (g_esco_player && (memcmp(g_esco_player->bt_addr, bt_addr, 6) == 0)) {
-        jlstream_ioctl(g_esco_player->stream, NODE_IOC_START, 0);
-    }
-    return 0;
-}
 
 /*
 	ESCO状态检测，

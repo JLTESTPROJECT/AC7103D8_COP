@@ -523,7 +523,6 @@ static void cvp_adapter_release(struct stream_node *node)
 
 /*节点adapter 注意需要在sdk_used_list声明，否则会被优化*/
 REGISTER_STREAM_NODE_ADAPTER(cvp_sms_vf_node_adapter) = {
-    .name       = "cvp_sms_vf",
     .uuid       = NODE_UUID_CVP_SMS_VF,
     .bind       = cvp_adapter_bind,
     .ioctl      = cvp_adapter_ioctl,

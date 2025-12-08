@@ -844,7 +844,6 @@ static void iis_adapter_release(struct stream_node *node)
 }
 
 REGISTER_STREAM_NODE_ADAPTER(multi_ch_iis0_node_adapter) = {
-    .name       = "multi_ch_iis0",
     .uuid       = NODE_UUID_MULTI_CH_IIS0_TX,
     .bind       = iis_adapter_bind,
     .ioctl      = iis_adapter_ioctl,
@@ -853,7 +852,6 @@ REGISTER_STREAM_NODE_ADAPTER(multi_ch_iis0_node_adapter) = {
     .hdl_size   = sizeof(struct iis_node_hdl),
 };
 REGISTER_STREAM_NODE_ADAPTER(multi_ch_iis1_node_adapter) = {
-    .name       = "multi_ch_iis1",
     .uuid       = NODE_UUID_MULTI_CH_IIS1_TX,
     .bind       = iis_adapter_bind,
     .ioctl      = iis_adapter_ioctl,

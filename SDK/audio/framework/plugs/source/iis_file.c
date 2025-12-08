@@ -354,9 +354,6 @@ static void iis_ioc_get_fmt(struct iis_file_hdl *hdl, struct stream_fmt *fmt)
     case STREAM_SCENE_PC_MIC:
         hdl->channel_mode   = AUDIO_CH_MIX;
         break;
-    case STREAM_SCENE_PC_MIC:
-        hdl->channel_mode   = AUDIO_CH_MIX;
-        break;
     default:
         hdl->channel_mode   = AUDIO_CH_LR;
         break;

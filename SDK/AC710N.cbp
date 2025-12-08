@@ -1290,6 +1290,7 @@
 <Unit filename="audio/CVP/audio_cvp_demo.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/CVP/audio_cvp_develop.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/CVP/audio_cvp_dms.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="audio/CVP/audio_cvp_elevoc.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/CVP/audio_cvp_online.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/CVP/audio_cvp_online.h" />
 <Unit filename="audio/CVP/audio_cvp_ref_task.c"><Option compilerVer="CC"/></Unit>
@@ -1305,14 +1306,18 @@
 <Unit filename="audio/anc/audio_anc_debug_tool.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/anc/audio_anc_develop.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/anc/audio_anc_fade_ctr.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="audio/anc/audio_anc_fade_ctr.h" />
 <Unit filename="audio/anc/audio_anc_hw_src.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/anc/audio_anc_includes.h" />
 <Unit filename="audio/anc/audio_anc_lvl_sync.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="audio/anc/audio_anc_lvl_sync.h" />
 <Unit filename="audio/anc/audio_anc_manager.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/anc/audio_anc_mult_scene.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/anc/icsd_anc_user.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="audio/anc/icsd_anc_user.h" />
 <Unit filename="audio/common/amplitude_statistic.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/common/amplitude_statistic.h" />
+<Unit filename="audio/common/audio_avc.h" />
 <Unit filename="audio/common/audio_build_needed.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/common/audio_dac_digital_volume.h" />
 <Unit filename="audio/common/audio_dvol.c"><Option compilerVer="CC"/></Unit>
@@ -1359,6 +1364,7 @@
 <Unit filename="audio/common/icsd/adt/icsd_adt.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/common/icsd/adt/icsd_adt_alg.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/common/icsd/adt/icsd_adt_app.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="audio/common/icsd/adt/icsd_adt_app.h" />
 <Unit filename="audio/common/icsd/adt/icsd_adt_config.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/common/icsd/adt/icsd_adt_demo.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/common/icsd/aeq/icsd_aeq.c"><Option compilerVer="CC"/></Unit>
@@ -1407,6 +1413,7 @@
 <Unit filename="audio/common/icsd/wat/icsd_wat_config.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/common/icsd/wind/cvp_wind_app.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/common/icsd/wind/icsd_wind_app.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="audio/common/icsd/wind/icsd_wind_app.h" />
 <Unit filename="audio/common/icsd/wind/icsd_wind_config.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/common/online_debug/aud_data_export.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/common/online_debug/aud_data_export.h" />
@@ -1502,8 +1509,10 @@
 <Unit filename="audio/framework/include/fm_file.h" />
 <Unit filename="audio/framework/include/linein_file.h" />
 <Unit filename="audio/framework/include/volume_node.h" />
+<Unit filename="audio/framework/node_list.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/framework/nodes/agc_node.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/framework/nodes/ai_tx_node.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="audio/framework/nodes/avc_node.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/framework/nodes/channle_swap_node.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/framework/nodes/cvp_3mic_node.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/framework/nodes/cvp_develop_node.c"><Option compilerVer="CC"/></Unit>
@@ -1568,6 +1577,7 @@
 <Unit filename="audio/interface/include/cvp_node.h" />
 <Unit filename="audio/interface/include/dev_flow_player.h" />
 <Unit filename="audio/interface/include/dev_flow_recoder.h" />
+<Unit filename="audio/interface/include/env_noise_recoder.h" />
 <Unit filename="audio/interface/include/esco_player.h" />
 <Unit filename="audio/interface/include/esco_recoder.h" />
 <Unit filename="audio/interface/include/file_player.h" />
@@ -1613,6 +1623,7 @@
 <Unit filename="audio/interface/recoder/le_audio_recorder.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/interface/recoder/pc_mic_recoder.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/interface/user_defined/audio_dsp_low_latency_player.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="audio/interface/user_defined/env_noise_recoder.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/jl_kws/jl_kws_algo.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/jl_kws/jl_kws_api.h" />
 <Unit filename="audio/jl_kws/jl_kws_audio.c"><Option compilerVer="CC"/></Unit>
@@ -1850,6 +1861,7 @@
 <Unit filename="interface/media/audio_src.h" />
 <Unit filename="interface/media/audio_src_base.h" />
 <Unit filename="interface/media/audio_stdlog.h" />
+<Unit filename="interface/media/audio_threshold_det.h" />
 <Unit filename="interface/media/audio_time.h" />
 <Unit filename="interface/media/automute.h" />
 <Unit filename="interface/media/bt_audio_timestamp.h" />
@@ -1879,6 +1891,9 @@
 <Unit filename="interface/media/cvp/cvp_sms.h" />
 <Unit filename="interface/media/cvp/cvp_tms.h" />
 <Unit filename="interface/media/cvp/cvp_v3.h" />
+<Unit filename="interface/media/cvp/elevoc/ele_typedef.h" />
+<Unit filename="interface/media/cvp/elevoc/ele_vocplus_api.h" />
+<Unit filename="interface/media/cvp/elevoc/elevoc_profile.h" />
 <Unit filename="interface/media/cvp/lib_h/jlsp_DualMicSystem_Hybrid.h" />
 <Unit filename="interface/media/cvp/lib_h/jlsp_ns.h" />
 <Unit filename="interface/media/cvp/lib_h/jlsp_v3_ns.h" />

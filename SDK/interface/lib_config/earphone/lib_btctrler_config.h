@@ -115,6 +115,7 @@ extern const int config_btctler_single_carrier_en ;
 extern const int sniff_support_reset_anchor_point ;
 extern const int sniff_long_interval ;
 extern const int config_rf_oob ;
+extern const int ll_vendor_ctrl_cmd_support ;
 
 #endif /* LIB_BTCTRLER_CONFIG_H__H */
 

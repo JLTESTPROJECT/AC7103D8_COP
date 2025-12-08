@@ -6,13 +6,14 @@
 #endif
 
 #include "app_config.h"
-#if TCFG_AUDIO_ANC_ENABLE
+#if (TCFG_AUDIO_ANC_ENABLE || TCFG_AUDIO_AVC_NODE_ENABLE)
 
 #include "audio_anc_includes.h"
 #include "system/includes.h"
 #include "bt_tws.h"
 #include "audio_config.h"
 #include "sniff.h"
+#include "audio_anc_lvl_sync.h"
 
 #if 0
 #define lvl_sync_log printf
@@ -31,6 +32,7 @@ int audio_anc_lvl_sync_list_init()
     INIT_LIST_HEAD(&lvl_sync_list_hdl.head);
     return 0;
 }
+early_initcall(audio_anc_lvl_sync_list_init);
 
 struct audio_anc_lvl_sync *audio_anc_lvl_sync_get_hdl_by_name(u8 name)
 {
@@ -171,7 +173,7 @@ void audio_anc_lvl_sync_info(struct audio_anc_lvl_sync *hdl, u8 *data, int len)
 
 struct audio_anc_lvl_sync *audio_anc_lvl_sync_open(struct audio_anc_lvl_sync_param *open_param)
 {
-    struct audio_anc_lvl_sync *hdl = anc_malloc("ANC_SYNC", sizeof(struct audio_anc_lvl_sync));
+    struct audio_anc_lvl_sync *hdl = zalloc(sizeof(struct audio_anc_lvl_sync));
     if (!hdl) {
         return NULL;
     }
@@ -180,6 +182,7 @@ struct audio_anc_lvl_sync *audio_anc_lvl_sync_open(struct audio_anc_lvl_sync_par
     hdl->cur_lvl = open_param->default_lvl;
     hdl->name = open_param->name;
     hdl->sync_result_cb = open_param->sync_result_cb;
+    hdl->priv = open_param->priv;
     local_irq_disable();
     list_add(&hdl->hentry, &lvl_sync_list_hdl.head);
     local_irq_enable();
@@ -199,7 +202,7 @@ void audio_anc_lvl_sync_close(struct audio_anc_lvl_sync *hdl)
     list_del(&hdl->hentry);
     local_irq_enable();
     lvl_sync_log("audio_anc_lvl_sync_close name %d\n", hdl->name);
-    anc_free(hdl);
+    free(hdl);
 }
 
 #endif

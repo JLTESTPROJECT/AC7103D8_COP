@@ -39,6 +39,7 @@ struct usb_ep_addr_t {
 typedef struct {
     u32 stamp;
     u32 left_time;
+    u32 retry;
 } usb_ot_t;
 
 

@@ -375,7 +375,6 @@ static void virtual_udisk_adapter_release(struct stream_node *node)
 }
 
 REGISTER_STREAM_NODE_ADAPTER(virtual_udisk_node_adapter) = {
-    .name       = "virtual_udisk",
     .uuid       = NODE_UUID_VIRTUAL_UDISK,
     .bind       = virtual_udisk_adapter_bind,
     .ioctl      = virtual_udisk_adapter_ioctl,

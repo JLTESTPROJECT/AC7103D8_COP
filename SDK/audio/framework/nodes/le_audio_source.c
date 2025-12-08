@@ -463,7 +463,6 @@ static void le_audio_source_release(struct stream_node *node)
 }
 
 REGISTER_STREAM_NODE_ADAPTER(le_audio_source_adapter) = {
-    .name       = "le_audio_source",
     .uuid       = NODE_UUID_LE_AUDIO_SOURCE,
     .bind       = le_audio_source_bind,
     .ioctl      = le_audio_source_ioctl,

@@ -463,7 +463,6 @@ static void spatial_effects_adapter_release(struct stream_node *node)
 
 /*节点adapter 注意需要在sdk_used_list声明，否则会被优化*/
 REGISTER_STREAM_NODE_ADAPTER(spatial_effects_node_adapter) = {
-    .name       = "spatial_effects",
     .uuid       = NODE_UUID_SPATIAL_EFFECTS,
     .bind       = spatial_effects_adapter_bind,
     .ioctl      = spatial_effects_adapter_ioctl,

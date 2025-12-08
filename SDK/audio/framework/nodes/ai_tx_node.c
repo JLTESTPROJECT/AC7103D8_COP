@@ -119,7 +119,6 @@ static void ai_tx_release(struct stream_node *node)
 
 
 REGISTER_STREAM_NODE_ADAPTER(ai_tx_adapter) = {
-    .name       = "ai_tx",
     .uuid       = NODE_UUID_AI_TX,
     .bind       = ai_tx_bind,
     .ioctl      = ai_tx_ioctl,

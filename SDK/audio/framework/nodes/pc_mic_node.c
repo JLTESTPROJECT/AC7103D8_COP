@@ -1002,7 +1002,6 @@ u32 pc_mic_get_fmt_sample_rate(void)
 
 
 REGISTER_STREAM_NODE_ADAPTER(pc_mic_node_adapter) = {
-    .name       = "pc_mic",
     .uuid       = NODE_UUID_PC_MIC,
     .bind       = pc_mic_adapter_bind,
     .ioctl      = pc_mic_adapter_ioctl,

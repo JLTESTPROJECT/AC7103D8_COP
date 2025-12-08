@@ -147,6 +147,7 @@ void set_tws_task_interval(int tws_task_interval);
  */
 void bt_tws_set_pair_suss(const u8 *remote_addr);
 
+int tws_pair_by_chip_conn_init();
 /**
  * @brief TWS通过jldtp数据传输协议配对流程
  *

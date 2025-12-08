@@ -27,6 +27,9 @@
 #endif
 
 
+#define ABS(a, b)         (a > b) ? (a-b) : (b-a)
+
+
 #define CH_RES_BUF_SIZE     240
 
 static const u8 ch_port[LPCTMU_CHANNEL_SIZE] = {
@@ -47,6 +50,7 @@ static u8 lpctmu_ch_order_list[LPCTMU_CHANNEL_SIZE];
 
 volatile u8 lpctmu_event = 0;
 volatile u8 lpctmu_isr_sleep = 0;
+volatile s16 lpctmu_ear_last_diff[2];
 
 
 extern u32 __get_lrc_hz();
@@ -451,7 +455,7 @@ u32 lpctmu_get_res_kfifo_data(u16 *buf, u32 len)
 }
 
 AT_VOLATILE_RAM_CODE_POWER
-s16 lpctmu_res_medfilt3(u32 ch, s16 ch_res, u32 stable_th, u32 *unstable)
+s16 lpctmu_res_medfilt3(u32 ch, s16 ch_res)
 {
     if (__this->ch_pp_res[ch] == 0) {
         __this->ch_pp_res[ch] = ch_res;
@@ -471,21 +475,6 @@ s16 lpctmu_res_medfilt3(u32 ch, s16 ch_res, u32 stable_th, u32 *unstable)
         }
         if (ch_res < __this->ch_pp_res[ch]) {
             med_res = __this->ch_pp_res[ch];
-        }
-    }
-
-    if (unstable) {
-#define ABS(a, b)         (a > b) ? (a -b) : (b-a)
-        u32 tmp, diff = 0;
-        tmp = ABS(__this->ch_pp_res[ch], __this->ch_p_res[ch]);
-        diff = MAX(diff, tmp);
-        tmp = ABS(__this->ch_pp_res[ch], ch_res);
-        diff = MAX(diff, tmp);
-        tmp = ABS(__this->ch_p_res[ch], ch_res);
-        diff = MAX(diff, tmp);
-        *unstable = 0;
-        if (diff > stable_th) {
-            *unstable = 1;
         }
     }
 
@@ -557,7 +546,7 @@ void lpctmu_isr_deal(void)
                 lpctmu_event |= BIT(cur_ch);
             }
         }
-        s16 med_res = lpctmu_res_medfilt3(cur_ch, ch_res, 0, 0);
+        s16 med_res = lpctmu_res_medfilt3(cur_ch, ch_res);
         if (__this->sample_cnt <= __this->ch_key_num) {
             if ((med_res < (s16)__this->lim_l[cur_ch]) || (med_res > (s16)__this->lim_h[cur_ch])) {
                 lpctmu_event |= BIT(cur_ch);
@@ -571,10 +560,13 @@ void lpctmu_isr_deal(void)
                 u32 tmp_ch = __this->ear_ch_list[group][0];
                 u32 tmp_ref_ch = __this->ear_ch_list[group][1];
                 s16 diff = (s16)__this->ch_p_res[tmp_ch] - (s16)__this->ch_p_res[tmp_ref_ch];
-                u32 unstable = 0;
-                lpctmu_res_medfilt3(LPCTMU_CHANNEL_SIZE + group, diff, 10, &unstable);
-                if (unstable) {
+                diff = lpctmu_res_medfilt3(LPCTMU_CHANNEL_SIZE + group, diff);
+                s16 delta = ABS(diff, lpctmu_ear_last_diff[group]);
+                if (delta > 10) {
                     lpctmu_event |= BIT(cur_ch);
+                }
+                if (lpctmu_event) {
+                    lpctmu_ear_last_diff[group] = diff;
                 }
             }
         }

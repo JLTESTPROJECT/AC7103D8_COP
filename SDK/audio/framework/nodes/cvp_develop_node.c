@@ -326,7 +326,6 @@ static void cvp_adapter_release(struct stream_node *node)
 
 /*节点adapter 注意需要在sdk_used_list声明，否则会被优化*/
 REGISTER_STREAM_NODE_ADAPTER(cvp_node_adapter) = {
-    .name       = "cvp_develop",
     .uuid       = NODE_UUID_CVP_DEVELOP,
     .bind       = cvp_adapter_bind,
     .ioctl      = cvp_adapter_ioctl,

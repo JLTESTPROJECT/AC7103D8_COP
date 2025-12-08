@@ -75,6 +75,11 @@
     *(.jlsp_tri_code)
     *(.jlsp_tri_const)
 #endif
+#if AUDIO_CVP_ELEVOC_AT_RAM
+	. = ALIGN(4);
+	*(.ele_data_o1)
+	*(.ele_code_o1)
+#endif
     . = ALIGN(4);
     cvp_data_code_end = . ;
     cvp_data_code_size = cvp_data_code_end - cvp_data_code_begin ;

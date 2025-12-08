@@ -286,6 +286,7 @@ enum ANC_EXT_DEBUG_DATA_ID {
     ANC_L_ADAP_CMP_FORM_TRAIN = 0x27,
     ANC_L_ADAP_FRE_2 = 0x28,
     ANC_L_ADAP_MSE = 0x29,
+    ANC_L_ADAP_SZ_CMP = 0x2A,
 
     //----------- R ------------
     ANC_R_ADAP_FRE = 0x30,
@@ -297,6 +298,7 @@ enum ANC_EXT_DEBUG_DATA_ID {
     ANC_R_ADAP_CMP_FORM_TRAIN = 0x37,
     ANC_R_ADAP_FRE_2 = 0x38,
     ANC_R_ADAP_MSE = 0x39,
+    ANC_R_ADAP_SZ_CMP = 0x3A,
 };
 
 //自适应训练模式
@@ -545,6 +547,8 @@ int anc_ext_debug_tool_function_get(void);
 void anc_ext_ear_adaptive_dut_mode_set(u8 dut_mode);
 
 int anc_ext_algorithm_state_update(enum ANC_EXT_ALGO func, u8 state, u8 info);
+
+u8 anc_ext_algorithm_state_get(enum ANC_EXT_ALGO func);
 
 //工具-自适应CMP使能设置
 int anc_ext_adaptive_cmp_tool_en_set(u8 en);

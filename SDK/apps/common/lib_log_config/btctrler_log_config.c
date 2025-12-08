@@ -250,6 +250,12 @@ const char log_tag_const_d_TWS  = CONFIG_DEBUG_LIB(1);
 const char log_tag_const_w_TWS  = CONFIG_DEBUG_LIB(1);
 const char log_tag_const_e_TWS  = CONFIG_DEBUG_LIB(1);
 
+const char log_tag_const_v_TWS_DATA_TRANS  = CONFIG_DEBUG_LIB(0);
+const char log_tag_const_i_TWS_DATA_TRANS  = CONFIG_DEBUG_LIB(1);
+const char log_tag_const_d_TWS_DATA_TRANS  = CONFIG_DEBUG_LIB(1);
+const char log_tag_const_w_TWS_DATA_TRANS  = CONFIG_DEBUG_LIB(1);
+const char log_tag_const_e_TWS_DATA_TRANS  = CONFIG_DEBUG_LIB(1);
+
 const char log_tag_const_v_TWS_ESCO  = CONFIG_DEBUG_LIB(1);
 const char log_tag_const_i_TWS_ESCO  = CONFIG_DEBUG_LIB(1);
 const char log_tag_const_d_TWS_ESCO  = CONFIG_DEBUG_LIB(1);

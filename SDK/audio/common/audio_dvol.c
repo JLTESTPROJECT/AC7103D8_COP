@@ -343,6 +343,7 @@ void audio_digital_vol_offset_dB_set(dvol_handle *dvol, float offset_dB)
     s16 cur_vol = dvol->vol_target;
     dvol->offset_dB = offset_dB;
     float tar_dB = 20 * log10_float(cur_vol / DVOL_MAX_FLOAT) + offset_dB;
+    tar_dB = (tar_dB > 0.0f) ? 0.0f : tar_dB; //不允许计算出超过0dB的目标音量值
     s16 tar_vol = (s16)(eq_db2mag(tar_dB) * DVOL_MAX_FLOAT + 0.5f);
     dvol->offset = tar_vol - cur_vol;
     printf("dvol_offset_dB");

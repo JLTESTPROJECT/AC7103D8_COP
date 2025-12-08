@@ -25,6 +25,12 @@ const int config_media_tws_en = 1;
 const int config_media_tws_en = 0;
 #endif
 
+#ifndef LOCAL_TWS_SOURCE_PLAYER_USE_ENC_DATA  //source 端是否解编码数据
+#define LOCAL_TWS_SOURCE_PLAYER_USE_ENC_DATA   0
+#endif
+
+const int local_tws_source_play_use_enc_data = LOCAL_TWS_SOURCE_PLAYER_USE_ENC_DATA;
+
 /*蓝牙音频关联的使能配置，不含蓝牙的系统配置为0*/
 #if TCFG_APP_BT_EN
 const int config_bt_audio_enable = 1;
@@ -217,6 +223,20 @@ const int config_audio_cvp_ref_ch_recognize_enable = 1;
 #else
 const int config_audio_cvp_ref_ch_recognize_enable = 0;
 #endif
+#if (TCFG_AUDIO_GLOBAL_SAMPLE_RATE == 32000)
+#define LLNS_TABLE_SELECT   BIT(0)
+#else
+#define LLNS_TABLE_SELECT   BIT(1)
+#endif
+
+#define CVP_TABLE_SELECT    BIT(9)
+
+#ifdef TCFG_AUDIO_CVP_V3_MODE
+const u32 NN_TABLE_SELECT = (CVP_TABLE_SELECT | LLNS_TABLE_SELECT);
+#else
+const u32 NN_TABLE_SELECT = (LLNS_TABLE_SELECT);
+#endif
+
 /*
  *******************************************************************
  *						Audio Codec Config
@@ -672,7 +692,6 @@ const u8 const_mic_capless_trim_delay_debug = 0;
 const u8 LLNS_DNS_AGC_EN = 0; //预留配置，当前版本不支持AGC
 const u32 LLNS_DNS_SUPPORT_SAMPLE_RATE = TCFG_AUDIO_GLOBAL_SAMPLE_RATE; //仅支持32k、48k采样率
 const u16 LLNS_DNS_PROCESS_FRAME_SIZE = (LLNS_DNS_SUPPORT_SAMPLE_RATE == 32000) ? 480 : 720; //降噪一次输出数据长度(点)，不可更改
-const u32 NN_TABLE_SELECT = (LLNS_DNS_SUPPORT_SAMPLE_RATE == 32000) ? BIT(0) : BIT(1);
 
 const char log_tag_const_v_ALINK  = CONFIG_DEBUG_LIB(0);
 const char log_tag_const_c_ALINK  = CONFIG_DEBUG_LIB(0);

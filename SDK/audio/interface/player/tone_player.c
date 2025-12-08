@@ -401,7 +401,7 @@ int tone_player_init(struct tone_player *player, const char *file_name)
         strcpy(file_path + strlen(FLASH_RES_PATH), file_name);
         file = resfile_open(file_path);
         if (!file) {
-            printf("tone_player_faild: %s\n", file_name);
+            printf("tone_player open file faild: %s\n", file_name);
             return -EINVAL;
         }
         fname_uuid = JBHash((u8 *)file_name, strlen(file_name));

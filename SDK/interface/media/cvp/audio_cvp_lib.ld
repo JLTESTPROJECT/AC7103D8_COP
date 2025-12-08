@@ -161,11 +161,14 @@ SECTIONS
         *(.jlsp_tri_code)
         *(.jlsp_tri_const)
 #endif
-		
+#if AUDIO_CVP_ELEVOC_AT_RAM == 0
+        . = ALIGN(4);
+        *(.ele_data_o1)
+        *(.ele_code_o1)
+#endif
 		. = ALIGN(4);
 		*(.conv_params)
 		*(.seq_params)
-		. = ALIGN(4);
 
 		. = ALIGN(4);
 		cvp_code_end = . ;

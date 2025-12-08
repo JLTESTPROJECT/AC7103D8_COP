@@ -12,10 +12,16 @@ c_SRC_FILES += \
       audio/framework/nodes/esco_tx_node.c \
       audio/framework/nodes/plc_node.c \
       audio/framework/nodes/volume_node.c \
+      audio/framework/node_list.c \
 
 #if TCFG_VIRTUAL_UDISK_NODE
 c_SRC_FILES += \
       audio/framework/nodes/virtual_udisk_node.c
+#endif
+
+#if TCFG_AUDIO_AVC_NODE_ENABLE
+c_SRC_FILES += \
+      audio/framework/nodes/avc_node.c
 #endif
 
 #if TCFG_NS_NODE_ENABLE || TCFG_NS_NODE_LITE_ENABLE
@@ -325,7 +331,8 @@ c_SRC_FILES += \
 #endif
 
 c_SRC_FILES += \
-	  audio/interface/user_defined/audio_dsp_low_latency_player.c
+	  audio/interface/user_defined/audio_dsp_low_latency_player.c \
+	  audio/interface/user_defined/env_noise_recoder.c
 
 #if EXPORT_LE_AUDIO_SUPPORT
 #if LE_AUDIO_STREAM_ENABLE
@@ -428,6 +435,11 @@ c_SRC_FILES += \
 #endif
 #endif
 
+#if (TCFG_AUDIO_ANC_ENABLE || TCFG_AUDIO_AVC_NODE_ENABLE)
+c_SRC_FILES += \
+    audio/anc/audio_anc_lvl_sync.c
+#endif
+
 // Audio ANC
 #if EXPORT_PLATFORM_ANC_ENABLE
 #if TCFG_AUDIO_ANC_ENABLE
@@ -443,7 +455,6 @@ c_SRC_FILES += \
 	  audio/anc/audio_anc_manager.c \
 	  audio/anc/audio_anc.c \
 	  audio/anc/icsd_anc_user.c \
-	  audio/anc/audio_anc_lvl_sync.c \
 
 #endif
 #endif
@@ -521,6 +532,7 @@ c_SRC_FILES += \
 	  audio/CVP/audio_cvp_ais_3mic.c \
 	  audio/CVP/audio_cvp_ref_task.c \
 	  audio/CVP/audio_cvp_config.c \
+	  audio/CVP/audio_cvp_elevoc.c \
 
 #if TCFG_USER_TWS_ENABLE
 c_SRC_FILES += \
@@ -1498,7 +1510,7 @@ c_SRC_FILES += \
 
 // *INDENT-OFF*
 
-#if CONFIG_JLDTP_ENABLE
+#if 1//CONFIG_JLDTP_ENABLE
 c_SRC_FILES += \
 	apps/common/jldtp/uart_transport.c \
 	apps/common/jldtp/jldtp_manager.c \

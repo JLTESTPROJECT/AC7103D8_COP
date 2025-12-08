@@ -894,6 +894,12 @@ int charge_init(const struct charge_platform_data *data)
     return 0;
 }
 
+void charge_system_reset(void)
+{
+    //充电采用LV0的复位
+    system_reset(CHARGE_FLAG);
+}
+
 void charge_module_stop(void)
 {
     if (!__this->init_ok) {
@@ -931,7 +937,6 @@ void charge_exit_shipping(void)
         PMU_NVDC_EN(CHARGE_VILOOP2_ENABLE);
         CHG_VILOOP_EN(CHARGE_VILOOP1_ENABLE);
         CHG_VILOOP2_EN(CHARGE_VILOOP2_ENABLE);
-        CHG_CCLOOP_EN(1);
         CHARGE_EN(1);
         CHGGO_EN(1);
     }

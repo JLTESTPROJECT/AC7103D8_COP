@@ -164,7 +164,6 @@ static void sink_dev3_release(struct stream_node *node)
 }
 
 REGISTER_STREAM_NODE_ADAPTER(sink_dev3_adapter) = {
-    .name       = "sink_dev3",
     .uuid       = NODE_UUID_SINK_DEV3,
     .bind       = sink_dev3_bind,
     .ioctl      = sink_dev3_ioctl,

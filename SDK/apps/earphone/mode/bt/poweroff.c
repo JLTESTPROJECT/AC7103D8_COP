@@ -20,6 +20,7 @@
 #include "bt_background.h"
 #include "usb/otg.h"
 #include "btstack/le/le_user.h"
+#include "asm/charge.h"
 #if TCFG_AUDIO_ANC_ENABLE
 #include "audio_anc.h"
 #endif
@@ -160,7 +161,7 @@ static void wait_exit_btstack_flag(void *_reason)
 #if TCFG_CHARGE_ENABLE
         case POWEROFF_POWER_RESET:
             log_info("system_reset!!!\n");
-            app_charge_system_reset();
+            charge_system_reset();
             break;
         case POWEROFF_POWER_KEEP:
             app_charge_power_off_keep_mode();

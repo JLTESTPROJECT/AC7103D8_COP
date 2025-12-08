@@ -730,7 +730,7 @@ static int a2dp_bt_status_event_handler(int *event)
             break;
         }
         ret = a2dp_player_get_btaddr(data);
-        if (ret && memcmp(data, bt->args, 6) == 0) {
+        if (!a2dp_player_runing() || (ret && memcmp(data, bt->args, 6) == 0)) {
             data[6] = bt->value;
 
             memcpy(g_avrcp_vol_chance_data, data, 7);

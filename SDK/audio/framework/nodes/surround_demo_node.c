@@ -161,7 +161,6 @@ static void surround_demo_adapter_release(struct stream_node *node)
 }
 
 REGISTER_STREAM_NODE_ADAPTER(surround_demo_node_adapter) = {
-    .name       = "surround_demo",
     .uuid       = NODE_UUID_SURROUND_DEMO,
     .bind       = surround_demo_adapter_bind,
     .ioctl      = surround_demo_adapter_ioctl,

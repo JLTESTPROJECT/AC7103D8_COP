@@ -100,7 +100,6 @@ struct audio_rt_anc_hdl {
     u8 seq;
     u8 state;
     u8 run_busy;
-    u8 app_func_en;
     u8 dut_mode;            //产测模式使能
     int rtanc_mode;
     int cmp_tool_data_len;
@@ -487,7 +486,9 @@ int audio_adt_rtanc_set_infmt(void *rtanc_tool)
 #endif
 
     infmt.var_buf = &hdl->ch_l.var_cache_buff;
-    infmt.var_buf_r = infmt.var_buf; //gali
+#if ANC_CONFIG_RFB_EN && AUDIO_ANC_STEREO_ENABLE
+    infmt.var_buf_r = &hdl->ch_r.var_cache_buff;
+#endif
     if (hdl->sz_sel.state & RTANC_SZ_STA_INIT) {
         hdl->sz_sel.state |= RTANC_SZ_STA_START;
         rtanc_log("RTANC_STATE_SZ:START\n");
@@ -845,18 +846,14 @@ static void audio_rtanc_suspend_list_query(u8 init_flag)
         if (hdl->state == RT_ANC_STATE_OPEN) {
             rtanc_log("RTANC_STATE:SUSPEND\n");
             hdl->state = RT_ANC_STATE_SUSPEND;
-            if (hdl->app_func_en) {
-                anc_ext_algorithm_state_update(ANC_EXT_ALGO_RTANC, ANC_EXT_ALGO_STA_SUSPEND, 0);
-            }
+            anc_ext_algorithm_state_update(ANC_EXT_ALGO_RTANC, ANC_EXT_ALGO_STA_SUSPEND, 0);
             icsd_adt_rtanc_suspend();
         }
     } else {
         if (hdl->state == RT_ANC_STATE_SUSPEND) {
             rtanc_log("RTANC_STATE:SUSPEND->OPEN\n");
             audio_rtanc_spp_send_data(RTANC_SPP_CMD_RESUME_STATE, NULL, 0);
-            if (hdl->app_func_en) {
-                anc_ext_algorithm_state_update(ANC_EXT_ALGO_RTANC, ANC_EXT_ALGO_STA_OPEN, 0);
-            }
+            anc_ext_algorithm_state_update(ANC_EXT_ALGO_RTANC, ANC_EXT_ALGO_STA_OPEN, 0);
             hdl->state = RT_ANC_STATE_OPEN;
             icsd_adt_rtanc_resume();
         }
@@ -980,6 +977,12 @@ int audio_rtanc_adaptive_exit(void)
     if (audio_anc_real_time_adaptive_state_get() == 0) {
         return 1;
     }
+
+    //恢复工具显示状态
+    if (anc_ext_algorithm_state_get(ANC_EXT_ALGO_RTANC) == ANC_EXT_ALGO_STA_SUSPEND) {
+        anc_ext_algorithm_state_update(ANC_EXT_ALGO_RTANC, ANC_EXT_ALGO_STA_OPEN, 0);
+    }
+
     rtanc_log("RTANC_STATE:CLOSE\n");
     hdl->state = RT_ANC_STATE_CLOSE;
     clock_free("ANC_RT_ADAPTIVE");
@@ -1001,7 +1004,7 @@ int audio_rtanc_adaptive_exit(void)
     return 0;
 }
 
-int audio_rtanc_adaptive_en(u8 en)
+static int audio_rtanc_adaptive_en(u8 en)
 {
     int ret;
     rtanc_log("audio_rtanc_adaptive_en: %d\n", en);
@@ -1025,16 +1028,9 @@ int audio_rtanc_adaptive_en(u8 en)
     return 0;
 }
 
-//获取用户端是否启用这个功能
-u8 audio_rtanc_app_func_en_get(void)
-{
-    return hdl->app_func_en;
-}
-
 int audio_anc_real_time_adaptive_open(void)
 {
     int ret;
-    hdl->app_func_en = 1;
     ret = audio_rtanc_adaptive_en(1);
     if (!ret) {
         anc_ext_algorithm_state_update(ANC_EXT_ALGO_RTANC, ANC_EXT_ALGO_STA_OPEN, 0);
@@ -1045,7 +1041,6 @@ int audio_anc_real_time_adaptive_open(void)
 int audio_anc_real_time_adaptive_close(void)
 {
     int ret;
-    hdl->app_func_en = 0;
     ret = audio_rtanc_adaptive_en(0);
 
     anc_ext_algorithm_state_update(ANC_EXT_ALGO_RTANC, ANC_EXT_ALGO_STA_CLOSE, 0);
@@ -1134,16 +1129,16 @@ static void audio_anc_real_time_adaptive_data_packet(struct icsd_rtanc_tool_data
 #if AUDIO_ANC_STEREO_ENABLE	//头戴式
 
     if (hdl->param->developer_mode) {
-        rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)rtanc_tool->h_freq, len * 4, ANC_R_ADAP_FRE, 0);
-        rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)rtanc_tool->sz_out_l, len * 8, ANC_R_ADAP_SZPZ, 0);
-        rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)rtanc_tool->pz_out_l, len * 8, ANC_R_ADAP_PZ, 0);
-        rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)rtanc_tool->target_out_l, len * 8, ANC_R_ADAP_TARGET, 0);
-        rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)rtanc_tool->target_out_cmp_l, len * 8, ANC_R_ADAP_TARGET_CMP, 0);
+        rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)rtanc_tool->h_freq, len * 4, ANC_L_ADAP_FRE, 0);
+        rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)rtanc_tool->sz_out_l, len * 8, ANC_L_ADAP_SZPZ, 0);
+        rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)rtanc_tool->pz_out_l, len * 8, ANC_L_ADAP_PZ, 0);
+        rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)rtanc_tool->target_out_l, len * 8, ANC_L_ADAP_TARGET, 0);
+        rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)rtanc_tool->target_out_cmp_l, len * 8, ANC_L_ADAP_TARGET_CMP, 0);
     }
-    rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)ff_dat, ff_dat_len, ANC_R_FF_IIR, 0);  //R_ff
+    rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)ff_dat, ff_dat_len, ANC_L_FF_IIR, 0);  //R_ff
 
-    rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)rtanc_tool->h2_freq, rtanc_tool->h2_len * 4, ANC_R_ADAP_FRE_2, 0);
-    rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)rtanc_tool->mse_l, rtanc_tool->h2_len * 8, ANC_R_ADAP_MSE, 0);
+    rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)rtanc_tool->h2_freq, rtanc_tool->h2_len * 4, ANC_L_ADAP_FRE_2, 0);
+    rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)rtanc_tool->mse_l, rtanc_tool->h2_len * 8, ANC_L_ADAP_MSE, 0);
 
     /* put_buf((u8 *)rtanc_tool->h_freq, len * 4); */
     /* put_buf((u8 *)rtanc_tool->sz_out_l, len * 8); */
@@ -1157,16 +1152,16 @@ static void audio_anc_real_time_adaptive_data_packet(struct icsd_rtanc_tool_data
     /* put_buf((u8 *)cmp_dat, cmp_dat_len);  //R_cmp */
 
     if (hdl->param->developer_mode) {
-        rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)rtanc_tool->h_freq, len * 4, ANC_L_ADAP_FRE, 0);
-        rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)rtanc_tool->sz_out_r, len * 8, ANC_L_ADAP_SZPZ, 0);
-        rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)rtanc_tool->pz_out_r, len * 8, ANC_L_ADAP_PZ, 0);
-        rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)rtanc_tool->target_out_r, len * 8, ANC_L_ADAP_TARGET, 0);
-        rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)rtanc_tool->target_out_cmp_r, len * 8, ANC_L_ADAP_TARGET_CMP, 0);
+        rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)rtanc_tool->h_freq, len * 4, ANC_R_ADAP_FRE, 0);
+        rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)rtanc_tool->sz_out_r, len * 8, ANC_R_ADAP_SZPZ, 0);
+        rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)rtanc_tool->pz_out_r, len * 8, ANC_R_ADAP_PZ, 0);
+        rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)rtanc_tool->target_out_r, len * 8, ANC_R_ADAP_TARGET, 0);
+        rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)rtanc_tool->target_out_cmp_r, len * 8, ANC_R_ADAP_TARGET_CMP, 0);
     }
-    rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)rff_dat, ff_dat_len, ANC_L_FF_IIR, 0);  //R_ff
+    rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)rff_dat, ff_dat_len, ANC_R_FF_IIR, 0);  //R_ff
 
-    rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)rtanc_tool->h2_freq, rtanc_tool->h2_len * 4, ANC_L_ADAP_FRE_2, 0);
-    rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)rtanc_tool->mse_r, rtanc_tool->h2_len * 8, ANC_L_ADAP_MSE, 0);
+    rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)rtanc_tool->h2_freq, rtanc_tool->h2_len * 4, ANC_R_ADAP_FRE_2, 0);
+    rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)rtanc_tool->mse_r, rtanc_tool->h2_len * 8, ANC_R_ADAP_MSE, 0);
 #else
 #if TCFG_USER_TWS_ENABLE
     if (bt_tws_get_local_channel() == 'R') {
@@ -1175,10 +1170,7 @@ static void audio_anc_real_time_adaptive_data_packet(struct icsd_rtanc_tool_data
             rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)rtanc_tool->h_freq, len * 4, ANC_R_ADAP_FRE, 0);
             rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)rtanc_tool->sz_out_l, len * 8, ANC_R_ADAP_SZPZ, 0);
             rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)rtanc_tool->pz_out_l, len * 8, ANC_R_ADAP_PZ, 0);
-#if !AUDIO_ANC_ADAPTIVE_CMP_SZ_FACTOR
-            //双FB 方案复用耳道target线作为SZ补偿曲线显示
             rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)rtanc_tool->target_out_l, len * 8, ANC_R_ADAP_TARGET, 0);
-#endif
             rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)rtanc_tool->target_out_cmp_l, len * 8, ANC_R_ADAP_TARGET_CMP, 0);
         }
         rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)ff_dat, ff_dat_len, ANC_R_FF_IIR, 0);  //R_ff
@@ -1205,10 +1197,7 @@ static void audio_anc_real_time_adaptive_data_packet(struct icsd_rtanc_tool_data
             rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)rtanc_tool->h_freq, len * 4, ANC_L_ADAP_FRE, 0);
             rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)rtanc_tool->sz_out_l, len * 8, ANC_L_ADAP_SZPZ, 0);
             rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)rtanc_tool->pz_out_l, len * 8, ANC_L_ADAP_PZ, 0);
-#if !AUDIO_ANC_ADAPTIVE_CMP_SZ_FACTOR
-            //双FB 方案复用耳道target线作为SZ补偿曲线显示
             rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)rtanc_tool->target_out_l, len * 8, ANC_L_ADAP_TARGET, 0);
-#endif
             rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)rtanc_tool->target_out_cmp_l, len * 8, ANC_L_ADAP_TARGET_CMP, 0);
         }
         rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)ff_dat, ff_dat_len, ANC_L_FF_IIR, 0);  //R_ff
@@ -1235,25 +1224,24 @@ static void audio_rtanc_cmp_tool_data_catch(u8 *data, int len, u8 ch)
         return;
     }
     float *sz_cmp, *sz_temp;
-    u8 target_id, iir_id;
+    u8 sz_cmp_id, iir_id;
 #if AUDIO_ANC_STEREO_ENABLE	//头戴式
     iir_id = ch ? ANC_R_CMP_IIR : ANC_L_CMP_IIR;
 #else
 #if TCFG_USER_TWS_ENABLE
     if (bt_tws_get_local_channel() == 'R') {
         rtanc_log("cmp export send tool_data, ch:R\n");
-        target_id = ANC_R_ADAP_TARGET;
+        sz_cmp_id = ANC_R_ADAP_SZ_CMP;
         iir_id = ANC_R_CMP_IIR;
     } else
 #endif/*TCFG_USER_TWS_ENABLE*/
     {
-        rtanc_debug_log("cmp export send tool_data, ch:L\n");
-        target_id = ANC_L_ADAP_TARGET;
+        rtanc_log("cmp export send tool_data, ch:L\n");
+        sz_cmp_id = ANC_L_ADAP_SZ_CMP;
         iir_id = ANC_L_CMP_IIR;
     }
 #endif
 #if AUDIO_ANC_ADAPTIVE_CMP_SZ_FACTOR
-    //双FB 方案复用耳道target线作为SZ补偿曲线显示
     sz_cmp = audio_anc_ear_adaptive_cmp_sz_cmp_get(ANC_EAR_ADAPTIVE_CMP_CH_L);
     if (sz_cmp) {
         //60点->25点
@@ -1263,9 +1251,9 @@ static void audio_rtanc_cmp_tool_data_catch(u8 *data, int len, u8 ch)
             sz_temp[2 * i] = sz_cmp[2 * mem_list[i]];
             sz_temp[2 * i + 1] = sz_cmp[2 * mem_list[i] + 1];
         }
-        rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)sz_temp, 25 * 8, target_id, 0);
+
+        rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)sz_temp, 25 * 8, sz_cmp_id, 0);
         anc_free(sz_temp);
-        /* rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)sz_cmp, 60 * 8, target_id, 0); */
     }
 #endif
     rtanc_tool_data = anc_data_catch(rtanc_tool_data, (u8 *)data, len, iir_id, 0);  //R_cmp

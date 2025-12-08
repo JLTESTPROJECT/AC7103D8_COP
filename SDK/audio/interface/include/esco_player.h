@@ -21,11 +21,4 @@ int esco_player_is_playing(u8 *btaddr);
 
 void esco_player_set_ai_tx_node_func(int (*func)(u8 *, u32));
 
-int esco_player_start(u8 *bt_addr);
-int esco_player_suspend(u8 *bt_addr);
-
-
-
-
-
 #endif

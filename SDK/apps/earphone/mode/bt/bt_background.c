@@ -47,6 +47,11 @@ void bt_background_init(int (*hci_handler)(struct bt_event *), int (*status_hand
 
 static void background_add_forward_msg(int msg_from, int *msg)
 {
+#if TCFG_USER_TWS_ENABLE
+    if (tws_api_get_role() == TWS_ROLE_SLAVE) {
+        return ;
+    }
+#endif
     struct forward_msg *_forward_msg = zalloc(sizeof(struct forward_msg));
     if (_forward_msg) {
         _forward_msg->msg_from = msg_from;
@@ -163,6 +168,11 @@ void bt_background_resume(void)
         log_info("bt_background_goback_with_phone\n");
         background_goback_with_phone();
     }
+#if TCFG_USER_TWS_ENABLE
+    if (tws_api_get_role() == TWS_ROLE_SLAVE) {
+        return ;
+    }
+#endif
     /*除切模式触发的后台返回的消息需要重新处理*/
     if (g_bt_hdl.background.backmode != BACKGROUND_GOBACK_WITH_MODE_SWITCH) {
         struct forward_msg *p, *n;

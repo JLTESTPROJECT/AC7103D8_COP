@@ -131,14 +131,6 @@ struct ble_dut_ops_t {
 
 extern const struct ble_dut_ops_t *__ble_dut_ops;
 
-struct le_adv_link_param_cfg {
-    u8 param1;
-    s8 param2[2];
-    s8 param3[2];
-    u8 param4[2];
-    u8 param5;
-};
-
 typedef struct _bt_fre_offset_compensation_api_t {
     u8(*init)(s16 *fre_offset, u8 *once_trim_flag);
     u8(*write)(s16 fre_offset, u8 *once_trim_flag);

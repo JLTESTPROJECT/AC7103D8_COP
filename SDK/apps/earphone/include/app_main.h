@@ -34,6 +34,10 @@ typedef struct _APP_VAR {
     s16 wtone_volume;
     s16 ktone_volume;
     s16 ring_volume;
+#if JL_UNICAST_DUAL_UAC_ENABLE
+    u8 uac0_vol;   //双声卡模式下UAC0音量
+    u8 uac1_vol;   //双声卡模式下UAC1音量
+#endif
     u8 opid_play_vol_sync;
     u8 aec_dac_gain;
     u8 aec_mic_gain;

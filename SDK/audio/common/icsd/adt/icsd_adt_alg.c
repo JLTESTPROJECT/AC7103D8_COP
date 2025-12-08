@@ -8,7 +8,7 @@
 #include "app_config.h"
 #include "audio_anc_includes.h"
 #if ((defined TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN) && TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN && \
-	 TCFG_AUDIO_ANC_ENABLE)
+	 TCFG_AUDIO_ANC_ENABLE) || TCFG_AUDIO_AVC_NODE_ENABLE
 
 //用于管理与ADT_LIB 相关函数编译控制
 #define ICSD_VDT_LIB          TCFG_AUDIO_SPEAK_TO_CHAT_ENABLE
@@ -16,7 +16,7 @@
 #define ICSD_EIN_LIB          0	//入耳检测
 #define ICSD_WIND_LIB         TCFG_AUDIO_ANC_WIND_NOISE_DET_ENABLE
 #define ICSD_RTANC_LIB        TCFG_AUDIO_ANC_REAL_TIME_ADAPTIVE_ENABLE
-#define ICSD_AVC_LIB		  TCFG_AUDIO_ANC_ENV_NOISE_DET_ENABLE	//自适应音量
+#define ICSD_AVC_LIB		  TCFG_AUDIO_ANC_ENV_NOISE_DET_ENABLE || TCFG_AUDIO_AVC_NODE_ENABLE	//自适应音量
 #define ICSD_HOWL_LIB		  TCFG_AUDIO_ANC_HOWLING_DET_ENABLE
 #define ICSD_ADJDCC_LIB		  TCFG_AUDIO_ADAPTIVE_DCC_ENABLE
 // #define ICSD_RTAEQ_LIB        1
@@ -228,7 +228,9 @@ void icsd_adt_avc_run(__adt_avc_run_parm *_run_parm, __adt_avc_output *_output)
     icsd_avc_run(&run_parm, &output);
     _output->ctl_lvl = output.ctl_lvl;
     _output->spldb_iir = output.spldb_iir;
+#if (!TCFG_AUDIO_AVC_NODE_ENABLE)
     ADT_FUNC->icsd_AVC_output(_output);
+#endif
 #endif
 }
 

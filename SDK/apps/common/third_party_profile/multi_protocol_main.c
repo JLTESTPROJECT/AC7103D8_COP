@@ -34,7 +34,7 @@
 extern void app_ble_ancs_ams_init();
 #endif
 
-#if ((THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN | GFPS_EN | MMA_EN | FMNA_EN | REALME_EN | SWIFT_PAIR_EN | DMA_EN | ONLINE_DEBUG_EN | CUSTOM_DEMO_EN | XIMALAYA_EN | AURACAST_APP_EN| MULTI_CLIENT_EN | JL_SBOX_EN)) || \
+#if ((THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN | GFPS_EN | MMA_EN | FMNA_EN | TUYA_DEMO_EN | REALME_EN | SWIFT_PAIR_EN | DMA_EN | ONLINE_DEBUG_EN | CUSTOM_DEMO_EN | XIMALAYA_EN | AURACAST_APP_EN| MULTI_CLIENT_EN | JL_SBOX_EN | HID_ISO_EN)) || \
 		(TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN | LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN | LE_AUDIO_JL_BIS_RX_EN | LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_BIS_TX_EN)))
 #define ATT_LOCAL_PAYLOAD_SIZE    (517)//(517)              //note: need >= 20
 #define ATT_SEND_CBUF_SIZE        (512*2)                   //note: need >= 20,缓存大小，可修改
@@ -401,7 +401,7 @@ static void multi_protocol_profile_init(void)
 #endif
     rcsp_ble_profile_init(rcsp_profile_data);
 
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
+#if (TCFG_LE_AUDIO_RCSP_USE_SAME_ACL)
     if (get_bt_le_audio_config()) { // RCSP 与 CIS 共用 ACL
         app_ble_no_profile_flag_set(rcsp_server_ble_hdl, 1);
     }
@@ -475,7 +475,8 @@ void multi_protocol_bt_init(void)
     dma_rx_resume_register(multi_protocol_resume);
     dma_protocol_all_init();
 #endif
-#if (BT_AI_SEL_PROTOCOL & TUYA_DEMO_EN)
+
+#if (THIRD_PARTY_PROTOCOLS_SEL & TUYA_DEMO_EN)
     extern void tuya_bt_ble_init(void);
     tuya_bt_ble_init();
 #endif
@@ -610,6 +611,10 @@ void multi_protocol_bt_ble_enable(u8 enable)
 #endif
 #if (THIRD_PARTY_PROTOCOLS_SEL & MMA_EN)
     xm_bt_ble_adv_enable(enable);
+#endif
+#if (THIRD_PARTY_PROTOCOLS_SEL & TUYA_DEMO_EN)
+    extern void tuya_bt_ble_adv_enable(u8 enable);
+    tuya_bt_ble_adv_enable(enable);
 #endif
 #if (THIRD_PARTY_PROTOCOLS_SEL & REALME_EN)
     realme_ble_adv_enable(enable);

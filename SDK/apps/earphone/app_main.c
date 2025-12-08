@@ -618,6 +618,58 @@ struct app_mode *app_mode_switch_handler(int *msg)
     }
 }
 
+#if 0
+//用于查找重复出现的字符
+static u8 putchar_num = 0;
+int (putchar)(int a)    //重定义putchar
+{
+    uint32_t rets_addr;
+    __asm__ volatile("%0 = rets ;" : "=r"(rets_addr));
+    if (a == 'a') {   //修改需要查找putchar的字符
+        putchar_num++;
+    }
+    if (putchar_num == 5) {    //打印连续出现5次的字符的rets
+        y_printf("char:%c rets:%x\n", a, rets_addr);
+        putchar_num =  0;
+    }
+#ifdef __LOG_ENABLE
+    if (log_output_lock() != 0) {
+        struct logbuf *lb = log_output_start(1);
+        if (lb) {
+            log_putchar(lb, a);
+            log_output_end(lb);
+        }
+    } else {
+        log_putbyte(a);
+        log_output_unlock();
+    }
+#else
+    if (a == '\r') {
+        return a;
+    }
+    putbyte(a);
+#endif
+    return a;
+}
+#endif
+
+#if 0
+void timer_no_response_callback(const char *task_name, void *func, u32 msec, void *timer, u32 curr_msec)
+{
+    extern const char *pcTaskName(void *pxTCB);
+    extern TaskHandle_t task_get_current_handle(u8 cpu_id);
+    if (CPU_CORE_NUM == 2) {
+        TaskHandle_t task0 = task_get_current_handle(0);
+        TaskHandle_t task1 = task_get_current_handle(1);
+        printf("timer_no_response: %s, %p, %d, %p, %d, c0:%s, c1:%s\n", task_name, func, msec, timer, curr_msec, pcTaskName(task0), pcTaskName(task1));
+    } else {
+        TaskHandle_t task0 = task_get_current_handle(0);
+        printf("timer_no_response: %s, %p, %d, %p, %d, c:%s\n", task_name, func, msec, timer, curr_msec, pcTaskName(task0));
+    }
+    //用于debug任务无响应情况
+    task_trace_info_dump(task_name);
+}
+#endif
 
 #if 0
 static void test_printf(void *_arg)

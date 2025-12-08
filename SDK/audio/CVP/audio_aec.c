@@ -39,6 +39,10 @@
 #include "smart_voice/smart_voice.h"
 #endif
 
+#if TCFG_AUDIO_AVC_NODE_ENABLE
+#include "audio_avc.h"
+#endif
+
 
 #define LOG_TAG_CONST       AEC_USER
 #define LOG_TAG             "[AEC_USER]"
@@ -487,7 +491,7 @@ int acoustic_echo_cancel_init(struct audio_aec_init_param_t *init_param, s16 ena
         aec_param->ref_bit_width = DATA_BIT_WIDE_16BIT;
     }
 
-#if (TCFG_SMART_VOICE_ENABLE && TCFG_SMART_VOICE_USE_AEC)
+#if ((TCFG_SMART_VOICE_ENABLE && TCFG_SMART_VOICE_USE_AEC) || (TCFG_AUDIO_AVC_NODE_ENABLE && AVC_USE_AEC))
     printf("esco_player_runing() : %d", esco_player_runing());
     if (!esco_player_runing()) {
         /* aec_param->ref_sr = TCFG_AUDIO_GLOBAL_SAMPLE_RATE; */

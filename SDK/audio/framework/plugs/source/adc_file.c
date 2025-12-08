@@ -26,6 +26,10 @@
 #endif
 #if TCFG_AUDIO_ADC_ENABLE
 
+#if TCFG_AUDIO_AVC_NODE_ENABLE
+#include "audio_avc.h"
+#endif
+
 #if 1
 #define adc_file_log	printf
 #else
@@ -718,6 +722,11 @@ static void adc_mic_output_handler(void *_hdl, s16 *data, int len)
         frame->timestamp    = adc_hdl.timestamp;
 #endif
 
+#if AVC_USE_AEC
+        if (hdl->scene == STREAM_SCENE_ENV_NOISE) {
+            audio_avc_aec_data_fill((s16 *)frame->data, frame->len);
+        }
+#endif
         adc_file_fade_in(hdl, frame->data, frame->len);//淡入处理
         source_plug_put_output_frame(hdl->source_node, frame);
     }
@@ -834,6 +843,9 @@ static void adc_ioc_get_fmt(struct adc_file_hdl *hdl, struct stream_fmt *fmt)
 #else
         fmt->sample_rate    = mic_eff_sr;
 #endif
+        break;
+    case STREAM_SCENE_ENV_NOISE:
+        fmt->sample_rate = 16000;
         break;
     default:
 #if SUPPORT_CHAGE_AUDIO_CLK

@@ -46,10 +46,6 @@ static int poweron_mode_init()
 {
     log_info("power on");
 
-#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE
-    local_tws_init();
-#endif
-
     if (app_var.play_poweron_tone) {
         int ret = play_tone_file_callback(get_tone_files()->power_on, NULL, poweron_tone_play_end_callback);
         if (ret != 0) {

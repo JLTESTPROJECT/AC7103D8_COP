@@ -79,7 +79,6 @@ static void channel_swap_adapter_release(struct stream_node *node)
 }
 
 REGISTER_STREAM_NODE_ADAPTER(channel_swap_node_adapter) = {
-    .name       = "channel_swap",
     .uuid       = NODE_UUID_CHANNLE_SWAP,
     .bind       = channel_swap_adapter_bind,
     .ioctl      = channel_swap_adapter_ioctl,

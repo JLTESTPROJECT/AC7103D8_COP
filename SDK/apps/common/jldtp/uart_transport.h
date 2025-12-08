@@ -5,11 +5,14 @@
 #include "jldtp/jldtp.h"
 
 
+typedef struct {
+    u32 tx_pin;
+    u32 rx_pin;
+    u32 baud_rate;
+    u16 mtu_size;
+} jldtp_uart_config_t;
 
-int transport_uart_open(u32 baud_rate, u32 tx_pin, u32 rx_pin);
-
-
-extern const struct jldtp_transport jldtp_uart_transport;
+extern const jldtp_transport_t jldtp_uart_transport;
 
 
 

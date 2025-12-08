@@ -446,7 +446,6 @@ static void volume_release(struct stream_node *node)
 
 
 REGISTER_STREAM_NODE_ADAPTER(volume_node_adapter) = {
-    .name       = "volume",
     .uuid       = NODE_UUID_VOLUME_CTRLER,
     .bind       = volume_bind,
     .ioctl      = volume_ioctl,

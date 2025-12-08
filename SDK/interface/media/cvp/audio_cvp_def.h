@@ -34,9 +34,16 @@
 #define DMS_HYBRID  	3	//talk mic + fb mic 风噪处理
 #define DMS_AWN  		4	//talk mic + ff mic 风噪处理
 
-/*develop cvp select*/
-#define CVP_CFG_USER_DEFINED	1	//用户自定义开发算法
-#define CVP_CFG_AIS_3MIC		2	//思必驰3mic算法
+/*Develop cvp Config
+ * 高位：算法原厂
+ * 低位：算法类型
+ */
+#define CVP_CFG_USER_DEFINED			1	//用户自定义开发算法
+#define CVP_CFG_AIS_3MIC				2	//思必驰3mic算法
+#define CVP_CFG_ELEVOC_1MIC_VPU			((1UL << 20) | (1UL << 0))	//大象声科Elevoc：1mic+VPU
+#define CVP_CFG_ELEVOC_2MIC_VPU			((1UL << 20) | (1UL << 1))	//大象声科Elevoc：2mic+VPU
+#define CVP_CFG_ELEVOC_2MIC_VPU_CLIP	((1UL << 20) | (1UL << 2))	//大象声科Elevoc：2mic+VPU（耳夹形态FreeClip）
+#define CVP_CFG_ELEVOC_3MIC_VPU			((1UL << 20) | (1UL << 3))	//大象声科Elevoc：3mic+VPU
 
 /*SMS DNS版本定义*/
 #define SMS_DNS_V100        0xC1

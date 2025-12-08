@@ -113,7 +113,6 @@ static void uart_node_release(struct stream_node *node)
 
 
 REGISTER_STREAM_NODE_ADAPTER(uart_node_adapter) = {
-    .name       = "uart_dump",
     .uuid       = NODE_UUID_UART_DUMP,
     .bind       = uart_node_bind,
     .ioctl      = uart_node_ioctl,

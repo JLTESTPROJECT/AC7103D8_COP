@@ -11,9 +11,13 @@ objs += \
       $(ROOT)/audio/framework/nodes/esco_tx_node.o \
       $(ROOT)/audio/framework/nodes/plc_node.o \
       $(ROOT)/audio/framework/nodes/volume_node.o \
+      $(ROOT)/audio/framework/node_list.o \
 
 objs += \
       $(ROOT)/audio/framework/nodes/virtual_udisk_node.o
+
+objs += \
+      $(ROOT)/audio/framework/nodes/avc_node.o
 
 objs += \
       $(ROOT)/audio/framework/nodes/ns_node.o
@@ -222,7 +226,8 @@ objs += \
 	  $(ROOT)/audio/interface/recoder/ai_voice_recoder.o
 
 objs += \
-	  $(ROOT)/audio/interface/user_defined/audio_dsp_low_latency_player.o
+	  $(ROOT)/audio/interface/user_defined/audio_dsp_low_latency_player.o \
+	  $(ROOT)/audio/interface/user_defined/env_noise_recoder.o
 
 #if EXPORT_LE_AUDIO_SUPPORT
 objs += \
@@ -309,6 +314,9 @@ objs += \
 
 #endif
 
+objs += \
+    $(ROOT)/audio/anc/audio_anc_lvl_sync.o
+
 #if EXPORT_PLATFORM_ANC_ENABLE
 objs += \
 	  $(ROOT)/audio/anc/audio_anc_fade_ctr.o \
@@ -322,7 +330,6 @@ objs += \
 	  $(ROOT)/audio/anc/audio_anc_manager.o \
 	  $(ROOT)/audio/anc/audio_anc.o \
 	  $(ROOT)/audio/anc/icsd_anc_user.o \
-	  $(ROOT)/audio/anc/audio_anc_lvl_sync.o \
 
 #endif
 
@@ -385,6 +392,7 @@ objs += \
 	  $(ROOT)/audio/CVP/audio_cvp_ais_3mic.o \
 	  $(ROOT)/audio/CVP/audio_cvp_ref_task.o \
 	  $(ROOT)/audio/CVP/audio_cvp_config.o \
+	  $(ROOT)/audio/CVP/audio_cvp_elevoc.o \
 
 objs += \
 	  $(ROOT)/audio/interface/player/tws_tone_player.o

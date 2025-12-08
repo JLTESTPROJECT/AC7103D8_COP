@@ -577,10 +577,8 @@ static void cvp_adapter_release(struct stream_node *node)
 /*节点adapter 注意需要在sdk_used_list声明，否则会被优化*/
 REGISTER_STREAM_NODE_ADAPTER(cvp_node_adapter) = {
 #if TCFG_AUDIO_CVP_SMS_ANS_MODE
-    .name       = "cvp_sms_ans",
     .uuid       = NODE_UUID_CVP_SMS_ANS,
 #else /*TCFG_AUDIO_CVP_SMS_DNS_MODE*/
-    .name       = "cvp_sms_dns",
     .uuid       = NODE_UUID_CVP_SMS_DNS,
 #endif
     .bind       = cvp_adapter_bind,

@@ -44,25 +44,6 @@ int audio_icsd_wind_detect_close()
     return audio_icsd_adt_sync_close(adt_mode, 0);
 }
 
-/*风噪检测开关*/
-void audio_icsd_wind_detect_en(u8 en)
-{
-    wind_log("%s en: %d", __func__, en);
-    if (audio_icsd_adt_open_permit(ADT_WIND_NOISE_DET_MODE) == 0) {
-        return;
-    }
-
-    if (((get_icsd_adt_mode() & ADT_WIND_NOISE_DET_MODE) == 0) && en) {
-        /*打开提示音*/
-        icsd_adt_tone_play(ICSD_ADT_TONE_WINDDET_ON);
-        audio_icsd_wind_detect_open();
-    } else if ((get_icsd_adt_mode() & ADT_WIND_NOISE_DET_MODE) && (!en)) {
-        /*关闭提示音*/
-        icsd_adt_tone_play(ICSD_ADT_TONE_WINDDET_OFF);
-        audio_icsd_wind_detect_close();
-    }
-}
-
 /*风噪检测使用demo*/
 void audio_icsd_wind_detect_demo()
 {

@@ -339,7 +339,6 @@ static void ns_adapter_release(struct stream_node *node)
 
 /*节点adapter 注意需要在sdk_used_list声明，否则会被优化*/
 REGISTER_STREAM_NODE_ADAPTER(ns_node_adapter) = {
-    .name       = "ns",
     .uuid       = NODE_UUID_NOISE_SUPPRESSOR,
     .bind       = ns_adapter_bind,
     .ioctl      = ns_adapter_ioctl,
@@ -350,7 +349,6 @@ REGISTER_STREAM_NODE_ADAPTER(ns_node_adapter) = {
 };
 
 REGISTER_STREAM_NODE_ADAPTER(ns_node_lite_adapter) = {
-    .name       = "ns_lite",
     .uuid       = NODE_UUID_NOISE_SUPPRESSOR_LITE,
     .bind       = ns_adapter_bind,
     .ioctl      = ns_adapter_ioctl,

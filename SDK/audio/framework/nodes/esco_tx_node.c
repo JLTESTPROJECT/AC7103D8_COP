@@ -239,7 +239,6 @@ static void esco_tx_release(struct stream_node *node)
 	((defined TCFG_BT_HFP_ONLY_DISPLAY_BAT_ENABLE) && (!TCFG_BT_HFP_ONLY_DISPLAY_BAT_ENABLE) && TCFG_BT_SUPPORT_HFP)
 
 REGISTER_STREAM_NODE_ADAPTER(esco_tx_adapter) = {
-    .name       = "esco_tx",
     .uuid       = NODE_UUID_ESCO_TX,
     .bind       = esco_tx_bind,
     .ioctl      = esco_tx_ioctl,

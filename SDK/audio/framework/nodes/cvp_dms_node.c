@@ -1117,7 +1117,6 @@ static void cvp_adapter_release(struct stream_node *node)
 /*节点adapter 注意需要在sdk_used_list声明，否则会被优化*/
 #if (TCFG_AUDIO_CVP_DMS_ANS_MODE)
 REGISTER_STREAM_NODE_ADAPTER(dms_ans_node_adapter) = {
-    .name       = "cvp_dms_ans",
     .uuid       = NODE_UUID_CVP_DMS_ANS,
     .bind       = cvp_adapter_bind,
     .ioctl      = cvp_adapter_ioctl,
@@ -1133,7 +1132,6 @@ REGISTER_ONLINE_ADJUST_TARGET(cvp_dms_ans) = {
 
 #if (TCFG_AUDIO_CVP_DMS_DNS_MODE)
 REGISTER_STREAM_NODE_ADAPTER(dms_dns_node_adapter) = {
-    .name       = "cvp_dms_dns",
     .uuid       = NODE_UUID_CVP_DMS_DNS,
     .bind       = cvp_adapter_bind,
     .ioctl      = cvp_adapter_ioctl,
@@ -1149,7 +1147,6 @@ REGISTER_ONLINE_ADJUST_TARGET(cvp_dms_dns) = {
 
 #if (TCFG_AUDIO_CVP_DMS_FLEXIBLE_ANS_MODE)
 REGISTER_STREAM_NODE_ADAPTER(dms_flexible_ans_node_adapter) = {
-    .name       = "cvp_dms_flexible_ans",
     .uuid       = NODE_UUID_CVP_DMS_FLEXIBLE_ANS,
     .bind       = cvp_adapter_bind,
     .ioctl      = cvp_adapter_ioctl,
@@ -1165,7 +1162,6 @@ REGISTER_ONLINE_ADJUST_TARGET(cvp_dms_flexible_ans) = {
 
 #if (TCFG_AUDIO_CVP_DMS_FLEXIBLE_DNS_MODE)
 REGISTER_STREAM_NODE_ADAPTER(dms_flexible_dns_node_adapter) = {
-    .name       = "cvp_dms_flexible_dns",
     .uuid       = NODE_UUID_CVP_DMS_FLEXIBLE_DNS,
     .bind       = cvp_adapter_bind,
     .ioctl      = cvp_adapter_ioctl,
@@ -1181,7 +1177,6 @@ REGISTER_ONLINE_ADJUST_TARGET(cvp_dms_flexible_dns) = {
 
 #if (TCFG_AUDIO_CVP_DMS_HYBRID_DNS_MODE)
 REGISTER_STREAM_NODE_ADAPTER(dms_hybrid_dns_node_adapter) = {
-    .name       = "cvp_dms_hybrid_dns",
     .uuid       = NODE_UUID_CVP_DMS_HYBRID_DNS,
     .bind       = cvp_adapter_bind,
     .ioctl      = cvp_adapter_ioctl,
@@ -1198,7 +1193,6 @@ REGISTER_ONLINE_ADJUST_TARGET(cvp_dms_hybrid_dns) = {
 
 #if (TCFG_AUDIO_CVP_DMS_AWN_DNS_MODE)
 REGISTER_STREAM_NODE_ADAPTER(dms_awn_dns_node_adapter) = {
-    .name       = "cvp_dms_awn_dns",
     .uuid       = NODE_UUID_CVP_DMS_AWN_DNS,
     .bind       = cvp_adapter_bind,
     .ioctl      = cvp_adapter_ioctl,

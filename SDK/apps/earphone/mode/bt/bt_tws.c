@@ -488,6 +488,11 @@ int bt_tws_poweron()
     tws_api_auto_role_switch_disable();
 #endif
 
+
+#if CONFIG_TWS_PAIR_MODE == CONFIG_TWS_PAIR_BY_CHIP_CONN
+    tws_pair_by_chip_conn_init();
+#endif
+
     int result = 0;
     err = tws_get_sibling_addr(addr, &result);
     if (err == 0) {
@@ -544,7 +549,10 @@ int bt_tws_poweron()
  */
 void bt_tws_set_pair_suss(const u8 *remote_addr)
 {
-    if (gtws.state & BT_TWS_PAIRED) {
+    u8 addr[6];
+    int result = 0;
+    int err = tws_get_sibling_addr(addr, &result);
+    if (err == 0 && memcmp(remote_addr, addr, 6) == 0) {
         return;
     }
     syscfg_write(CFG_TWS_REMOTE_ADDR, remote_addr, 6);

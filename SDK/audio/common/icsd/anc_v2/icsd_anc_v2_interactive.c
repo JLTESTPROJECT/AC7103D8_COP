@@ -1002,15 +1002,7 @@ void audio_anc_adaptive_data_packet(struct icsd_anc_v2_tool_data *TOOL_DATA)
             anc_adaptive_data = anc_data_catch(anc_adaptive_data, (u8 *)TOOL_DATA->h_freq, len * 4, ANC_R_ADAP_FRE, 0);
             anc_adaptive_data = anc_data_catch(anc_adaptive_data, (u8 *)TOOL_DATA->data_out1, len * 8, ANC_R_ADAP_SZPZ, 0);
             anc_adaptive_data = anc_data_catch(anc_adaptive_data, (u8 *)TOOL_DATA->data_out2, len * 8, ANC_R_ADAP_PZ, 0);
-#if AUDIO_ANC_ADAPTIVE_CMP_SZ_FACTOR
-            //双FB 方案复用耳道target线作为SZ补偿曲线显示
-            float *sz_cmp_r = audio_anc_ear_adaptive_cmp_sz_cmp_get(ANC_EAR_ADAPTIVE_CMP_CH_L);
-            if (sz_cmp_r) {
-                anc_adaptive_data = anc_data_catch(anc_adaptive_data, (u8 *)sz_cmp_r, len * 8, ANC_R_ADAP_TARGET, 0);
-            }
-#else
             anc_adaptive_data = anc_data_catch(anc_adaptive_data, (u8 *)TOOL_DATA->data_out3, len * 8, ANC_R_ADAP_TARGET, 0);
-#endif
             anc_adaptive_data = anc_data_catch(anc_adaptive_data, (u8 *)TOOL_DATA->data_out13, len * 8, ANC_R_ADAP_TARGET_CMP, 0);
             anc_adaptive_data = anc_data_catch(anc_adaptive_data, (u8 *)TOOL_DATA->target_before_cmp_l, len * 8, ANC_R_ADAP_TARGET_BEFORE_CMP, 0);
             anc_adaptive_data = anc_data_catch(anc_adaptive_data, (u8 *)TOOL_DATA->cmp_form_anc_train_l, len * 8, ANC_R_ADAP_CMP_FORM_TRAIN, 0);
@@ -1021,6 +1013,12 @@ void audio_anc_adaptive_data_packet(struct icsd_anc_v2_tool_data *TOOL_DATA)
 #if ANC_EAR_ADAPTIVE_CMP_EN
             anc_adaptive_data = anc_data_catch(anc_adaptive_data, (u8 *)cmp_dat, cmp_dat_len, ANC_R_CMP_IIR, 0);  //R_cmp
 #endif/*ANC_EAR_ADAPTIVE_CMP_EN*/
+#if AUDIO_ANC_ADAPTIVE_CMP_SZ_FACTOR
+            float *sz_cmp_r = audio_anc_ear_adaptive_cmp_sz_cmp_get(ANC_EAR_ADAPTIVE_CMP_CH_L);
+            if (sz_cmp_r) {
+                anc_adaptive_data = anc_data_catch(anc_adaptive_data, (u8 *)sz_cmp_r, len * 8, ANC_R_ADAP_SZ_CMP, 0);
+            }
+#endif
         } else
 #endif/*TCFG_USER_TWS_ENABLE*/
         {
@@ -1028,15 +1026,7 @@ void audio_anc_adaptive_data_packet(struct icsd_anc_v2_tool_data *TOOL_DATA)
             anc_adaptive_data = anc_data_catch(anc_adaptive_data, (u8 *)TOOL_DATA->h_freq, len * 4, ANC_L_ADAP_FRE, 0);
             anc_adaptive_data = anc_data_catch(anc_adaptive_data, (u8 *)TOOL_DATA->data_out1, len * 8, ANC_L_ADAP_SZPZ, 0);
             anc_adaptive_data = anc_data_catch(anc_adaptive_data, (u8 *)TOOL_DATA->data_out2, len * 8, ANC_L_ADAP_PZ, 0);
-#if AUDIO_ANC_ADAPTIVE_CMP_SZ_FACTOR
-            //双FB 方案复用耳道target线作为SZ补偿曲线显示
-            float *sz_cmp_l = audio_anc_ear_adaptive_cmp_sz_cmp_get(ANC_EAR_ADAPTIVE_CMP_CH_L);
-            if (sz_cmp_l) {
-                anc_adaptive_data = anc_data_catch(anc_adaptive_data, (u8 *)sz_cmp_l, len * 8, ANC_L_ADAP_TARGET, 0);
-            }
-#else
             anc_adaptive_data = anc_data_catch(anc_adaptive_data, (u8 *)TOOL_DATA->data_out3, len * 8, ANC_L_ADAP_TARGET, 0);
-#endif
             anc_adaptive_data = anc_data_catch(anc_adaptive_data, (u8 *)TOOL_DATA->data_out13, len * 8, ANC_L_ADAP_TARGET_CMP, 0);
             anc_adaptive_data = anc_data_catch(anc_adaptive_data, (u8 *)TOOL_DATA->target_before_cmp_l, len * 8, ANC_L_ADAP_TARGET_BEFORE_CMP, 0);
             anc_adaptive_data = anc_data_catch(anc_adaptive_data, (u8 *)TOOL_DATA->cmp_form_anc_train_l, len * 8, ANC_L_ADAP_CMP_FORM_TRAIN, 0);
@@ -1047,6 +1037,13 @@ void audio_anc_adaptive_data_packet(struct icsd_anc_v2_tool_data *TOOL_DATA)
 #if ANC_EAR_ADAPTIVE_CMP_EN
             anc_adaptive_data = anc_data_catch(anc_adaptive_data, (u8 *)cmp_dat, cmp_dat_len, ANC_L_CMP_IIR, 0);  //L_cmp
 #endif/*ANC_EAR_ADAPTIVE_CMP_EN*/
+#if AUDIO_ANC_ADAPTIVE_CMP_SZ_FACTOR
+            //双FB 方案复用耳道target线作为SZ补偿曲线显示
+            float *sz_cmp_l = audio_anc_ear_adaptive_cmp_sz_cmp_get(ANC_EAR_ADAPTIVE_CMP_CH_L);
+            if (sz_cmp_l) {
+                anc_adaptive_data = anc_data_catch(anc_adaptive_data, (u8 *)sz_cmp_l, len * 8, ANC_L_ADAP_SZ_CMP, 0);
+            }
+#endif
         }
 #endif  /* TCFG_AUDIO_ANC_CH == (ANC_L_CH | ANC_R_CH) */
 

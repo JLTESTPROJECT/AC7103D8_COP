@@ -15,10 +15,12 @@ enum anc_lvl_sync_name {
     ANC_LVL_SYNC_WIND = 0,
     ANC_LVL_SYNC_ENV,
     ANC_LVL_SYNC_AVC,
+    COMMON_LVL_SYNC_AVC, //通用avc模块，不依赖anc
 };
 
 struct audio_anc_lvl_sync_param {
     void (*sync_result_cb)(void *);
+    void *priv;
     u8 sync_check;      //实时性检查，某些tws消息同步有实时性要求
     u8 high_lvl_sync;   //1:tws对齐高等级 0:对齐低等级
     u8 default_lvl;     //初始设置等级
@@ -28,6 +30,7 @@ struct audio_anc_lvl_sync_param {
 struct audio_anc_lvl_sync {
     struct list_head hentry;
     void (*sync_result_cb)(void *);
+    void *priv;
     u8 sync_check;      //实时性检查，某些tws消息同步有实时性要求
     u8 high_lvl_sync;   //1:tws对齐高等级 0:对齐低等级
     s8 sync_cnt[2];     //0:cmp 1:result

@@ -770,7 +770,6 @@ static void iis_adapter_release(struct stream_node *node)
 }
 
 REGISTER_STREAM_NODE_ADAPTER(iis_node_adapter) = {
-    .name       = "iis",
     .uuid       = NODE_UUID_IIS0_TX,
     .bind       = iis_adapter_bind,
     .ioctl      = iis_adapter_ioctl,
@@ -779,7 +778,6 @@ REGISTER_STREAM_NODE_ADAPTER(iis_node_adapter) = {
     .hdl_size   = sizeof(struct iis_node_hdl),
 };
 REGISTER_STREAM_NODE_ADAPTER(iis1_node_adapter) = {
-    .name       = "iis1",
     .uuid       = NODE_UUID_IIS1_TX,
     .bind       = iis_adapter_bind,
     .ioctl      = iis_adapter_ioctl,
@@ -791,7 +789,6 @@ REGISTER_STREAM_NODE_ADAPTER(iis1_node_adapter) = {
 
 #if TCFG_TDM_TX_NODE_ENABLE
 REGISTER_STREAM_NODE_ADAPTER(tdm_node_adapter) = {
-    .name       = "tdm",
     .uuid       = NODE_UUID_TDM_TX,
     .bind       = iis_adapter_bind,
     .ioctl      = iis_adapter_ioctl,

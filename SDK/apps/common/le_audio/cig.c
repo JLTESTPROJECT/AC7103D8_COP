@@ -76,8 +76,7 @@ REGISTER_WIRELESS_DEV(cig_central_op) = {
 };
 #endif /* (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_CIS_CENTRAL_EN) */
 
-
-#if (BT_AI_SEL_PROTOCOL & LE_AUDIO_CIS_RX_EN)
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
 
 static int cig_perip_init(void *priv)
 {
@@ -147,5 +146,5 @@ REGISTER_WIRELESS_DEV(cig_perip_op) = {
     .ioctrl         = cig_perip_ioctrl,
 };
 
-#endif /* (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_CIS_PERIPHERAL_EN) */
+#endif /* TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN) */
 

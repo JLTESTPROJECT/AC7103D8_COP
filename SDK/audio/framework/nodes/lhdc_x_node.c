@@ -197,7 +197,6 @@ static void lhdc_x_adapter_release(struct stream_node *node)
 
 /*节点adapter 注意需要在sdk_used_list声明，否则会被优化*/
 REGISTER_STREAM_NODE_ADAPTER(lhdc_x_node_adapter) = {
-    .name       = "lhdc_x",
     .uuid       = NODE_UUID_LHDC_X,
     .bind       = lhdc_x_adapter_bind,
     .ioctl      = lhdc_x_adapter_ioctl,

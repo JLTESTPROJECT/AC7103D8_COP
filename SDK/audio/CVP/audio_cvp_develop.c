@@ -389,7 +389,7 @@ static void audio_aec_task(void *priv)
             if ((!list_empty(&cvp_dev->in_head)) &&
                 (!list_empty(&cvp_dev->ref0_head))) {
                 cvp_dev->busy = 1;
-                local_irq_disable();
+                spin_lock(&cvp_lock);
                 /*1.获取主mic数据*/
                 bulk = list_first_entry(&cvp_dev->in_head, struct mic_bulk, entry);
                 list_del(&bulk->entry);
@@ -418,7 +418,7 @@ static void audio_aec_task(void *priv)
                     list_del(&ref0_bulk->entry);
                     cvp_dev->pFar = (s16 *)ref0_bulk->addr;
                 }
-                local_irq_enable();
+                spin_unlock(&cvp_lock);
 
                 int rlen = cvp_dev->ref_size;
                 /*dac参考数据是立体声数据时，合成一个声道*/
@@ -681,6 +681,9 @@ void audio_aec_close(void)
 
         if (CONST_AEC_EXPORT) {
             aec_uart_close();
+            extern void uartSendExit();
+            uartSendExit();
+
         }
 
         if (CONST_REF_SRC) {
@@ -701,7 +704,7 @@ void audio_aec_close(void)
             free(cvp_dev->free_ram);
         }
 
-        /* free(cvp_dev); */
+        free(cvp_dev);
         cvp_dev = NULL;
         local_irq_enable();
         aec_code_movable_unload();
@@ -839,19 +842,19 @@ void audio_aec_inbuf(s16 *buf, u16 len)
                 bulk->used = 0;
                 __list_del_entry(&bulk->entry);
             }
-            if (cvp_dev->mic_num == 2) {
+            if (cvp_dev->mic_num >= 2) {
                 list_for_each_entry(bulk, &cvp_dev->inref_head, entry) {
                     bulk->used = 0;
                     __list_del_entry(&bulk->entry);
                 }
             }
-            if (cvp_dev->mic_num == 3) {
+            if (cvp_dev->mic_num >= 3) {
                 list_for_each_entry(bulk, &cvp_dev->inref_1_head, entry) {
                     bulk->used = 0;
                     __list_del_entry(&bulk->entry);
                 }
             }
-            if (cvp_dev->mic_num == 4) {
+            if (cvp_dev->mic_num >= 4) {
                 list_for_each_entry(bulk, &cvp_dev->inref_2_head, entry) {
                     bulk->used = 0;
                     __list_del_entry(&bulk->entry);

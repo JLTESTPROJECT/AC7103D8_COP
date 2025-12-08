@@ -273,7 +273,6 @@ static void agc_adapter_release(struct stream_node *node)
 
 /*节点adapter 注意需要在sdk_used_list声明，否则会被优化*/
 REGISTER_STREAM_NODE_ADAPTER(agc_node_adapter) = {
-    .name       = "agc",
     .uuid       = NODE_UUID_AGC,
     .bind       = agc_adapter_bind,
     .ioctl      = agc_adapter_ioctl,

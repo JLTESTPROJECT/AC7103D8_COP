@@ -41,6 +41,10 @@
 #include "effects/eq_config.h"
 #endif
 
+#if TCFG_AUDIO_AVC_NODE_ENABLE
+#include "env_noise_recoder.h"
+#endif
+
 extern struct audio_dac_hdl dac_hdl;
 struct a2dp_player {
     u8 bt_addr[6];
@@ -400,6 +404,9 @@ int a2dp_player_open(u8 *btaddr)
 #if (TCFG_SMART_VOICE_ENABLE && TCFG_SMART_VOICE_USE_AEC)
     audio_smart_voice_aec_open();
 #endif
+#if TCFG_AUDIO_AVC_NODE_ENABLE
+    env_noise_recoder_open();
+#endif
 
     puts("a2dp_open_dec_file_suss\n");
 
@@ -497,6 +504,9 @@ void a2dp_player_close(u8 *btaddr)
 
 #if (TCFG_SMART_VOICE_ENABLE && TCFG_SMART_VOICE_USE_AEC)
     audio_smart_voice_aec_close();
+#endif
+#if TCFG_AUDIO_AVC_NODE_ENABLE
+    env_noise_recoder_close();
 #endif
 
 #if TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN

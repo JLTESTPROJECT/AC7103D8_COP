@@ -178,6 +178,7 @@ enum stream_scene : u8 {
 
     STREAM_SCENE_LOUDSPEAKER_IIS, //扩音器IIS
     STREAM_SCENE_LOUDSPEAKER_MIC, //扩音器MIC
+    STREAM_SCENE_ENV_NOISE,
     STREAM_SCENE_USER_DEFINED, //自定义流程
 
     //最大32个场景，如果大于32个场景，需把tone、ring, key_tone场景号往后挪
@@ -229,9 +230,9 @@ enum stream_node_state : u16 {
 enum stream_node_type : u8 {
     NODE_TYPE_SYNC      = 0x01,
     NODE_TYPE_BYPASS    = 0x03,
-    NODE_TYPE_FLOW_CTRL = 0x04,
+    NODE_TYPE_FLOW_CTRL = 0x04,  //流控类型，源节点后接入解码器，解码器会控制输出的速度，防止中间缓存过多
     NODE_TYPE_ASYNC     = 0x10,
-    NODE_TYPE_IRQ       = 0x20,
+    NODE_TYPE_IRQ       = 0x20,  //中断输入类型，比如ADC，通常1次中断唤醒一次数据流，如果数据流内有拆包，拼包行为，会导致输出不及时，效率降低
     NODE_TYPE_SWITCH    = 0x40,
 };
 
@@ -433,7 +434,6 @@ struct stream_oport {
 
 
 struct stream_node_adapter {
-    const char *name;
     u16 hdl_size;
     u16 iport_size;
 
@@ -809,6 +809,7 @@ u8 jlstream_frames_cross_fade_run(struct jlsream_crossfade *crossfade, void *fad
 int jlstream_set_node_task(struct jlstream *stream, u16 node_uuid,
                            const char *node_name, const char *task_name);
 
+const char *jlstream_node_name(u16 node_uuid);
 
 #endif
 

@@ -86,6 +86,6 @@
 
 // le_audio
 #define		CFG_JL_UNICAST_EDR_MODE			 186 // jlunicast模式切换
-
+#define		CFG_JL_CIS_DUAL_UAC_VOL	         187 // jlunicast双声卡音量
 
 #endif /* #ifndef _USER_CFG_ID_H_ */

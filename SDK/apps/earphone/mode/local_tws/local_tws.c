@@ -12,6 +12,7 @@
 #include "tws_a2dp_play.h"
 #include "a2dp_player.h"
 #include "app_msg.h"
+#include "dac_node.h"
 
 #if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE
 #define LOG_TAG             "[LOCAL_TWS]"
@@ -552,6 +553,7 @@ static int local_tws_event_handler(int *_event)
     case TWS_EVENT_DATA_TRANS_OPEN:
         break;
     case TWS_EVENT_DATA_TRANS_START:
+        dac_try_power_on_thread();
         /*Source端打开本地传输Sink端会收到该event并收到参数，在此处打开本地解码*/
 #if (!LOCAL_TWS_SOURCE_PLAYER_USE_ENC_DATA)
         if (trans_role == TWS_DATA_TRANS_SOURCE) {

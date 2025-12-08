@@ -3,13 +3,11 @@
 
 
 #define NODE_UUID_SOURCE            0x1100
-#define NODE_UUID_DEMUXER           0x1200
 #define NODE_UUID_DECODER           0x1A85
 #define NODE_UUID_ENCODER           0x0A2C
 
 #define NODE_UUID_TONE              0x768A
 #define NODE_UUID_RING              0xCADC
-#define NODE_UUID_FILEPLAY          0XF03B
 #define NODE_UUID_KEY_TONE          0x8346
 #define NODE_UUID_EQ                0x737B
 #define NODE_UUID_SRC               0x1ECD
@@ -25,7 +23,6 @@
 #define NODE_UUID_ESCO_TX           0x849A
 #define NODE_UUID_BT_AUDIO_SYNC     0xA576
 #define NODE_UUID_VOLUME_CTRLER     0x74E3
-#define NODE_UUID_MULTIPLEX         0x2C15
 #define NODE_UUID_UART_DUMP         0xE76E
 #define NODE_UUID_MUTE              0xD5E0
 #define NODE_UUID_PLC               0xED7F
@@ -61,7 +58,6 @@
 #define NODE_UUID_LE_AUDIO_PCM      0xC4B7
 #define NODE_UUID_LE_AUDIO_TX       0xDEF2
 #define NODE_UUID_LE_AUDIO_RX       0xDEB0
-#define NODE_UUID_LE_AUDIO_PCM      0xC4B7
 #define NODE_UUID_LE_AUDIO_SOURCE   0x2D57
 #define NODE_UUID_LE_AUDIO_SINK     0x2DFB
 #define NODE_UUID_CAPTURE_SYNC      0xFF09
@@ -208,6 +204,7 @@
 #define NODE_UUID_VOCAL_TRACK_SEPARATION_8TO2  0x3198//声道拆分8转2
 #define NODE_UUID_NF_SUPPRESSOR            0x9F3F
 #define NODE_UUID_VIRTUAL_SURROUND_HP      0XDCD4//虚拟环绕音（耳机适用）
+#define NODE_UUID_AVC                      0xD2BF//音量自适应
 
 
 #define NODE_UUID_VIBRATO                  0x40DC//人声高音颤音

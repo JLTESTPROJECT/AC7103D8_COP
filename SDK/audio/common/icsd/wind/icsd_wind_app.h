@@ -36,9 +36,6 @@ int audio_icsd_wind_detect_open();
 /*关闭风噪检测*/
 int audio_icsd_wind_detect_close();
 
-/*风噪检测开关*/
-void audio_icsd_wind_detect_en(u8 en);
-
 /*风噪检测开关demo*/
 void audio_icsd_wind_detect_demo();
 

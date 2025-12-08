@@ -54,7 +54,7 @@ static void app_idle_enter_softoff(void)
 #if TCFG_CHARGE_ENABLE
     if (get_lvcmp_det() && (0 == get_charge_full_flag())) {
         log_info("charge inset, system reset!\n");
-        app_charge_system_reset();
+        charge_system_reset();
     }
 #endif
 
