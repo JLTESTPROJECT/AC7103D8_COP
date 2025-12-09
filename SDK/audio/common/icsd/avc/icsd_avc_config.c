@@ -7,16 +7,15 @@
 
 #include "app_config.h"
 
-#if ( TCFG_AUDIO_ANC_ENABLE && TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN && \
-TCFG_AUDIO_ANC_ENV_NOISE_DET_ENABLE) || TCFG_AUDIO_AVC_NODE_ENABLE
-
+#if ((TCFG_AUDIO_ANC_ENABLE && TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN && TCFG_AUDIO_ANC_ENV_NOISE_DET_ENABLE) || \
+    (TCFG_AUDIO_AVC_NODE_ENABLE && (TCFG_AVC_ALGO_SELECT == 1)))
 
 #include "audio_config.h"
 #include "icsd_avc.h"
 
 int (*avc_printf)(const char *format, ...) = _avc_printf;
 
-float avc_alpha_db = 0.9; //debug
+float avc_alpha_db = 0.9; //滤波器平滑度 越大越平滑，响应越慢 range (0,1)
 void avc_config_init(__avc_config *_avc_config)
 {
     /* _avc_config->alpha_db = 0x995; */

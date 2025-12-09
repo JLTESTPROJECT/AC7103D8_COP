@@ -319,6 +319,8 @@ void audio_anc_power_adaptive_init(audio_anc_t *param)
     cfg.param = param;
 #if (TCFG_AUDIO_ANC_ENV_ADAPTIVE_GAIN_LITE_ENABLE || TCFG_AUDIO_ANC_ENV_ADAPTIVE_VOLUME_LITE_ENABLE)
     cfg.pow_output_cb = audio_anc_env_avc_thr_to_lvl_sync;
+#else
+    cfg.pow_output_cb = NULL;
 #endif
     anc_pow_adap_init(&cfg);
 }

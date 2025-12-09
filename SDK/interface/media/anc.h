@@ -255,6 +255,11 @@ enum ANC_DCC_TRIM_MODE {
 #define ANC_CFG_READ		 		0x01
 #define ANC_CFG_WRITE				0x02
 
+//ANC 模拟MIC类型判断
+#define IS_ANC_ANALOG_MIC(mic)     ((mic) >= A_MIC0 && (mic) < D_MIC0)
+//ANC 数字MIC类型判断
+#define IS_ANC_DIGITAL_MIC(mic)    ((mic) >= D_MIC0 && (mic) <= D_MIC3)
+
 //ANC性能自动生成结构
 typedef struct {
     u8  mode;				//当前训练步骤

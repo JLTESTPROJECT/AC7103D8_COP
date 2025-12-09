@@ -383,6 +383,8 @@ struct stream_thread {
     u8 debug;
     u8 start;
     char name[16];
+    u32 run_time;
+    u32 begin_usec;
     OS_SEM sem;
     OS_MUTEX mutex;
     struct jlstream *stream;
@@ -548,8 +550,6 @@ struct jlstream {
     enum stream_scene scene;
 
     u16 output_time;
-    u16 run_time;
-    u32 begin_usec;
     u32 first_start_usec;
 
     u32 end_jiffies;

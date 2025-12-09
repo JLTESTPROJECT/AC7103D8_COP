@@ -91,7 +91,6 @@ static anc_coeff_t *anc_cfg_test(u8 coeff_en, u8 gains_en);
 static void anc_fade_in_timer_add(audio_anc_t *param);
 static int audio_anc_adt_prepare(u8 mode);
 static int audio_anc_adt_reset(u8 mode);
-void anc_dmic_io_init(audio_anc_t *param, u8 en);
 static void anc_tone_play_and_mode_switch(u8 mode, u8 preemption, u8 cb_sel);
 void anc_mode_enable_set(u8 mode_enable);
 void audio_anc_post_msg_drc(void);
@@ -136,6 +135,9 @@ typedef struct {
     u8 switch_latch_mode;           /*切模式 锁存模式*/
     u8 adt_open;
     u8 stereo_to_mono_mix;			//ANC 双->单声道控制
+#if AUDIO_ANC_PDM_MIC_ENABLE
+    u8 pdm_mic_ch;
+#endif
     float drc_ratio;				/*动态MIC增益，对应DRC增益比例*/
     volatile u8 state;				/*ANC状态*/
     volatile u8 mode_switch_lock;	/*切模式锁存，1表示正在切ANC模式*/
@@ -333,7 +335,9 @@ static void anc_task(void *p)
 #if TCFG_AUDIO_ANC_BASE_DEBUG_ENABLE
             case ANC_MSG_TRAIN_OPEN:/*启动训练模式*/
                 audio_mic_pwr_ctl(MIC_PWR_ON);
-                anc_dmic_io_init(&anc_hdl->param, 1);
+#if AUDIO_ANC_PDM_MIC_ENABLE
+                audio_anc_pdm_mic_start(anc_hdl->pdm_mic_ch);
+#endif
                 user_anc_log("ANC_MSG_TRAIN_OPEN");
                 audio_anc_dma_sel_map(&anc_hdl->param, &anc_hdl->param.debug_sel);
                 audio_anc_train(&anc_hdl->param, 1);
@@ -416,7 +420,9 @@ static void anc_task(void *p)
 #endif/*LADC_CH_PLNK*/
                 if (anc_hdl->state == ANC_STA_INIT) {
                     audio_mic_pwr_ctl(MIC_PWR_ON);
-                    anc_dmic_io_init(&anc_hdl->param, 1);
+#if AUDIO_ANC_PDM_MIC_ENABLE
+                    audio_anc_pdm_mic_start(anc_hdl->pdm_mic_ch);
+#endif
 #if ANC_MODE_SYSVDD_EN
                     clock_set_lowest_voltage(SYSVDD_VOL_SEL_105V);	//进入ANC时提高SYSVDD电压
 #endif/*ANC_MODE_SYSVDD_EN*/
@@ -442,7 +448,9 @@ static void anc_task(void *p)
                 }
                 if (cur_anc_mode == ANC_OFF) {
                     anc_hdl->state = ANC_STA_INIT;
-                    anc_dmic_io_init(&anc_hdl->param, 0);
+#if AUDIO_ANC_PDM_MIC_ENABLE
+                    audio_anc_pdm_mic_stop();
+#endif
                     audio_mic_pwr_ctl(MIC_PWR_OFF);
 #if ANC_MODE_SYSVDD_EN
                     clock_set_lowest_voltage(SYSVDD_VOL_SEL_084V);	//退出ANC恢复普通模式
@@ -2114,90 +2122,6 @@ int anc_cfg_online_deal(u8 cmd, anc_gain_t *cfg)
     return 0;
 }
 
-#if 0
-/*ANC数字MIC IO配置*/
-static atomic_t dmic_mux_ref;
-#define DMIC_SCLK_FROM_PLNK		0
-#define DMIC_SCLK_FROM_ANC		1
-void dmic_io_mux_ctl(u8 en, u8 sclk_sel)
-{
-    user_anc_log("dmic_io_mux,en:%d,sclk:%d,ref:%d\n", en, sclk_sel, atomic_read(&dmic_mux_ref));
-    if (en) {
-        if (atomic_read(&dmic_mux_ref)) {
-            user_anc_log("DMIC_IO_MUX open now\n");
-            if (sclk_sel == DMIC_SCLK_FROM_ANC) {
-                user_anc_log("plink_sclk -> anc_sclk\n");
-                gpio_set_fun_output_port(TCFG_AUDIO_PLNK_SCLK_PIN, FO_ANC_MICCK, 0, 1);
-            }
-            atomic_inc_return(&dmic_mux_ref);
-            return;
-        }
-        if (sclk_sel == DMIC_SCLK_FROM_ANC) {
-            gpio_set_fun_output_port(TCFG_AUDIO_PLNK_SCLK_PIN, FO_ANC_MICCK, 0, 1);
-        } else {
-            gpio_set_fun_output_port(TCFG_AUDIO_PLNK_SCLK_PIN, FO_PLNK_SCLK, 0, 1);
-        }
-        gpio_set_direction(TCFG_AUDIO_PLNK_SCLK_PIN, 0);
-        gpio_set_die(TCFG_AUDIO_PLNK_SCLK_PIN, 0);
-        gpio_direction_output(TCFG_AUDIO_PLNK_SCLK_PIN, 1);
-#if TCFG_AUDIO_PLNK_DAT0_PIN != NO_CONFIG_PORT
-        //anc data0 port init
-        gpio_set_mode(IO_PORT_SPILT(TCFG_AUDIO_PLNK_DAT0_PIN), PORT_INPUT_PULLUP_10K);
-        gpio_set_fun_input_port(TCFG_AUDIO_PLNK_DAT0_PIN, PFI_PLNK_DAT0);
-#endif/*TCFG_AUDIO_PLNK_DAT0_PIN != NO_CONFIG_PORT*/
-
-#if TCFG_AUDIO_PLNK_DAT1_PIN != NO_CONFIG_PORT
-        //anc data1 port init
-        gpio_set_mode(IO_PORT_SPILT(TCFG_AUDIO_PLNK_DAT1_PIN), PORT_INPUT_PULLUP_10K);
-        gpio_set_fun_input_port(TCFG_AUDIO_PLNK_DAT1_PIN, PFI_PLNK_DAT1);
-#endif/*TCFG_AUDIO_PLNK_DAT1_PIN != NO_CONFIG_PORT*/
-        atomic_inc_return(&dmic_mux_ref);
-    } else {
-        if (atomic_read(&dmic_mux_ref)) {
-            atomic_dec_return(&dmic_mux_ref);
-            if (atomic_read(&dmic_mux_ref)) {
-                if (sclk_sel == DMIC_SCLK_FROM_ANC) {
-                    user_anc_log("anc close now,anc_sclk->plnk_sclk\n");
-                    gpio_set_fun_output_port(TCFG_AUDIO_PLNK_SCLK_PIN, FO_PLNK_SCLK, 0, 1);
-                } else {
-                    user_anc_log("plnk close,anc_plnk open\n");
-                }
-            } else {
-                user_anc_log("dmic all close,disable plnk io_mapping output\n");
-                gpio_disable_fun_output_port(TCFG_AUDIO_PLNK_SCLK_PIN);
-#if TCFG_AUDIO_PLNK_DAT0_PIN != NO_CONFIG_PORT
-                gpio_disable_fun_input_port(TCFG_AUDIO_PLNK_DAT0_PIN);
-#endif/*TCFG_AUDIO_PLNK_DAT0_PIN != NO_CONFIG_PORT*/
-#if TCFG_AUDIO_PLNK_DAT1_PIN != NO_CONFIG_PORT
-                gpio_disable_fun_input_port(TCFG_AUDIO_PLNK_DAT1_PIN);
-#endif/*TCFG_AUDIO_PLNK_DAT1_PIN != NO_CONFIG_PORT*/
-            }
-        } else {
-            user_anc_log("dmic_mux_ref NULL\n");
-        }
-    }
-}
-void anc_dmic_io_init(audio_anc_t *param, u8 en)
-{
-    if (en) {
-        int i;
-        for (i = 0; i < 4; i++) {
-            if ((param->mic_type[i] > (AUDIO_ADC_MAX_NUM - 1)) && (param->mic_type[i] != MIC_NULL)) {
-                user_anc_log("anc_dmic_io_init %d:%d\n", i, param->mic_type[i]);
-                dmic_io_mux_ctl(1, DMIC_SCLK_FROM_ANC);
-                break;
-            }
-        }
-    } else {
-        dmic_io_mux_ctl(0, DMIC_SCLK_FROM_ANC);
-    }
-}
-#else
-void anc_dmic_io_init(audio_anc_t *param, u8 en)
-{
-}
-#endif
-
 void audio_anc_post_msg_drc(void)
 {
     os_taskq_post_msg("anc", 1, ANC_MSG_DRC_TIMER);
@@ -2387,9 +2311,18 @@ void audio_anc_mic_management(audio_anc_t *param)
                     param->mic_param[mic_num].mult_flag = 1;
                 }
                 audio_anc_mic_mana_set_gain(param, mic_num, i);
+                break;
             }
         }
+#if AUDIO_ANC_PDM_MIC_ENABLE
+        if (param->mic_type[i] >= D_MIC0) {
+            anc_hdl->pdm_mic_ch |= BIT(param->mic_type[i] - D_MIC0);
+        }
+#endif
     }
+#if AUDIO_ANC_PDM_MIC_ENABLE
+    printf("anc dmic_num 0x%x\n", anc_hdl->pdm_mic_ch);
+#endif
     for (i = 0; i < AUDIO_ADC_MAX_NUM; i++) {
         printf("mic%d en %d, gain %d, type %d, mult_flag %d\n", i, param->mic_param[i].en, \
                param->mic_param[i].gain, param->mic_param[i].type, param->mic_param[i].mult_flag);

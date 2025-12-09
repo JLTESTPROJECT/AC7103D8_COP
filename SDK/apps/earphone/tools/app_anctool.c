@@ -26,6 +26,9 @@
 #define anctool_printf  log_i
 #define anctool_put_buf put_buf
 
+//ANC SPP命令仅主机响应(用于 headset_tws 方案区分左右调试)
+#define ANC_SPP_RESPONSE_TO_TWS_MASTER_ONLY		0
+
 /*
 	ANC SDK版本号
 	功能新增/修改产生兼容性问题时，通知用户更新工具 or SDK
@@ -848,6 +851,29 @@ static void app_anctool_module_deal(u8 *data, u16 len)
     anctool_printf("recv packet:\n");
     anctool_put_buf(data, len);
     __this->connected_flag = 1;
+#if TCFG_USER_TWS_ENABLE && ANC_SPP_RESPONSE_TO_TWS_MASTER_ONLY
+    //从机拦截所有写参数的行为
+    if (tws_api_get_role() == TWS_ROLE_SLAVE) {
+        switch (cmd) {
+        case CMD_WRITE_FILE_START:
+        case CMD_WRITE_FILE_DATA:
+        case CMD_WRITE_FILE_END:
+        case CMD_SET_ID:
+        case CMD_TOOLS_SET_GAIN:
+            return;
+        case CMD_PASSTHROUGH:	//透传指令特殊处理
+            switch (data[2]) {
+            case CMD_MIC_CMP_GAIN_EN ... CMD_MIC_CMP_GAIN_ALL_SET:
+                return;
+            default:
+                break;
+            }
+            break;
+        default:
+            break;
+        }
+    }
+#endif
     switch (cmd) {
     case CMD_GET_VERSION:
         anctool_printf("CMD_GET_VERSION\n");
@@ -1003,10 +1029,13 @@ static void app_anctool_module_deal(u8 *data, u16 len)
         anctool_callback(0, ANC_EXEC_FAIL);
 #endif
         break;
-#if TCFG_USER_TWS_ENABLE && (ANC_CH != (ANC_L_CH | ANC_R_CH)) && TCFG_AUDIO_ANC_BASE_DEBUG_ENABLE
+#if TCFG_USER_TWS_ENABLE && TCFG_AUDIO_ANC_BASE_DEBUG_ENABLE
     case CMD_EAR_ROLE_SWITCH:
         anctool_printf("CMD_EAR_ROLE_SWITCH\n");
         if (get_tws_sibling_connect_state()) {
+            char channel = bt_tws_get_local_channel();
+            printf("anctool_printf channel %c\n", channel);
+            audio_anc_debug_app_send_data(ANC_DEBUG_APP_OTHER_MSG, 0x0, (u8 *)&channel, 1);
             tws_api_role_switch();
             app_anctool_send_ack(CMD_EAR_ROLE_SWITCH, TRUE, ERR_NO);
         } else {
@@ -1113,6 +1142,9 @@ void app_anctool_spp_connect(void)
     anctool_printf("%s, spp_connect!\n", __FUNCTION__);
     anctool_api_init(&app_anctool_data);
     __this->para = anc_api_get_train_param();
+#if TCFG_USER_TWS_ENABLE
+    tws_api_auto_role_switch_disable();
+#endif
 
 #if TCFG_AUDIO_ANC_BASE_DEBUG_ENABLE
     audio_anc_debug_tool_open();

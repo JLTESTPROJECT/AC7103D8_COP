@@ -416,7 +416,23 @@ static int esco_audio_open(u8 *bt_addr)
         anc_ear_adaptive_forced_exit(1, 1);
     }
 #endif
-    esco_player_open(bt_addr);
+
+    // 如果不播手机铃声,且已经收到INCOMING消息在播本地铃声,就不开上下行,等active消息在开
+#if TCFG_BT_INBAND_RING == 0
+    if (ring_player_runing()) {
+        return 0;
+    }
+#endif
+
+    if (!esco_player_runing()) {
+        esco_player_open(bt_addr);
+    }
+
+    // 来电未接通,先不开上行,不然无法做语音识别
+    if (bt_get_call_status_for_addr(bt_addr) == BT_CALL_INCOMING) {
+        return 0;
+    }
+
 #if TCFG_TWS_POWER_BALANCE_ENABLE && TCFG_USER_TWS_ENABLE
     if (tws_api_get_role() == TWS_ROLE_MASTER) {
         log_info("tws_master open esco recoder\n");
@@ -459,6 +475,11 @@ int bt_phone_active(u8 *bt_addr)
     bt_tws_sync_volume();
     r_printf("phone_active:%d\n", app_var.call_volume);
     app_audio_set_volume(APP_AUDIO_STATE_CALL, app_var.call_volume, 1);
+
+    //已经收到过SCO_STATUS_CHANGE消息,才尝试再次开通话上下行
+    if (g_bt_hdl.phone_call_dec_begin) {
+        esco_audio_open(bt_addr);
+    }
     return 0;
 
 }

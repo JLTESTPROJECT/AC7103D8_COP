@@ -1298,6 +1298,7 @@
 <Unit filename="audio/CVP/audio_cvp_sync.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/CVP/audio_cvp_v3.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/anc/anc_memory.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="audio/anc/anc_pdm_mic_hw.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/anc/audio_anc.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/anc/audio_anc.h" />
 <Unit filename="audio/anc/audio_anc_common.c"><Option compilerVer="CC"/></Unit>

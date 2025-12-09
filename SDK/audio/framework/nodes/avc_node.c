@@ -238,7 +238,9 @@ static void avc_thr_to_lvl_sync(struct avc_hdl *hdl, int noise_thr)
 
     u8 avc_lvl = audio_threshold_det_run(hdl->avc_thr_hdl, noise_thr);
     //avc_lvl+1 : 1为最低档与工具对齐，实际内部buf偏移为0
-    /* avc_log("avc_det-avc_thr: %d, avc_lvl: %d, cur_lvl: %d\n", noise_thr, avc_lvl+1, hdl->lvl_sync_hdl->cur_lvl+1); */
+#if AVC_THR_DEBUG_ENABLE
+    avc_log("avc_det-avc_thr: %d, avc_lvl: %d, cur_lvl: %d\n", noise_thr, avc_lvl + 1, hdl->lvl_sync_hdl->cur_lvl + 1);
+#endif
     if (hdl->lvl_sync_hdl->cur_lvl == avc_lvl) {
         return;
     }
@@ -322,7 +324,13 @@ static void avc_lvl_sync_cb(void *_hdl)
     if (hdl->last_offset_dB == vol_table[avc_lvl]) {
         return;
     }
-    audio_app_set_vol_offset_dB_fade_process_by_app_core(&fade_hdl, (float)vol_table[avc_lvl], hdl->cur_vol_offset_fade_time);
+    if (lvl_sync_hdl->first_sync) {
+        //单边触发后对耳加入，不需跑fade，直接设置音量offset，保证双耳音量一致
+        avc_log("avc_first_sync: %d\n", vol_table[avc_lvl]);
+        audio_app_set_vol_offset_dB_fade_process_by_app_core(&fade_hdl, (float)vol_table[avc_lvl], 0);
+    } else {
+        audio_app_set_vol_offset_dB_fade_process_by_app_core(&fade_hdl, (float)vol_table[avc_lvl], hdl->cur_vol_offset_fade_time);
+    }
     hdl->last_offset_dB = vol_table[avc_lvl];
 
     //avc_lvl+1 : 1为最低档与工具对齐，实际内部buf偏移为0
@@ -420,7 +428,6 @@ static int avc_bind(struct stream_node *node, u16 uuid)
 
 static void avc_open_iport(struct stream_iport *iport)
 {
-    iport->handle_frame = avc_handle_frame;
 }
 
 /*
@@ -825,11 +832,11 @@ static void avc_release(struct stream_node *node)
 }
 
 REGISTER_STREAM_NODE_ADAPTER(avc_adapter) = {
-    .name       = "avc",
     .uuid       = NODE_UUID_AVC,
     .bind       = avc_bind,
     .ioctl      = avc_ioctl,
     .release    = avc_release,
+    .handle_frame = avc_handle_frame,
     .hdl_size   = sizeof(struct avc_hdl),
 };
 

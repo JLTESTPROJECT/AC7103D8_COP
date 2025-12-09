@@ -269,15 +269,19 @@ objs += \
 
 #if EXPORT_PLATFORM_ICSD_ENABLE
 objs += \
+	$(ROOT)/audio/common/icsd/adt/icsd_adt_alg.o \
+	$(ROOT)/audio/common/icsd/common_v2/icsd_common_v2.o \
+	$(ROOT)/audio/common/icsd/avc/icsd_avc_config.o \
+
+
+objs += \
 	$(ROOT)/audio/common/icsd/adt/icsd_adt.o \
 	$(ROOT)/audio/common/icsd/adt/icsd_adt_app.o \
 	$(ROOT)/audio/common/icsd/adt/icsd_adt_config.o \
-	$(ROOT)/audio/common/icsd/adt/icsd_adt_alg.o \
 	$(ROOT)/audio/common/icsd/adt/icsd_adt_demo.o \
 	$(ROOT)/audio/common/icsd/common/icsd_common.o \
 	$(ROOT)/audio/common/icsd/dot/icsd_dot_app.o \
 	$(ROOT)/audio/common/icsd/dot/icsd_dot.o \
-	$(ROOT)/audio/common/icsd/common_v2/icsd_common_v2.o \
 	$(ROOT)/audio/common/icsd/common_v2/icsd_common_v2_app.o \
 	$(ROOT)/audio/common/icsd/anc_v2/icsd_anc_v2.o \
 	$(ROOT)/audio/common/icsd/anc_v2/icsd_anc_v2_app.o \
@@ -305,7 +309,6 @@ objs += \
 	$(ROOT)/audio/common/icsd/wind/icsd_wind_config.o \
 	$(ROOT)/audio/common/icsd/wind/icsd_wind_app.o \
 	$(ROOT)/audio/common/icsd/wind/cvp_wind_app.o \
-	$(ROOT)/audio/common/icsd/avc/icsd_avc_config.o \
 	$(ROOT)/audio/common/icsd/avc/icsd_avc_app.o \
 	$(ROOT)/audio/common/icsd/env_noise_det/icsd_env_noise_det_app.o \
 	$(ROOT)/audio/common/icsd/adjdcc/icsd_adjdcc_config.o \
@@ -330,6 +333,7 @@ objs += \
 	  $(ROOT)/audio/anc/audio_anc_manager.o \
 	  $(ROOT)/audio/anc/audio_anc.o \
 	  $(ROOT)/audio/anc/icsd_anc_user.o \
+	  $(ROOT)/audio/anc/anc_pdm_mic_hw.o \
 
 #endif
 

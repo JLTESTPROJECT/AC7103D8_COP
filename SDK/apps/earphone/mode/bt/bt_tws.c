@@ -1026,6 +1026,7 @@ int bt_tws_connction_status_event_handler(int *msg)
             }
             break;
         }
+        app_send_message(APP_MSG_TWS_DISCONNECTED, 0);
         break;
     case TWS_EVENT_PHONE_LINK_DETACH:
         /*

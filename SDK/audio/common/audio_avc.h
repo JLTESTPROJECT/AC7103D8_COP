@@ -1,23 +1,32 @@
 #ifndef _AUDIO_AVC_H_
 #define _AUDIO_AVC_H_
 
+#include "app_config.h"
+
 #define THR_LVL_MAX_NUM             16
 #define VOL_LVL_MAX_NUM             16
 
+//实时查看当前噪声阈值与avc档位，打印较多，建议调试时打开
+#define AVC_THR_DEBUG_ENABLE        0
+
 //AVC使能回声消除
-#define AVC_USE_AEC                 1              //与通话回声消除互斥
+#define AVC_USE_AEC                 (TCFG_AVC_AEC_ENABLE || TCFG_AVC_NLP_ENABLE)              //与通话回声消除互斥
 #define AVC_AEC_CLOCK               (96 * 1000000) //启动回声消除后所设置的最小系统时钟
 
-//AVC检测算法每帧运算长度
-#define ALGO_RUN_FRAME_LEN          1024      //byte
-
 //AVC算法类型选择
-#define ICSD_AVC_ALGO_RUN           BIT(0)    //ICSD 算法，需要开启ANC宏，与环境自适应(标准版)互斥
+#define ICSD_AVC_ALGO_RUN           BIT(0)    //ICSD 算法，与环境自适应(标准版)互斥
 #define ENERGY_DETECT_RUN           BIT(1)    //能量检测
-#define AVC_ALGO_RUN_TYPE           ICSD_AVC_ALGO_RUN
+#define AVC_ALGO_RUN_TYPE           TCFG_AVC_ALGO_SELECT
 
 //ICSD AVC算法版本选择：0 NORAML 1 LITE
-#define ICSD_AVC_ALGO_TYPE          0
+#define ICSD_AVC_ALGO_TYPE          1
+
+//AVC检测算法每帧运算长度
+#if ICSD_AVC_ALGO_TYPE
+#define ALGO_RUN_FRAME_LEN          512       //byte
+#else
+#define ALGO_RUN_FRAME_LEN          1024      //byte
+#endif
 
 //ADC采样率
 #define AVC_ADC_SAMPLE_RATE         16000
@@ -32,6 +41,7 @@ struct avc_tool_common_param {
     int lvl_down_hold_time;
     int vol_offset_fade_time;
     int high_lvl_sync;
+    int algo_sel;
     int aec_en;
     int nlp_en;
     float aec_dt_aggress;   //原音回音追踪等级, default: 1.0f(1 ~ 5)

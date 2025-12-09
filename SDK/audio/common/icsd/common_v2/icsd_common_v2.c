@@ -8,8 +8,8 @@
 #include "app_config.h"
 #include "audio_config_def.h"
 
-#if (TCFG_AUDIO_ANC_ENABLE && \
-	 TCFG_AUDIO_ANC_EXT_VERSION == ANC_EXT_V2)
+#if ((TCFG_AUDIO_ANC_ENABLE && TCFG_AUDIO_ANC_EXT_VERSION == ANC_EXT_V2) || \
+    (TCFG_AUDIO_AVC_NODE_ENABLE && (TCFG_AVC_ALGO_SELECT == 1)))
 
 #include "icsd_common_v2.h"
 #include "audio_anc.h"

@@ -124,6 +124,29 @@ static void audio_anc_lvl_sync_info_cb(void *_data, u16 len, bool rx)
         }
         lvl_sync_log("AUDIO_ANC_LVL_SYNC_RESULT noise_lvl %d send to task, name %d\n", noise_lvl, hdl->name);
         hdl->cur_lvl = noise_lvl;
+        hdl->first_sync = 0;
+        hdl->sync_result_cb(hdl);
+        hdl->busy = 0;
+        break;
+    case AUDIO_ANC_LVL_SYNC_FIRST: //tws首次连接时同步档位
+        hdl->busy = 1;
+        lvl_sync_log("AUDIO_ANC_LVL_SYNC_FIRST %d %d\n", hdl->cur_lvl, noise_lvl);
+        if ((hdl->high_lvl_sync && (hdl->cur_lvl > noise_lvl)) || \
+            (!hdl->high_lvl_sync && (hdl->cur_lvl < noise_lvl))) {
+            u8 tmp_data[4] = {AUDIO_ANC_LVL_SYNC_FIRST_RESULT, hdl->cur_lvl, 0, 0};
+            audio_anc_lvl_sync_info(hdl, tmp_data, 4);
+        }
+        hdl->busy = 0;
+        break;
+    case AUDIO_ANC_LVL_SYNC_FIRST_RESULT:
+        hdl->busy = 1;
+        if (hdl->cur_lvl == noise_lvl) {
+            hdl->busy = 0;
+            break;
+        }
+        lvl_sync_log("AUDIO_ANC_LVL_SYNC_FIRST_RESULT %d %d\n", hdl->cur_lvl, noise_lvl);
+        hdl->cur_lvl = noise_lvl;
+        hdl->first_sync = 1;
         hdl->sync_result_cb(hdl);
         hdl->busy = 0;
         break;
@@ -186,6 +209,12 @@ struct audio_anc_lvl_sync *audio_anc_lvl_sync_open(struct audio_anc_lvl_sync_par
     local_irq_disable();
     list_add(&hdl->hentry, &lvl_sync_list_hdl.head);
     local_irq_enable();
+#if TCFG_USER_TWS_ENABLE
+    if (get_tws_sibling_connect_state()) {
+        u8 data[4] = {AUDIO_ANC_LVL_SYNC_FIRST, hdl->cur_lvl, 0, 0};
+        audio_anc_lvl_sync_info(hdl, data, 4);
+    }
+#endif
     lvl_sync_log("audio_anc_lvl_sync_open name %d\n", hdl->name);
     return hdl;
 }

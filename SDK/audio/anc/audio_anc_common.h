@@ -55,6 +55,12 @@ void bt_tws_sync_anc(void);
 //ANC基础-同步信息处理函数
 int anc_mode_sync(struct anc_tws_sync_info *info);
 
+//启动ANC 数字MIC
+int audio_anc_pdm_mic_start(u8 mic_ch);
+
+//关闭ANC 数字MIC
+int audio_anc_pdm_mic_stop(void);
+
 //==============ANC 内存管理=================
 
 //打印当前未释放的内存

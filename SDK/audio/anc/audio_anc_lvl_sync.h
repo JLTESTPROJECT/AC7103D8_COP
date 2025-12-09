@@ -6,6 +6,8 @@
 
 #define AUDIO_ANC_LVL_SYNC_CMP          BIT(0)
 #define AUDIO_ANC_LVL_SYNC_RESULT       BIT(1)
+#define AUDIO_ANC_LVL_SYNC_FIRST        BIT(2)
+#define AUDIO_ANC_LVL_SYNC_FIRST_RESULT BIT(3)
 
 /*
  * 新加的模块
@@ -37,6 +39,7 @@ struct audio_anc_lvl_sync {
     u8 cur_lvl;         //当前生效等级
     u8 local_lvl;       //本地检测等级
     u8 name;            //句柄链表管理标识
+    u8 first_sync;
     u8 busy;
 };
 

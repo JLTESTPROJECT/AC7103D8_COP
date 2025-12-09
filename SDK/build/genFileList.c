@@ -387,17 +387,23 @@ c_SRC_FILES += \
 
 // ICSD
 #if EXPORT_PLATFORM_ICSD_ENABLE
+#if (TCFG_AUDIO_ANC_ENABLE || (TCFG_AUDIO_AVC_NODE_ENABLE && (TCFG_AVC_ALGO_SELECT == 1)))
+c_SRC_FILES += \
+	audio/common/icsd/adt/icsd_adt_alg.c \
+	audio/common/icsd/common_v2/icsd_common_v2.c \
+	audio/common/icsd/avc/icsd_avc_config.c \
+
+#endif
+
 #if TCFG_AUDIO_ANC_ENABLE
 c_SRC_FILES += \
 	audio/common/icsd/adt/icsd_adt.c \
 	audio/common/icsd/adt/icsd_adt_app.c \
 	audio/common/icsd/adt/icsd_adt_config.c \
-	audio/common/icsd/adt/icsd_adt_alg.c \
 	audio/common/icsd/adt/icsd_adt_demo.c \
 	audio/common/icsd/common/icsd_common.c \
 	audio/common/icsd/dot/icsd_dot_app.c \
 	audio/common/icsd/dot/icsd_dot.c \
-	audio/common/icsd/common_v2/icsd_common_v2.c \
 	audio/common/icsd/common_v2/icsd_common_v2_app.c \
 	audio/common/icsd/anc_v2/icsd_anc_v2.c \
 	audio/common/icsd/anc_v2/icsd_anc_v2_app.c \
@@ -425,7 +431,6 @@ c_SRC_FILES += \
 	audio/common/icsd/wind/icsd_wind_config.c \
 	audio/common/icsd/wind/icsd_wind_app.c \
 	audio/common/icsd/wind/cvp_wind_app.c \
-	audio/common/icsd/avc/icsd_avc_config.c \
 	audio/common/icsd/avc/icsd_avc_app.c \
 	audio/common/icsd/env_noise_det/icsd_env_noise_det_app.c \
 	audio/common/icsd/adjdcc/icsd_adjdcc_config.c \
@@ -455,6 +460,7 @@ c_SRC_FILES += \
 	  audio/anc/audio_anc_manager.c \
 	  audio/anc/audio_anc.c \
 	  audio/anc/icsd_anc_user.c \
+	  audio/anc/anc_pdm_mic_hw.c \
 
 #endif
 #endif

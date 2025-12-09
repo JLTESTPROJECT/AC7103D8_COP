@@ -150,6 +150,7 @@ enum {
     APP_MSG_TWS_UNPAIRED,
     APP_MSG_TWS_PAIR_SUSS,
     APP_MSG_TWS_CONNECTED,
+    APP_MSG_TWS_DISCONNECTED,
     APP_MSG_TWS_WAIT_PAIR,                      // 等待配对
     APP_MSG_TWS_START_PAIR,                     // 手动发起配对
     APP_MSG_TWS_START_CONN,                     // 开始回连TWS

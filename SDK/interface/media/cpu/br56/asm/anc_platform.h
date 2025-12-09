@@ -8,15 +8,16 @@
 
 #define ANC_GAINS_VERSION 		0X7100  //结构体版本号信息
 
-typedef enum {
-    A_MIC0 = 0x0,			//模拟MIC0 对应IO-0(PA1 PA2)
-    A_MIC1,                 //模拟MIC1 对应IO-0(PB10 PB9)
-    D_MIC0,                 //数字MIC0(plnk_dat0_pin-上升沿采样)
-    D_MIC1,                 //数字MIC1(plnk_dat1_pin-上升沿采样)
-    D_MIC2,                 //数字MIC2(plnk_dat0_pin-下降沿采样)
-    D_MIC3,                 //数字MIC3(plnk_dat1_pin-下降沿采样)
-    MIC_NULL = 0XFF,		//没有定义相关的MIC
-} ANC_mic_type_t;
+/* ANC MIC类型定义 */
+#define A_MIC0        0x00  // 模拟MIC0 对应IO-0(PA1 PA2)
+#define A_MIC1        0x01  // 模拟MIC1 对应IO-0(PB10 PB9)
+
+#define D_MIC0        0x02  // 数字MIC0(plnk_dat0_pin-上升沿采样)
+#define D_MIC1        0x03  // 数字MIC1(plnk_dat1_pin-上升沿采样)
+#define D_MIC2        0x04  // 数字MIC2(plnk_dat0_pin-下降沿采样)
+#define D_MIC3        0x05  // 数字MIC3(plnk_dat1_pin-下降沿采样)
+
+#define MIC_NULL      0xFF  // 没有定义相关的MIC
 
 //6组滤波器组合(FF/FB/SZ), 无缝切换需要用到双倍滤波器，大于3组需使用96M 时钟
 enum ANC_CORE_MDOE {

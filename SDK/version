@@ -8,10 +8,10 @@ project earphone_sdk/apps/common/device/
 cf4f966080304bd18a79432abcf4b533135b5269
 
 project earphone_sdk/apps/earphone/
-f7fe623ee75881ee4947871f5955c2eae2507d4c
+2efd6aed839364f7fdb9a8dabd24bc8da2bfccf2
 
 project earphone_sdk/audio/
-6ab593284b1d6ae922665d0ae635992042c0c1a3
+1c9927dcaca6c247be78f9e0ef70433b51ea6cf5
 
 project earphone_sdk/cpu/
 0cda2cbae14212cd4e8c8fd6a150bfee0d749cab
@@ -26,7 +26,7 @@ project earphone_sdk/interface/driver/
 526e3919b32b9e2fe9fd31dbbc2fc9980b29fcb4
 
 project earphone_sdk/interface/media/
-69aff2e664f2ae8fcffc082b6ea42a2e191b87dd
+e2074a6154b1709fad8e8ecfee8c72b72fe04325
 
 project earphone_sdk/interface/net/
 67357d4e635b6971388627e307e18d82c9e4f9df
@@ -53,7 +53,7 @@ project earphone_sdk/lib/interface/crypto_toolbox/
 0c0b7c430c2cad0079e876fb290a51a918efff87
 
 project earphone_sdk/lib/media/
-633d9c5dcea39d3b0de1dcfc8f3443502d053d50
+0f1d1b9fd1459230e6baee6103435805daa4b593
 
 project earphone_sdk/lib/net/
 3c5e9f04c1604569371f6c078de5b522ac97c2d2
@@ -65,4 +65,4 @@ project earphone_sdk/lib/update/
 f68e1fd86f509dc4398bee544636fc8bbf639775
 
 project earphone_sdk/lib/utils/
-7b5d30ee3a1186a11fb09efb9b5e66b16e5f3219
+0aad82a38d3c23d47c9e9104499cf7f6615f2347
