@@ -51,6 +51,9 @@
 #if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SINK_EN)
 #include "app_le_auracast.h"
 #endif
+#if (THIRD_PARTY_PROTOCOLS_SEL & HID_ISO_EN)
+#include "hid_iso.h"
+#endif
 
 #include "volume_node.h"
 
@@ -463,10 +466,12 @@ static int app_connected_conn_status_event_handler(int *msg)
             log_debug("connected_perip_connect_deal fail");
         }
 
+#if (LE_AUDIO_JL_DONGLE_UNICAST_WITH_PHONE_CONN_CONFIG & LE_AUDIO_JL_DONGLE_UNICAST_WITH_PHONE_CONN_PLAY_PREEMPTEDK)
         if (esco_player_runing()) {
             log_info("esco runing, stop cis");
             le_audio_unicast_play_remove_by_phone_call();
         }
+#endif
         //释放互斥量
         app_connected_mutex_post(&mutex, __LINE__);
         break;
@@ -554,8 +559,11 @@ static int app_connected_conn_status_event_handler(int *msg)
 
     case CIG_EVENT_ACL_CONNECT:
         log_info("CIG_EVENT_ACL_CONNECT");
-#if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
+#if (TCFG_LE_AUDIO_RCSP_USE_SAME_ACL)
         rcsp_bt_ble_adv_enable(0);
+#endif
+#if (THIRD_PARTY_PROTOCOLS_SEL & HID_ISO_EN)
+        hid_iso_adv_enable(0);
 #endif
         acl_info = (cis_acl_info_t *)&event[1];
         if (acl_info->conn_type) {
@@ -625,7 +633,7 @@ static int app_connected_conn_status_event_handler(int *msg)
 
     case CIG_EVENT_ACL_DISCONNECT:
         log_info("CIG_EVENT_ACL_DISCONNECT");
-#if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
+#if (TCFG_LE_AUDIO_RCSP_USE_SAME_ACL)
 #if TCFG_USER_TWS_ENABLE
         if (tws_api_get_role() != TWS_ROLE_SLAVE) {
             rcsp_bt_ble_adv_enable(1);
@@ -633,6 +641,11 @@ static int app_connected_conn_status_event_handler(int *msg)
 #else
         rcsp_bt_ble_adv_enable(1);
 #endif
+#endif
+#if (THIRD_PARTY_PROTOCOLS_SEL & HID_ISO_EN)
+        hid_iso_adv_enable(1);
+        void le_audio_adv_open_discover_mode();
+        le_audio_adv_open_discover_mode();
 #endif
         g_le_audio_hdl.cig_phone_conn_status = 0;
         acl_info = (cis_acl_info_t *)&event[1];
@@ -740,7 +753,7 @@ static int app_connected_conn_status_event_handler(int *msg)
         play_tone_file(get_tone_files()->cis_connect);
 #endif
 
-#if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
+#if (TCFG_LE_AUDIO_RCSP_USE_SAME_ACL)
 #if TCFG_USER_TWS_ENABLE
         if (tws_api_get_role() != TWS_ROLE_SLAVE) {
             rcsp_bt_ble_adv_enable(1);
@@ -748,6 +761,9 @@ static int app_connected_conn_status_event_handler(int *msg)
 #else
         rcsp_bt_ble_adv_enable(1);
 #endif
+#endif
+#if (THIRD_PARTY_PROTOCOLS_SEL & HID_ISO_EN)
+        hid_iso_adv_enable(1);
 #endif
 
         break;
@@ -926,9 +942,11 @@ static void app_connected_suspend()
 int tws_check_user_conn_open_quick_type()
 {
     /* log_debug("tws_check_user_conn_open_quick_type=%d\n",check_le_audio_tws_conn_role() ); */
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN))
     if (is_cig_phone_conn()) {
         return g_le_audio_hdl.le_audio_tws_role;
     }
+#endif
     return 0xff;
 }
 
@@ -1459,6 +1477,7 @@ void le_audio_media_control_cmd(u8 *data, u8 len)
 #elif (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_UNICAST_SINK_EN)
             le_audio_send_priv_cmd(con_handle, VENDOR_PRIV_ACL_OPID_CONTORL, data, len);
 #endif
+            break;
         case CIG_EVENT_OPID_VOLUME_DOWN:
             log_info("sync vol to master down\n");
 #if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_UNICAST_SINK_EN)
@@ -1602,8 +1621,11 @@ void le_audio_profile_init()
 {
     printf("le_audio_profile_init:%d\n", g_le_audio_hdl.le_audio_profile_ok);
     if (get_bt_le_audio_config() && (g_le_audio_hdl.le_audio_profile_ok == 0)) {
-#if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
+#if (TCFG_LE_AUDIO_RCSP_USE_SAME_ACL)
         le_audio_user_server_profile_init(rcsp_profile_data);
+#endif
+#if (THIRD_PARTY_PROTOCOLS_SEL & HID_ISO_EN)
+        le_audio_user_server_profile_init(hid_iso_profile_data);
 #endif
         g_le_audio_hdl.le_audio_profile_ok = 1;
         char le_audio_name[LOCAL_NAME_LEN] = "le_audio_";     //le_audio蓝牙名

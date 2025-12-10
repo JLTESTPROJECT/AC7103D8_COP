@@ -808,6 +808,33 @@ c_SRC_FILES += \
 
 // *INDENT-OFF*
 
+#if TCFG_AI_PLAYER_ENABLE || TCFG_AI_RECORDER_ENABLE || TCFG_AI_TRANSLATOR_ENABLE
+c_SRC_FILES += \
+    apps/common/ai_audio/ai_audio_common.c \
+
+#endif
+
+#if TCFG_AI_PLAYER_ENABLE
+c_SRC_FILES += \
+    apps/common/ai_audio/ai_player.c \
+
+#endif
+
+#if TCFG_AI_RECORDER_ENABLE
+c_SRC_FILES += \
+    apps/common/ai_audio/ai_recorder.c \
+
+#endif
+
+#if TCFG_AI_TRANSLATOR_ENABLE
+c_SRC_FILES += \
+    apps/common/ai_audio/ai_translator.c \
+
+#endif
+
+
+// *INDENT-OFF*
+
 #if THIRD_PARTY_PROTOCOLS_SEL || TCFG_LE_AUDIO_APP_CONFIG
 c_SRC_FILES += \
 	apps/common/third_party_profile/multi_protocol_common.c \
@@ -846,6 +873,11 @@ c_SRC_FILES += \
 #if (THIRD_PARTY_PROTOCOLS_SEL & CUSTOM_DEMO_EN)
 c_SRC_FILES += \
     apps/common/third_party_profile/custom_protocol_demo/custom_protocol.c
+#endif
+
+#if (THIRD_PARTY_PROTOCOLS_SEL & HID_ISO_EN)
+c_SRC_FILES += \
+    apps/common/third_party_profile/hid_iso/hid_iso.c
 #endif
 
 #if (THIRD_PARTY_PROTOCOLS_SEL & ANCS_AMS_MODE_EN)

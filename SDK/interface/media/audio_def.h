@@ -241,7 +241,6 @@
 #define AUDIO_CODING_OGG          0x40000000
 #define AUDIO_CODING_LHDC         0x80000000
 #define AUDIO_CODING_LHDC_V5      0xA0000000
-#define AUDIO_CODING_STENC_OPUS   0xB0000000
 #define AUDIO_CODING_JL_VOCODER   0xC0000000
 
 //#define AUDIO_CODING_STU_PICK     0x10000000
@@ -318,4 +317,22 @@
 #define  LIMITER_PRECISION_HIGH_NORMAL_LOW  EFx_PRECISION_NOR//高、普通、最低
 #define  LIMITER_PRECISION_MAX              EFx_PRECISION_PRO //最高
 
+//PLC Mode定义
+#define LC3_PLC_FADE_MODE					0	//淡入淡出模式
+#define LC3_PLC_TD_MODE						1	//时域（TimeDomain）模式
+#define LC3_PLC_FD_MODE						2	//频域（FrequencyDomain）模式
+#define LC3_PLC_SILENCE_MODE				3	//填充静音包模式
+#define LC3_PLC_ADVANCED_MODE				4	//官方高级PLC模式（需授权使用）
+#define LC3_PLC_JL_ADVANCED_MODE			5	//JL自研高级PLC模式
+
+#define JLA_PLC_FADE_MODE					0	//淡入淡出模式
+#define JLA_PLC_TD_MODE						1	//时域（TimeDomain）模式
+#define JLA_PLC_FD_MODE						2	//频域（FrequencyDomain）模式
+#define JLA_PLC_SILENCE_MODE				3	//填充静音包模式
+
+#define JLA_V2_PLC_FADE_MODE				0	//淡入淡出模式
+#define JLA_V2_PLC_TD_MODE					1	//时域（TimeDomain）模式
+#define JLA_V2_PLC_FD_MODE					2	//频域（FrequencyDomain）模式
+#define JLA_V2_PLC_SILENCE_MODE				3	//填充静音包模式
+#define JLA_V2_PLC_JL_ADVANCED_MODE		    4	//JL自研高级PLC模式
 #endif/*_AUDIO_DEF_H_*/

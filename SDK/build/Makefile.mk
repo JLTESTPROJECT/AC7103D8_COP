@@ -191,6 +191,7 @@ LFLAGS := \
 	cpu/br56/liba/lib_lc3_codec.a \
 	cpu/br56/liba/lib_jl_codec_common.a \
 	cpu/br56/liba/opus_enc_lib.a \
+	cpu/br56/liba/lib_ogg_opus_dec.a \
 	cpu/br56/liba/lib_speex_codec.a \
 	cpu/br56/liba/libjlsp.a \
 	cpu/br56/liba/lib_nn_v3.a \

@@ -18,6 +18,7 @@ void bt_key_call_switch(void);
 
 void bt_send_a2dp_cmd(int msg);
 void bt_send_jl_cis_cmd(int msg);
+int bt_share_call_a2dp(u8 cmd);
 
 void bt_volume_up(u8 dec);
 void bt_volume_down(u8 dec);

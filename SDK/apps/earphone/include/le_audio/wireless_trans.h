@@ -152,6 +152,7 @@ void set_le_audio_jl_dongle_device_type(u8 type);
 void get_decoder_params_fmt(struct le_audio_stream_format *fmt);
 void get_encoder_params_fmt(struct le_audio_stream_format *fmt);
 u16 get_lc3_decoder_info_octets_per_frame();
+u16 get_lc3_decoder_info_frame_duration();
 
 #ifdef __cplusplus
 };

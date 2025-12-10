@@ -213,6 +213,12 @@ SDP_RECORD_HANDLER_REGISTER(pbap_sdp_record_item) = {
 #endif
 #if (TCFG_BT_SUPPORT_MAP==1)
 extern const u8 sdp_map_mce_service_data[];
+#if (defined TCFG_BT_SUPPORT_MAP_MESSAGE && (TCFG_BT_SUPPORT_MAP_MESSAGE==1))
+#if (!defined TCFG_BT_SUPPORT_BIP || (TCFG_BT_SUPPORT_BIP==0))
+u8 l2cap_support_ertm_enable = 1;
+#endif
+u8 user_map_support_message = 1;
+#endif
 u8 map_profile_support = 1;
 SDP_RECORD_HANDLER_REGISTER(map_sdp_record_item) = {
     .service_record = (u8 *)sdp_map_mce_service_data,

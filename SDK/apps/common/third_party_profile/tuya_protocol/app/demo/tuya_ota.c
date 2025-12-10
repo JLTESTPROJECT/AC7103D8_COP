@@ -18,7 +18,7 @@
 #include "btstack/avctp_user.h"
 #include "os/os_api.h"
 
-#if (BT_AI_SEL_PROTOCOL & TUYA_DEMO_EN)
+#if (THIRD_PARTY_PROTOCOLS_SEL & TUYA_DEMO_EN)
 
 u8 dual_bank_update_verify_without_crc(int (*verify_result_hdl)(int calc_crc));
 tuya_ble_status_t tuya_ble_ota_response(tuya_ble_ota_response_t *p_data);

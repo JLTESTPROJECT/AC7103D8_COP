@@ -54,12 +54,9 @@ u32 lp_touch_key_eartch_get_each_ch_state(void)
 {
     u32 state = 0;
 #if TOUCH_KEY_EARTCH_ALGO_IN_MSYS
-    u32 ch, ch_idx;
-    for (u32 i = 0; i < __this->eartch.ch_num; i ++) {
-        ch = __this->eartch.ch_list[i];
-        ch_idx = lp_touch_key_get_idx_by_cur_ch(ch);
-        if (lp_touch_key_eartch_algorithm_get_ear_state(ch_idx)) {
-            state |= BIT(ch);
+    for (u32 group = 0; group < __this->eartch.ch_num; group++) {
+        if (lp_touch_key_eartch_algorithm_get_state(group)) {
+            state |= BIT(group);
         }
     }
 #else
@@ -73,12 +70,11 @@ u32 lp_touch_key_eartch_get_each_ch_state(void)
 void lp_touch_key_eartch_set_each_ch_state(u32 state)
 {
 #if TOUCH_KEY_EARTCH_ALGO_IN_MSYS
-    u32 ch, ch_idx;
-    for (u32 i = 0; i < __this->eartch.ch_num; i ++) {
-        ch = __this->eartch.ch_list[i];
-        ch_idx = lp_touch_key_get_idx_by_cur_ch(ch);
-        if (state & BIT(ch)) {
-            lp_touch_key_eartch_algorithm_set_ear_state(ch_idx, 1);
+    for (u32 group = 0; group < __this->eartch.ch_num; group++) {
+        if (state & BIT(group)) {
+            lp_touch_key_eartch_algorithm_set_state(group, 1);
+        } else {
+            lp_touch_key_eartch_algorithm_set_state(group, 0);
         }
     }
 #else
@@ -90,10 +86,9 @@ void lp_touch_key_eartch_set_each_ch_state(u32 state)
 u32 lp_touch_key_eartch_touch_trigger_together(void)
 {
 #if TOUCH_KEY_EARTCH_ALGO_IN_MSYS
-    u32 ch, ch_en = 0;
-    for (u32 i = 0; i < __this->eartch.ch_num; i ++) {
-        ch = __this->eartch.ch_list[i];
-        ch_en |= BIT(ch);
+    u32 ch_en = 0;
+    for (u32 group = 0; group < __this->eartch.ch_num; group++) {
+        ch_en |= BIT(group);
     }
 #else
     u32 ch_en = M2P_CTMU_EARTCH_CH;
@@ -210,8 +205,7 @@ static void lp_touch_key_eartch_event_deal(u32 state)
 
 void lp_touch_key_eartch_up_trim_value(u32 valid, u16 *trim_buf, u32 kvld_valid, u16 *kvld_buf)
 {
-#if !TOUCH_KEY_EARTCH_ALGO_IN_MSYS
-    u32 ch;
+    u32 ch, ref_ch;
     u16 val_buf[LPCTMU_CHANNEL_SIZE];
     u16 k_buf[LPCTMU_CHANNEL_SIZE];
     for (ch = 0; ch < LPCTMU_CHANNEL_SIZE; ch++) {
@@ -226,35 +220,26 @@ void lp_touch_key_eartch_up_trim_value(u32 valid, u16 *trim_buf, u32 kvld_valid,
             k_buf[ch] = 0;
         }
     }
-    if (__this->eartch.ch_num == 0) {
-        return;
-    }
-    ch = __this->eartch.ch_list[0];
-    M2P_MESSAGE_ACCESS(M2P_MASSAGE_CTMU_CH0_CFG1L + ch * 8) = (val_buf[ch] >> 0) & 0xffff;
-    M2P_MESSAGE_ACCESS(M2P_MASSAGE_CTMU_CH0_CFG1H + ch * 8) = (val_buf[ch] >> 8) & 0xffff;
 
-    M2P_MESSAGE_ACCESS(M2P_MASSAGE_CTMU_CH0_CFG3L + ch * 8) = (k_buf[ch] >> 0) & 0xffff;
-    M2P_MESSAGE_ACCESS(M2P_MASSAGE_CTMU_CH0_CFG3H + ch * 8) = (k_buf[ch] >> 8) & 0xffff;
-    if (__this->eartch.ch_num == 2) {
-        ch = __this->eartch.ch_list[1];
+    for (u32 group = 0; group < __this->eartch.ch_num; group++) {
+        ch = __this->eartch.ch_list[group];
+        ref_ch = __this->eartch.ref_ch_list[group];
+
+#if TOUCH_KEY_EARTCH_ALGO_IN_MSYS
+
+        lp_touch_key_eartch_algorithm_set_dc_trim(group, val_buf[ch], val_buf[ref_ch]);
+        lp_touch_key_eartch_algorithm_set_kvld_trim(group, k_buf[ch]);
+#else
         M2P_MESSAGE_ACCESS(M2P_MASSAGE_CTMU_CH0_CFG1L + ch * 8) = (val_buf[ch] >> 0) & 0xffff;
         M2P_MESSAGE_ACCESS(M2P_MASSAGE_CTMU_CH0_CFG1H + ch * 8) = (val_buf[ch] >> 8) & 0xffff;
+
+        M2P_MESSAGE_ACCESS(M2P_MASSAGE_CTMU_CH0_CFG1L + ref_ch * 8) = (val_buf[ref_ch] >> 0) & 0xffff;
+        M2P_MESSAGE_ACCESS(M2P_MASSAGE_CTMU_CH0_CFG1H + ref_ch * 8) = (val_buf[ref_ch] >> 8) & 0xffff;
 
         M2P_MESSAGE_ACCESS(M2P_MASSAGE_CTMU_CH0_CFG3L + ch * 8) = (k_buf[ch] >> 0) & 0xffff;
         M2P_MESSAGE_ACCESS(M2P_MASSAGE_CTMU_CH0_CFG3H + ch * 8) = (k_buf[ch] >> 8) & 0xffff;
-    }
-    if (__this->eartch.ref_ch_num == 0) {
-        return;
-    }
-    ch = __this->eartch.ref_ch_list[0];
-    M2P_MESSAGE_ACCESS(M2P_MASSAGE_CTMU_CH0_CFG1L + ch * 8) = (val_buf[ch] >> 0) & 0xffff;
-    M2P_MESSAGE_ACCESS(M2P_MASSAGE_CTMU_CH0_CFG1H + ch * 8) = (val_buf[ch] >> 8) & 0xffff;
-    if (__this->eartch.ref_ch_num == 2) {
-        ch = __this->eartch.ref_ch_list[1];
-        M2P_MESSAGE_ACCESS(M2P_MASSAGE_CTMU_CH0_CFG1L + ch * 8) = (val_buf[ch] >> 0) & 0xffff;
-        M2P_MESSAGE_ACCESS(M2P_MASSAGE_CTMU_CH0_CFG1H + ch * 8) = (val_buf[ch] >> 8) & 0xffff;
-    }
 #endif
+    }
 }
 
 int lp_touch_key_eartch_get_inear_info(struct eartch_inear_info *inear_info)
@@ -304,15 +289,9 @@ void lp_touch_key_eartch_init(void)
     if (inear_info.valid == 0) {
         return;
     }
-    __this->lpctmu_cfg.ch_fixed_isel[__this->eartch.ch_list[0]] = inear_info.ctmu_ch_l_isel_level;
-    if (__this->eartch.ch_num == 2) {
-        __this->lpctmu_cfg.ch_fixed_isel[__this->eartch.ch_list[1]] = inear_info.ctmu_ch_h_isel_level;
-    }
-    if (__this->eartch.ref_ch_num) {
-        __this->lpctmu_cfg.ch_fixed_isel[__this->eartch.ref_ch_list[0]] = inear_info.ctmu_ref_ch_l_isel_level;
-        if (__this->eartch.ref_ch_num == 2) {
-            __this->lpctmu_cfg.ch_fixed_isel[__this->eartch.ref_ch_list[1]] = inear_info.ctmu_ref_ch_h_isel_level;
-        }
+    for (u32 group = 0; group < __this->eartch.ch_num; group++) {
+        __this->lpctmu_cfg.ch_fixed_isel[__this->eartch.ch_list[group]] = inear_info.ctmu_ch_isel_level[group];
+        __this->lpctmu_cfg.ch_fixed_isel[__this->eartch.ref_ch_list[group]] = inear_info.ctmu_ref_ch_isel_level[group];
     }
     lp_touch_key_eartch_up_trim_value(inear_info.ctmu_trim_valid, inear_info.ctmu_diff_trim, inear_info.ctmu_kvld_valid, inear_info.ctmu_kvld_trim);
 }
@@ -340,15 +319,9 @@ void lp_touch_key_eartch_save_inear_info(struct eartch_inear_info *inear_info)
         return;
     }
     inear_info->valid = 1;
-    inear_info->ctmu_ch_l_isel_level = lpctmu_get_ana_cur_level(__this->eartch.ch_list[0]);
-    if (__this->eartch.ch_num == 2) {
-        inear_info->ctmu_ch_h_isel_level = lpctmu_get_ana_cur_level(__this->eartch.ch_list[1]);
-    }
-    if (__this->eartch.ref_ch_num) {
-        inear_info->ctmu_ref_ch_l_isel_level = lpctmu_get_ana_cur_level(__this->eartch.ref_ch_list[0]);
-        if (__this->eartch.ref_ch_num == 2) {
-            inear_info->ctmu_ref_ch_h_isel_level = lpctmu_get_ana_cur_level(__this->eartch.ref_ch_list[1]);
-        }
+    for (u32 group = 0; group < __this->eartch.ch_num; group++) {
+        inear_info->ctmu_ch_isel_level[group] = lpctmu_get_ana_cur_level(__this->eartch.ch_list[group]);
+        inear_info->ctmu_ref_ch_isel_level[group] = lpctmu_get_ana_cur_level(__this->eartch.ref_ch_list[group]);
     }
     syscfg_write(LP_KEY_EARTCH_TRIM_VALUE, (void *)inear_info, sizeof(struct eartch_inear_info));
 }
@@ -367,7 +340,11 @@ static void lp_touch_eartch_update_trim_info_callback(void *dat, enum lp_touch_e
         inear_info.ctmu_trim_valid = *((u32 *)dat);
     }
     lp_touch_key_eartch_up_trim_value(inear_info.ctmu_trim_valid, inear_info.ctmu_diff_trim, 0, inear_info.ctmu_kvld_trim);
-    lpctmu_send_m2p_cmd(RESET_ALL_ALGO);
+#if TOUCH_KEY_EARTCH_ALGO_IN_MSYS
+    lp_touch_key_reset_eartch_algo();
+#else
+    lpctmu_send_m2p_cmd(RESET_EARTCH_ALGO);
+#endif
     lp_touch_key_eartch_save_inear_info(&inear_info);
     free(dat);
 }
@@ -535,7 +512,12 @@ void lp_touch_eartch_trim_dc_start(u32 is_out)
 {
     if (is_out) {
         __this->eartch.trim_start_flag = 1;
+#if TOUCH_KEY_EARTCH_ALGO_IN_MSYS
+        lp_touch_key_reset_eartch_algo();
+        lp_touch_key_reset_algo();
+#else
         lpctmu_send_m2p_cmd(RESET_ALL_ALGO_WITH_TRIM);
+#endif
     } else {
         __this->eartch.trim_start_flag = 2;
     }

@@ -7,6 +7,7 @@
 
 #define TWS_FUNC_ID_VBAT_SYNC       TWS_FUNC_ID('V', 'B', 'A', 'T')
 #define TWS_FUNC_ID_CHARGE_SYNC     TWS_FUNC_ID('C', 'H', 'G', 'S')
+#define TWS_FUNC_ID_AI_SYNC         TWS_FUNC_ID('A', 'I', 'P', 'A')
 
 enum {
     SYNC_CMD_EARPHONE_CHAREG_START,		// 开始充电

@@ -235,6 +235,10 @@ u16 get_lc3_decoder_info_octets_per_frame()
 {
     return lc3_decoder_info.octets_per_frame;
 }
+u16 get_lc3_decoder_info_frame_duration()
+{
+    return lc3_decoder_info.frame_duration;
+}
 void get_encoder_params_fmt(struct le_audio_stream_format *fmt)
 {
     /* lc3_encoder_info */

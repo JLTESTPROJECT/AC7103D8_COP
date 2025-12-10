@@ -324,6 +324,8 @@ typedef enum {
     USER_CTRL_MAP_READ_DRAFT,
     //MAP停止读取
     USER_CTRL_MAP_STOP_READING,
+
+    USER_CTRL_MAP_SET_NOTIFICATION,
     USER_CTRL_MAP_CMD_END,
 
     //PAN功能发送命令

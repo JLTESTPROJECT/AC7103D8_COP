@@ -52,6 +52,10 @@ static u16 touch_ch_res_buf[LPCTMU_CHANNEL_SIZE];
 static u8 key_msg_state = 0;
 
 
+#if TCFG_LP_EARTCH_KEY_ENABLE
+void lp_touch_key_reset_eartch_algo(void);
+#endif
+
 void lp_touch_key_reset_algo(void);
 
 
@@ -60,23 +64,36 @@ void lp_touch_key_save_identify_algo_param(void)
     if (!__this->pdata) {
         return;
     }
+    if (__this->lpctmu_cfg.ch_wkp_en == 0) {
+        return;
+    }
+
     log_debug("save algo param\n");
 
-    int ret = 0;
-    u32 ch_idx;
-    const struct touch_key_cfg *key_cfg;
-    const struct touch_key_algo_cfg *algo_cfg;
+    u32 tia_size = lp_touch_key_identify_algorithm_get_tia_size();
+    u8 *tia_vm_buf = (u8 *)malloc(tia_size * __this->pdata->key_num);
+    u32 tia_vm_size = 0;
 
-    for (ch_idx = 0; ch_idx < __this->pdata->key_num; ch_idx ++) {
+    const struct touch_key_cfg *key_cfg;
+    for (u32 ch_idx = 0; ch_idx < __this->pdata->key_num; ch_idx ++) {
         key_cfg = &(__this->pdata->key_cfg[ch_idx]);
-        algo_cfg = &(key_cfg->algo_cfg[key_cfg->index]);
-        u32 tia_size = lp_touch_key_identify_algorithm_get_tia_size();
+        if (key_cfg->eartch_en) {
+            continue;
+        }
         void *tia_addr = lp_touch_key_identify_algorithm_get_tia_addr(ch_idx);
-        ret = syscfg_write(VM_LP_TOUCH_KEY0_IDTY_ALGO + ch_idx, tia_addr, tia_size);
-        if (ret != tia_size) {
-            log_debug("write vm algo param error !\n");
+        if (tia_addr) {
+            memcpy(tia_vm_buf + tia_vm_size, tia_addr, tia_size);
+            tia_vm_size += tia_size;
         }
     }
+    if (tia_vm_size) {
+        int ret = syscfg_write(VM_LP_TOUCH_KEY2_IDTY_ALGO, tia_vm_buf, tia_vm_size);
+        if (ret != tia_vm_size) {
+            log_debug("write vm tia_algo param error !\n");
+        }
+    }
+    free(tia_vm_buf);
+    tia_vm_buf = NULL;
 }
 
 
@@ -110,14 +127,6 @@ void lp_touch_key_state_event_deal(u32 ch_idx, u32 event)
         case TOUCH_KEY_FALLING_EVENT:
             log_debug("touch key%d FALLING !\n", ch_idx);
 
-#if TCFG_LP_EARTCH_KEY_ENABLE
-            if (key_cfg->eartch_en == EARTCH_MASTER) {
-                touch_abandon_short_click_once = 0;
-                lp_touch_key_eartch_event_deal(1);
-                return;
-            }
-#endif
-
 #if CTMU_CHECK_LONG_CLICK_BY_RES
             arg->falling_res_avg = lp_touch_key_ctmu_res_buf_avg(ch_idx);
             log_debug("falling_res_avg: %d", arg->falling_res_avg);
@@ -128,14 +137,6 @@ void lp_touch_key_state_event_deal(u32 ch_idx, u32 event)
 
         case TOUCH_KEY_RAISING_EVENT:
             log_debug("touch key%d RAISING !\n", ch_idx);
-
-#if TCFG_LP_EARTCH_KEY_ENABLE
-            if (key_cfg->eartch_en == EARTCH_MASTER) {
-                touch_abandon_short_click_once = 0;
-                lp_touch_key_eartch_event_deal(0);
-                return;
-            }
-#endif
 
 #if CTMU_CHECK_LONG_CLICK_BY_RES
             lp_touch_key_ctmu_res_buf_clear(ch_idx);
@@ -181,7 +182,6 @@ void lp_touch_key_ctmu_res_deal(u32 pnd_type)
     }
 
     const struct touch_key_cfg *key_cfg;
-    u32 eartch_algo_state;
 
     u32 algo_valid;
     u16 ref_lim_l;
@@ -191,115 +191,90 @@ void lp_touch_key_ctmu_res_deal(u32 pnd_type)
     u32 ch_idx, ch;
 
     for (u32 i = 0; i < data_len; i ++) {
+#if TCFG_LP_EARTCH_KEY_ENABLE
+        len = lpctmu_get_res_kfifo_data((u16 *)&ch_res, 1);
+        if (len == 0) {
+            return;
+        }
+        ch = (ch_res >> 13) & 0x7;
+        ch_res &= 0x1fff;
+        ch_idx = lp_touch_key_get_idx_by_cur_ch(ch);
+#else
         ch_idx = lpctmu_get_ch_idx_by_res_kfifo_out();
         ch = lp_touch_key_get_cur_ch_by_idx(ch_idx);
         len = lpctmu_get_res_kfifo_data((u16 *)&ch_res, 1);
         if (len == 0) {
             return;
         }
+#endif
+
         key_cfg = &(__this->pdata->key_cfg[ch_idx]);
 
         touch_ch_res_buf[ch] = ch_res;
 
 #if TCFG_LP_TOUCH_KEY_BT_TOOL_ENABLE
-        if ((touch_bt_tool_enable) && (touch_bt_online_debug_send)) {
-            touch_bt_online_debug_send(ch, touch_ch_res_buf);
-        } else
+        if ((touch_bt_tool_enable) && (touch_bt_online_debug_send) && ((ch_idx + 1) == __this->pdata->key_num)) {
+#if TCFG_LP_EARTCH_KEY_ENABLE
+            lp_touch_eartch_trim_dc_handler(touch_ch_res_buf);
 #endif
-        {
-            lp_touch_key_range_algo_analyze(ch_idx, ch_res);
+            touch_bt_online_debug_send(ch, touch_ch_res_buf);
         }
+#endif
+
+        /* log_debug("idx:%d ch:%d, res:%d", ch_idx, ch, ch_res); */
+
+#if TCFG_LP_EARTCH_KEY_ENABLE
+        if (key_cfg->eartch_en) {
+            u32 group = 1;
+            if ((__this->eartch.ch_list[0] == key_cfg->key_ch) || \
+                (__this->eartch.ref_ch_list[0] == key_cfg->key_ch)) {
+                group = 0;
+            }
+            if (key_cfg->eartch_en == EARTCH_REFERENCE) {
+                u32 tmp_ch = __this->eartch.ch_list[group];
+                u32 tmp_ref_ch = __this->eartch.ref_ch_list[group];
+                touch_state = lp_touch_key_eartch_algorithm_analyze(group, touch_ch_res_buf[tmp_ch], touch_ch_res_buf[tmp_ref_ch]);
+                if (touch_state != (!!(__this->eartch.eartch_algo_state & BIT(group)))) {
+                    if (touch_state) {
+                        __this->eartch.eartch_algo_state |=  BIT(group);
+                    } else {
+                        __this->eartch.eartch_algo_state &= ~BIT(group);
+                    }
+                    lp_touch_key_eartch_event_deal(touch_state);
+                }
+            }
+            continue;
+        }
+#endif
 
         algo_valid = 0;
         ref_lim_l = -1;
         ref_lim_h = -1;
         lp_touch_key_identify_algo_get_ref_lim(ch_idx, (u16 *)&ref_lim_l, (u16 *)&ref_lim_h, (u32 *)&algo_valid);
-
         if (algo_valid) {
             __this->identify_algo_invalid &= ~BIT(ch_idx);
             lpctmu_cache_ch_res_key_msg_lim(ch, ref_lim_l, ref_lim_h);
-
             if ((ch_res < ref_lim_l) || (ch_res > ref_lim_h)) {
                 key_msg_state |=  BIT(ch_idx);
             } else {
                 key_msg_state &= ~BIT(ch_idx);
             }
-
             lpctmu_cur_trim_by_res(ch, 0);
         } else {
             key_msg_state &= ~BIT(ch_idx);
             __this->last_touch_state &= ~BIT(ch_idx);
             __this->identify_algo_invalid |=  BIT(ch_idx);
-            if (data_len <= __this->pdata->key_num) {
-#if TCFG_LP_EARTCH_KEY_ENABLE
-                if (key_cfg->eartch_en) {
-                } else
-#endif
-                {
-                    lpctmu_cur_trim_by_res(ch, ch_res);
-                }
+            if ((data_len <= __this->pdata->key_num) && (key_cfg->eartch_en == 0)) {
+                lpctmu_cur_trim_by_res(ch, ch_res);
             }
         }
 
-#if TCFG_LP_EARTCH_KEY_ENABLE
-        if (key_cfg->eartch_en) {
-
-            if (__this->eartch.ref_ch_num) {
-                u32 ref_ch, idx = 0;
-                if (key_cfg->eartch_en == EARTCH_MASTER) {
-                    if (ch == __this->eartch.ch_list[0]) {
-                        idx = 0;
-                    } else if (__this->eartch.ref_ch_num == 2) {
-                        idx = 1;
-                    }
-                    ref_ch = __this->eartch.ref_ch_list[idx];
-                    if (ch > ref_ch) {
-                        ch_res = 5000 + ch_res - touch_ch_res_buf[ref_ch];
-                    } else {
-                        continue;
-                    }
-                } else {
-                    ref_ch = ch;
-                    if (ref_ch == __this->eartch.ref_ch_list[0]) {
-                        idx = 0;
-                    } else if (__this->eartch.ref_ch_num == 2) {
-                        idx = 1;
-                    }
-                    ch = __this->eartch.ch_list[idx];
-                    if (ref_ch > ch) {
-                        ch_res = 5000 + touch_ch_res_buf[ch] - ch_res;
-                        ch_idx = lp_touch_key_get_idx_by_cur_ch(ch);
-                    } else {
-                        continue;
-                    }
-                }
-            }
-
-            touch_state = lp_touch_key_identify_algorithm_analyze(ch_idx, ch_res);
-            eartch_algo_state = lp_touch_key_eartch_algorithm_analyze(ch_idx, ch_res);
-            if (__this->eartch.ear_state == 0) {
-                if ((touch_state) && (eartch_algo_state)) {
-                    touch_state = 1;
-                } else {
-                    touch_state = 0;
-                }
-            } else {
-                touch_state = eartch_algo_state;
-            }
-            if (eartch_algo_state != (!!(__this->eartch.algo_state & BIT(ch_idx)))) {
-                if (eartch_algo_state) {
-                    __this->eartch.algo_state |=  BIT(ch_idx);
-                } else {
-                    __this->eartch.algo_state &= ~BIT(ch_idx);
-                    u32 res_avg =  lp_touch_key_eartch_algorithm_get_vaild_avg(ch_idx);
-                    lp_touch_key_identify_algorithm_reinit(ch_idx, res_avg);
-                }
-            }
-        } else
-#endif
-        {
-            touch_state = lp_touch_key_identify_algorithm_analyze(ch_idx, ch_res);
+        if (key_cfg->eartch_en == 0) {
+            lp_touch_key_range_algo_analyze(ch_idx, ch_res);
         }
+
+        touch_state = lp_touch_key_identify_algorithm_analyze(ch_idx, ch_res);
+
         /* log_debug("idx:%d ch:%d, res:%d, L:%d H:%d key:%d", ch_idx, ch, ch_res, ref_lim_l, ref_lim_h, touch_state); */
         /* log_debug("idx:%d ch:%d, res:%d, key:%d", ch_idx, ch, ch_res, touch_state); */
         if (touch_state != (!!(__this->last_touch_state & BIT(ch_idx)))) {
@@ -320,10 +295,16 @@ void lp_touch_key_ctmu_res_deal(u32 pnd_type)
 #endif
     {
 #if TCFG_LP_EARTCH_KEY_ENABLE
-        if ((__this->last_touch_state) || (__this->identify_algo_invalid) || (__this->eartch.algo_state) || (key_msg_state)) {
+        if ((__this->last_touch_state) || \
+            (__this->identify_algo_invalid) ||  \
+            (__this->eartch.inear_valid_timeout) ||  \
+            (__this->eartch.outear_valid_timeout) ||  \
+            (key_msg_state)) {
 #else
         /* log_debug("key:%x invld:%x",  __this->last_touch_state, __this->identify_algo_invalid); */
-        if ((__this->last_touch_state) || (__this->identify_algo_invalid) || (key_msg_state)) {
+        if ((__this->last_touch_state) || \
+            (__this->identify_algo_invalid) || \
+            (key_msg_state)) {
 #endif
             lpctmu_set_dma_res_ie(1);
         } else {
@@ -367,6 +348,25 @@ void lp_touch_key_task(void *p)
     u16 ref_lim_h;
     u32 algo_valid;
 
+    u32 tia_size = lp_touch_key_identify_algorithm_get_tia_size();
+    u8 *tia_vm_buf = (u8 *)malloc(tia_size * __this->pdata->key_num);
+    u32 tia_vm_size = 0;
+    for (u32 ch_idx = 0; ch_idx < __this->pdata->key_num; ch_idx ++) {
+        key_cfg = &(__this->pdata->key_cfg[ch_idx]);
+        if (key_cfg->eartch_en) {
+            continue;
+        }
+        tia_vm_size += tia_size;
+    }
+    u32 read_tia_succ = 0;
+    if (tia_vm_size) {
+        ret = syscfg_read(VM_LP_TOUCH_KEY2_IDTY_ALGO, tia_vm_buf, tia_vm_size);
+        if (ret == tia_vm_size) {
+            read_tia_succ = 1;
+        }
+    }
+    tia_vm_size = 0;
+
     if ((is_wakeup_source(PWR_WK_REASON_P11)) && (is_wakeup_source(PWR_WK_REASON_LPCTMU))) {
         touch_abandon_short_click_once = 1;
     } else {
@@ -397,7 +397,37 @@ void lp_touch_key_task(void *p)
             __this->lpctmu_cfg.ch_wkp_en |= BIT(ch);
         }
 
-        u32 tia_size = lp_touch_key_identify_algorithm_get_tia_size();
+#if TCFG_LP_EARTCH_KEY_ENABLE
+        if (key_cfg->eartch_en) {
+            __this->lpctmu_cfg.ear_sample_cnt_max = 2;
+        } else {
+            __this->lpctmu_cfg.ch_key_num ++;
+            __this->lpctmu_cfg.ch_key_en |= BIT(ch);
+        }
+
+        __this->lpctmu_cfg.sample_cnt_max  = __this->lpctmu_cfg.ch_key_num;
+        __this->lpctmu_cfg.sample_cnt_max += __this->lpctmu_cfg.ear_sample_cnt_max;
+
+        if (key_cfg->eartch_en == EARTCH_MASTER) {
+            __this->lpctmu_cfg.ch_ear_en |= BIT(ch);
+            __this->lpctmu_cfg.ear_ch_list[__this->eartch.ch_num][0] = ch;
+
+            __this->eartch.ch_list[__this->eartch.ch_num] = ch;
+            lp_touch_key_eartch_algorithm_init(__this->eartch.ch_num, 0, algo_cfg->algo_cfg0, algo_cfg->algo_cfg1, algo_cfg->algo_cfg2);
+            __this->eartch.ch_num ++;
+            continue;
+        } else if (key_cfg->eartch_en == EARTCH_REFERENCE) {
+            __this->lpctmu_cfg.ear_ref_io_mode[__this->eartch.ref_ch_num] = __this->pdata->eartch_ref_io_mode[__this->eartch.ref_ch_num];
+            __this->lpctmu_cfg.ch_ear_en |= BIT(ch);
+            __this->lpctmu_cfg.ear_ch_list[__this->eartch.ref_ch_num][1] = ch;
+            __this->eartch.ref_ch_list[__this->eartch.ref_ch_num] = ch;
+            lp_touch_key_eartch_algorithm_init(__this->eartch.ref_ch_num, 1, algo_cfg->algo_cfg0, algo_cfg->algo_cfg1, algo_cfg->algo_cfg2);
+            __this->eartch.ref_ch_num ++;
+            __this->lpctmu_cfg.ear_group_cnt_max ++;
+            continue;
+        }
+#endif
+
         void *tia_addr = malloc(tia_size);
         lp_touch_key_identify_algorithm_set_tia_addr(ch_idx, tia_addr);
 
@@ -408,13 +438,14 @@ void lp_touch_key_task(void *p)
             lp_touch_key_identify_algorithm_init(ch_idx, algo_cfg->algo_cfg0, algo_cfg->algo_cfg2);
         } else {
             log_debug("read vm algo param\n");
-            ret = syscfg_read(VM_LP_TOUCH_KEY0_IDTY_ALGO + ch_idx, tia_addr, tia_size);
-            if (ret != tia_size) {
+            if (read_tia_succ == 0) {
                 log_debug("read vm algo param error\n");
                 __this->identify_algo_invalid |= BIT(ch_idx);
                 lp_touch_key_identify_algorithm_init(ch_idx, algo_cfg->algo_cfg0, algo_cfg->algo_cfg2);
             } else {
                 log_debug("read vm algo param succ\n");
+                memcpy(tia_addr, tia_vm_buf + tia_vm_size, tia_size);
+                tia_vm_size += tia_size;
                 algo_valid = 0;
                 ref_lim_l = -1;
                 ref_lim_h = -1;
@@ -425,28 +456,15 @@ void lp_touch_key_task(void *p)
                 }
             }
         }
-#if TCFG_LP_EARTCH_KEY_ENABLE
-        if (key_cfg->eartch_en == EARTCH_MASTER) {
-            __this->eartch.ch_list[__this->eartch.ch_num] = ch;
-            __this->eartch.ch_num ++;
-            lp_touch_key_eartch_algorithm_init(ch_idx, algo_cfg->algo_cfg0, algo_cfg->algo_cfg2, 6);
-        } else if (key_cfg->eartch_en == EARTCH_REFERENCE) {
-            __this->eartch.ref_ch_list[__this->eartch.ref_ch_num] = ch;
-            __this->eartch.ref_ch_num ++;
-        } else
-#endif
-        {
 
-#if !TCFG_LP_TOUCH_KEY_BT_TOOL_ENABLE
-            lp_touch_key_range_algo_init(ch_idx, algo_cfg);
-#endif
-        }
-
+        lp_touch_key_range_algo_init(ch_idx, algo_cfg);
     }
+
+    free(tia_vm_buf);
+    tia_vm_buf = NULL;
 
 #if TCFG_LP_EARTCH_KEY_ENABLE
     lp_touch_key_eartch_init();
-    lp_touch_key_eartch_state_reset();
 #endif
 
     if (__this->lpctmu_cfg.ch_wkp_en) {
@@ -555,6 +573,18 @@ void lp_touch_key_enable(void)
     lpctmu_enable();
 }
 
+#if TCFG_LP_EARTCH_KEY_ENABLE
+void lp_touch_key_reset_eartch_algo(void)
+{
+    if (!__this->pdata) {
+        return;
+    }
+    for (u32 group = 0; group < __this->eartch.ch_num; group++) {
+        lp_touch_key_eartch_algorithm_reset(group);
+    }
+}
+#endif
+
 void lp_touch_key_reset_algo(void)
 {
     if (!__this->pdata) {
@@ -566,7 +596,12 @@ void lp_touch_key_reset_algo(void)
         lp_touch_key_slide_algo_reset();
     }
 
+    const struct touch_key_cfg *key_cfg;
     for (u32 ch_idx = 0; ch_idx < __this->pdata->key_num; ch_idx ++) {
+        key_cfg = &(__this->pdata->key_cfg[ch_idx]);
+        if (key_cfg->eartch_en) {
+            continue;
+        }
         __this->identify_algo_invalid |= BIT(ch_idx);
         lp_touch_key_identify_algo_reset(ch_idx);
         lp_touch_key_cnacel_long_hold_click_check(ch_idx);
@@ -583,6 +618,13 @@ void lp_touch_key_charge_mode_enter()
     log_debug("%s", __func__);
 
     //复位算法
+
+#if TCFG_LP_EARTCH_KEY_ENABLE
+    lp_touch_key_eartch_notify_event(EARTCH_MUST_BE_OUT_EAR);
+    lpctmu_eartch_disable();
+    __this->eartch.eartch_enbale = 0;
+#endif
+
     if (__this->pdata->charge_enter_algo_reset) {
         lp_touch_key_reset_algo();
     }
@@ -603,6 +645,13 @@ void lp_touch_key_charge_mode_exit()
     }
 
     //复位算法
+
+#if TCFG_LP_EARTCH_KEY_ENABLE
+    lp_touch_key_reset_eartch_algo();
+    lpctmu_eartch_enable();
+    __this->eartch.eartch_enbale = 1;
+#endif
+
     if (__this->pdata->charge_exit_algo_reset) {
         lp_touch_key_reset_algo();
     }
@@ -628,6 +677,31 @@ static void lp_touch_key_pre_softoff_cbfunc(void)
     lp_touch_key_save_identify_algo_param();
 }
 platform_uninitcall(lp_touch_key_pre_softoff_cbfunc);
+
+
+static enum LOW_POWER_LEVEL lpkey_level_query()
+{
+#if TCFG_LP_EARTCH_KEY_ENABLE
+    if (!__this->pdata) {
+        return LOW_POWER_MODE_DEEP_SLEEP;
+    }
+    if (lpctmu_is_working()) {
+        return LOW_POWER_MODE_LIGHT_SLEEP;
+    }
+#endif
+    return LOW_POWER_MODE_DEEP_SLEEP;
+}
+
+static u8 lpkey_idle_query(void)
+{
+    return 1;
+}
+
+REGISTER_LP_TARGET(key_lp_target) = {
+    .name = "lpkey",
+    .level = lpkey_level_query,
+    .is_idle = lpkey_idle_query,
+};
 
 
 #endif

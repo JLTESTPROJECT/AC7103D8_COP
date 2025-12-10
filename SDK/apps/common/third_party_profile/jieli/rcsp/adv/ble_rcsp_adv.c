@@ -50,7 +50,7 @@
 #include "btstack_rcsp_user.h"
 #include "update.h"
 
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
+#if (TCFG_LE_AUDIO_RCSP_USE_SAME_ACL)
 #include "app_le_connected.h"
 #endif
 
@@ -150,7 +150,7 @@ int rcsp_make_set_adv_data(void)
 
     buf[8] = 0x20;	//   2:TWS耳机类型   |  protocol verson
 
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
+#if (TCFG_LE_AUDIO_RCSP_USE_SAME_ACL)
     buf[8] |= 4;
 #else
     if (RCSP_USE_SPP == get_defalut_bt_channel_sel()) {
@@ -201,7 +201,7 @@ int rcsp_make_set_adv_data(void)
         buf[20] = 1;
     }
 
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
+#if (TCFG_LE_AUDIO_RCSP_USE_SAME_ACL)
     buf[20] |= BIT(2);  // 是否支持Le Audio功能
     if (is_cig_phone_conn()) {
         buf[20] |= BIT(3);  // Le Audio是否已连接

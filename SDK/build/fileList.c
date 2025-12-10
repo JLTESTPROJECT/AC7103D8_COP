@@ -594,6 +594,24 @@ objs += \
 
 
 objs += \
+    $(ROOT)/apps/common/ai_audio/ai_audio_common.o \
+
+
+objs += \
+    $(ROOT)/apps/common/ai_audio/ai_player.o \
+
+
+objs += \
+    $(ROOT)/apps/common/ai_audio/ai_recorder.o \
+
+
+objs += \
+    $(ROOT)/apps/common/ai_audio/ai_translator.o \
+
+
+
+
+objs += \
 	$(ROOT)/apps/common/third_party_profile/multi_protocol_common.o \
 	$(ROOT)/apps/common/third_party_profile/multi_protocol_event.o \
 
@@ -618,6 +636,9 @@ objs += \
 
 objs += \
     $(ROOT)/apps/common/third_party_profile/custom_protocol_demo/custom_protocol.o
+
+objs += \
+    $(ROOT)/apps/common/third_party_profile/hid_iso/hid_iso.o
 
 objs += \
     $(ROOT)/apps/common/third_party_profile/app_ble_ancs_ams/app_ble_ancs_ams.o
