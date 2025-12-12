@@ -876,6 +876,19 @@ objs += \
 	$(ROOT)/apps/common/third_party_profile/jieli/rcsp/server/functions/device_info/rcsp_device_feature.o \
 	$(ROOT)/apps/common/third_party_profile/jieli/rcsp/server/functions/device_info/rcsp_device_status.o \
 
+
+
+objs += \
+	$(ROOT)/apps/common/third_party_profile/jieli/rcsp/server/functions/rcsp_auracast/rcsp_auracast.o \
+
+objs += \
+	$(ROOT)/apps/common/third_party_profile/jieli/rcsp/server/functions/rcsp_auracast/rcsp_auracast_sink.o \
+
+
+objs += \
+	$(ROOT)/apps/common/third_party_profile/jieli/rcsp/server/functions/rcsp_auracast/rcsp_auracast_source.o \
+
+
 objs += \
 	$(ROOT)/apps/common/third_party_profile/jieli/rcsp/server/functions/external_flash/rcsp_extra_flash_cmd.o \
 	$(ROOT)/apps/common/third_party_profile/jieli/rcsp/server/functions/external_flash/rcsp_extra_flash_opt.o
@@ -1061,14 +1074,6 @@ objs += \
 
 objs += \
     $(ROOT)/apps/common/third_party_profile/multi_ble_client/ble_multi_client.o \
-
-
-objs += \
-    $(ROOT)/apps/common/third_party_profile/auracast_app/auracast_app_protocol.o \
-    $(ROOT)/apps/common/third_party_profile/auracast_app/auracast_app_ble.o \
-    $(ROOT)/apps/common/third_party_profile/auracast_app/auracast_app_gatt_over_edr.o \
-    $(ROOT)/apps/common/third_party_profile/auracast_app/auracast_app_source_api.o \
-    $(ROOT)/apps/common/third_party_profile/auracast_app/auracast_app_sink_api.o \
 
 
 #if EXPORT_FNMA_ENABLE

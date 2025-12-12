@@ -30,6 +30,7 @@
 #include "generic/circular_buf.h"
 #include "clock_manager/clock_manager.h"
 #include "btstack/avctp_user.h"
+#include "hw_eq.h"
 
 #if 1
 #define dev_log	printf

@@ -38,6 +38,7 @@
 
 #include "sensors/ear_sports_data_opt.h"
 #include "sensors/ear_sport_info_opt.h"
+#include "rcsp_auracast/rcsp_auracast.h"
 
 #if TCFG_USER_TWS_ENABLE
 #include "classic/tws_api.h"
@@ -358,10 +359,16 @@ static void find_device_handle(void *priv, u8 OpCode, u8 OpCode_SN, u8 *data, u1
 }
 #endif // RCSP_ADV_FIND_DEVICE_ENABLE
 
+#define RCSP_DEV_TYPE_WATCH             0  // 运动手表
+#define RCSP_DEV_TYPE_TWS_EARPHONE      1  // TWS耳机
+#define RCSP_DEV_TYPE_SOUNDBOX          2  // 音箱
+#define RCSP_DEV_TYPE_DONGLE            3  // Dongle 设备
+
 static void get_device_config_info(void *priv, u8 OpCode, u8 OpCode_SN, u8 *data, u16 len, u16 ble_con_handle, u8 *spp_remote_addr)
 {
+#if RCSP_MODE == RCSP_MODE_EARPHONE
     struct RcspModel *rcspModel = (struct RcspModel *)priv;
-    u8 resp_buf[3] = {0};
+    u8 resp_buf[6] = {0};
     if (rcspModel == NULL) {
         return ;
     }
@@ -370,17 +377,61 @@ static void get_device_config_info(void *priv, u8 OpCode, u8 OpCode_SN, u8 *data
     }
     //产品标识
 #if RCSP_MODE == RCSP_MODE_EARPHONE
-    resp_buf[0] = 1;
+    resp_buf[0] = RCSP_DEV_TYPE_TWS_EARPHONE;
 #elif RCSP_MODE == RCSP_MODE_WATCH
-    resp_buf[0] = 0;
+    resp_buf[0] = RCSP_DEV_TYPE_WATCH;
 #endif
     //版本号
-    resp_buf[1] = 0x01;
+    resp_buf[1] = 0x00;
 #if RCSP_ADV_TRANSLATOR
     resp_buf[2] |= BIT(1);
     if (!JL_rcsp_translator_whether_play_by_ai_rx()) {
         resp_buf[2] |= BIT(2);
     }
+#endif
+
+    resp_buf[2] |= BIT(4);  // support LTV
+
+    // aurcast feature LTV
+    resp_buf[3] = 2;        // length
+    resp_buf[4] = 0x01;     // type
+    // value
+    // Bit0: 是否支持Auracast功能
+    // Bit1: 是否支持私有Auracast 接收端功能
+    // Bit2: 是否支持 私有Aurafast 发射端功能
+    if (RCSP_ADV_AURCAST_SINK) {
+        resp_buf[5] |= BIT(0) | BIT(1);   // value
+    }
+    if (RCSP_ADV_AURCAST_SOURCE) {
+        resp_buf[5] |= BIT(0) | BIT(2);   // value
+    }
+
+
+#elif RCSP_MODE == RCSP_MODE_SOUNDBOX
+
+    u8 resp_buf[5] = {0};
+    // 产品标识
+    resp_buf[0] = RCSP_DEV_TYPE_SOUNDBOX;
+#if (defined(RCSP_DISPLAY_AS_DONGLE) && RCSP_DISPLAY_AS_DONGLE)
+    resp_buf[0] = RCSP_DEV_TYPE_DONGLE;
+#endif
+    //版本号
+    resp_buf[1] = 0x00;
+
+    // aurcast feature LTV
+    resp_buf[2] = 2;        // length
+    resp_buf[3] = 0x01;     // type
+    // value
+    // Bit0: 是否支持Auracast功能
+    // Bit1: 是否支持私有Auracast 接收端功能
+    // Bit2: 是否支持 私有Aurafast 发射端功能
+    if (RCSP_ADV_AURCAST_SINK) {
+        resp_buf[4] |= BIT(0) | BIT(1);   // value
+    }
+    if (RCSP_ADV_AURCAST_SOURCE) {
+        resp_buf[4] |= BIT(0) | BIT(2);   // value
+    }
+
 #endif
     JL_CMD_response_send(OpCode, JL_PRO_STATUS_SUCCESS, OpCode_SN, resp_buf, sizeof(resp_buf), ble_con_handle, spp_remote_addr);
     /* #if (TCFG_DEV_MANAGER_ENABLE || RCSP_TONE_FILE_TRANSFER_ENABLE) 传音大文件传输提示音方案 */
@@ -559,6 +610,16 @@ int JL_rcsp_ear_sensors_data_opt(void *priv, u8 OpCode, u8 OpCode_SN, u8 *data, 
 }
 #endif
 
+#if (RCSP_ADV_AURCAST_SINK || RCSP_ADV_AURCAST_SOURCE)
+static void rcsp_auracast_cmd_process(void *priv, u8 OpCode, u8 OpCode_SN, u8 *data, u16 len, u16 ble_con_handle, u8 *spp_remote_addr)
+{
+    int ret = auracast_app_packet_receive(OpCode, OpCode_SN, data, len, ble_con_handle, spp_remote_addr);
+    if (ret) {
+        JL_CMD_response_send(OpCode, JL_PRO_STATUS_FAIL, OpCode_SN, NULL, 0, ble_con_handle, spp_remote_addr);
+    }
+}
+#endif
+
 void rcsp_cmd_recieve(void *priv, u8 OpCode, u8 OpCode_SN, u8 *data, u16 len, u16 ble_con_handle, u8 *spp_remote_addr)
 {
     switch (OpCode) {
@@ -603,9 +664,6 @@ void rcsp_cmd_recieve(void *priv, u8 OpCode, u8 OpCode_SN, u8 *data, u16 len, u1
         find_device_handle(priv, OpCode, OpCode_SN, data, len, ble_con_handle, spp_remote_addr);
         break;
 #endif
-    case JL_OPCODE_GET_DEVICE_CONFIG_INFO:
-        get_device_config_info(priv, OpCode, OpCode_SN, data, len, ble_con_handle, spp_remote_addr);
-        break;
     case JL_OPCODE_GET_MD5:
         get_md5_handle(priv, OpCode, OpCode_SN, data, len, ble_con_handle, spp_remote_addr);
         break;
@@ -680,6 +738,14 @@ void rcsp_cmd_recieve(void *priv, u8 OpCode, u8 OpCode_SN, u8 *data, u16 len, u1
 #if TCFG_RCSP_DUAL_CONN_ENABLE
     case JL_OPCODE_1T2_DEVICE_EDR_INFO_LIST:
         rcsp_get_1t2_bt_device_name_list(priv, OpCode, OpCode_SN, data, len, ble_con_handle, spp_remote_addr);
+        break;
+#endif
+    case JL_OPTCODE_DEVICE_CONFIG_GET:
+        get_device_config_info(priv, OpCode, OpCode_SN, data, len, ble_con_handle, spp_remote_addr);
+        break;
+#if (RCSP_ADV_AURCAST_SINK || RCSP_ADV_AURCAST_SOURCE)
+    case JL_OPTCODE_AURACAST_CMD:
+        rcsp_auracast_cmd_process(priv, OpCode, OpCode_SN, data, len, ble_con_handle, spp_remote_addr);
         break;
 #endif
     default:

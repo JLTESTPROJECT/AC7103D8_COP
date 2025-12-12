@@ -512,7 +512,7 @@ static int app_chargestore_event_handler(int *msg)
         bt_tws_remove_pairs();
 #endif
         bt_cmd_prepare(USER_CTRL_DEL_ALL_REMOTE_INFO, 0, NULL);
-        app_charge_system_reset();
+        charge_system_reset();
         break;
     case CMD_TWS_CHANNEL_SET:
         chargestore_set_tws_channel_info(__this->channel);

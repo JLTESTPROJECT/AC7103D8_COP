@@ -196,7 +196,10 @@
     . = ALIGN(4);
 #endif
 
-#if AUDIO_LC3_CODEC_AT_RAM
+#if (AUDIO_LC3_CODEC_AT_RAM) && (defined CONFIG_CPU_BR56)
+    *(.lc3_enc.text.cache.L2.run)
+    *(.lc3_dec.text.cache.L2.run)
+#elif AUDIO_LC3_CODEC_AT_RAM
     *(.lc3_enc.text.cache.L2.run)
     *(.lc3_dec.text.cache.L2.run)
     *(.lc3_codec_c_const)
@@ -219,7 +222,18 @@
     . = ALIGN(4);
 #endif
 
-#if AUDIO_LC3_CODEC_AT_RAM ||  AUDIO_JLA_CODEC_AT_RAM
+#if (AUDIO_LC3_CODEC_AT_RAM || AUDIO_JLA_CODEC_AT_RAM) && (defined CONFIG_CPU_BR56)
+	*(.jl_codec_c_const)
+	*(.jl_codec_c_code)
+	*(.jl_codec_ari_c_const)
+	*(.jl_codec_ari_c_code)
+	*(.jl_codec_c_sparse_code)
+	*(.jl_codec_d_code)
+	*(.jl_codec_e_code)
+	*(.jl_codec_const)
+	*(.jl_plc_c_code)
+    *(.jl_plc_c_const)
+#elif AUDIO_LC3_CODEC_AT_RAM ||  AUDIO_JLA_CODEC_AT_RAM
 	*(.jl_codec_c_const) 
 	*(.jl_codec_c_code)  
 	*(.jl_codec_ari_c_const)

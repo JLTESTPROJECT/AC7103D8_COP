@@ -1300,11 +1300,9 @@ static void audio_icsd_adt_task(void *p)
 #endif
 #if TCFG_AUDIO_ANC_ENV_ADAPTIVE_GAIN_ENABLE
                     if (msg[1] == ICSD_ADT_ENV_NOISE_LVL) {
-                        if (hdl->adt_env_adaptive_hold_id == 0) {
-                            ret = audio_env_noise_event_process(noise_lvl);
-                            if (ret != -1) {
-                                anc_fade_gain = ret;
-                            }
+                        ret = audio_env_noise_event_process(noise_lvl);
+                        if (ret != -1) {
+                            anc_fade_gain = ret;
                         }
                     }
 #endif
@@ -1941,6 +1939,10 @@ void audio_icsd_adptive_vol_output_handle(__adt_avc_output *_output)
 {
     /* adt_debug_log("%s, spldb_iir:%d", __func__, (int)(_output->spldb_iir)); */
     struct speak_to_chat_t *hdl = speak_to_chat_hdl;
+    if (hdl->adt_env_adaptive_hold_id) {
+        //算法输出未稳定
+        return;
+    }
     if (hdl && hdl->state) {
         hdl->busy = 1;
         audio_anc_env_avc_thr_to_lvl_sync((int)_output->spldb_iir);

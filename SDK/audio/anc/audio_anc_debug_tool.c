@@ -396,9 +396,11 @@ int audio_anc_debug_user_cmd_process(u8 *data, int len)
  */
 void audio_anc_debug_app_send_data(u8 cmd, u8 cmd_2nd, u8 *buf, int len)
 {
+#if TCFG_AUDIO_ANC_EXT_TOOL_ENABLE
     if (!(anc_ext_debug_tool_function_get() & ANC_EXT_FUNC_SPP_EN_APP)) {
         return;
     }
+#endif
     u8 *send_buf = anc_malloc("ANC_DEBUG", len + 3);
     send_buf[0] = ANC_DEBUG_CMD_APP;
     send_buf[1] = cmd;

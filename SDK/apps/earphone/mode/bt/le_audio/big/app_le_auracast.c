@@ -13,7 +13,6 @@
 #include "btstack/le/auracast_sink_api.h"
 #include "le_audio_player.h"
 #include "app_le_auracast.h"
-#include "auracast_app_protocol.h"
 #include "a2dp_media_codec.h"
 #include "le/le_user.h"
 #if TCFG_USER_TWS_ENABLE
@@ -21,6 +20,10 @@
 #endif
 #if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN)))
 #include "app_le_connected.h"
+#endif
+
+#if (defined(RCSP_ADV_AURCAST_SINK) && RCSP_ADV_AURCAST_SINK)
+#include "rcsp_auracast.h"
 #endif
 
 #if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SINK_EN)
@@ -76,7 +79,7 @@ u8 le_auracast_is_running()
 
 static int app_auracast_app_notify_listening_status(u8 status, u8 error)
 {
-#if (THIRD_PARTY_PROTOCOLS_SEL & AURACAST_APP_EN)
+#if (defined(RCSP_ADV_AURCAST_SINK) && RCSP_ADV_AURCAST_SINK)
     return auracast_app_notify_listening_status(status, error);
 #else
     return 0;
@@ -284,7 +287,7 @@ static void le_auracast_audio_close(void)
  */
 void auracast_sink_source_info_report_event_deal(uint8_t *packet, uint16_t length)
 {
-#if (THIRD_PARTY_PROTOCOLS_SEL & AURACAST_APP_EN)
+#if (defined(RCSP_ADV_AURCAST_SINK) && RCSP_ADV_AURCAST_SINK)
     struct auracast_source_item_t src = {0};
     auracast_sink_source_info_t *param = (auracast_sink_source_info_t *)packet;
 

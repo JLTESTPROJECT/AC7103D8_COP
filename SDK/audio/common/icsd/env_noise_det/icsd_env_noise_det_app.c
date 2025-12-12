@@ -8,6 +8,7 @@
 #include "audio_config.h"
 #include "sniff.h"
 #include "icsd_adt.h"
+#include "hw_eq.h"
 
 #if 1
 #define env_log	printf
@@ -197,7 +198,7 @@ static void audio_anc_env_lvl_sync_cb(void *_hdl)
 {
     struct audio_anc_lvl_sync *hdl = (struct audio_anc_lvl_sync *)_hdl;
 #if TCFG_AUDIO_ANC_ENV_ADAPTIVE_GAIN_ENABLE
-    int err = os_taskq_post_msg(SPEAK_TO_CHAT_TASK_NAME, 2, ANC_MSG_ENV_NOISE_LVL, hdl->cur_lvl);
+    int err = os_taskq_post_msg(SPEAK_TO_CHAT_TASK_NAME, 2, ICSD_ADT_ENV_NOISE_LVL, hdl->cur_lvl);
 
 #elif TCFG_AUDIO_ANC_ENV_ADAPTIVE_GAIN_LITE_ENABLE
     int err = os_taskq_post_msg("anc", 2, ANC_MSG_ENV_NOISE_LVL, hdl->cur_lvl);

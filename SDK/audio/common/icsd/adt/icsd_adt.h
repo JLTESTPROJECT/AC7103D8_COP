@@ -312,5 +312,6 @@ extern const u8 ICSD_AVC_DATAPATH;
 extern const u16 ANC_DMA_POINTS;
 extern char lib_adt_version[];
 extern const u8 icsd_dac_micread;
+extern const u8 rtanc_ancout_2ch_en;
 
 #endif

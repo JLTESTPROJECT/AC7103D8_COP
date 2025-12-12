@@ -23,7 +23,6 @@
 
 #if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN) && !TCFG_THIRD_PARTY_PROTOCOLS_SIMPLIFIED
 
-
 static int g_rcsp_ble_conn_num = 0;
 static int g_rcsp_adt_conn_num = 0;
 static int g_rcsp_spp_conn_num = 0;

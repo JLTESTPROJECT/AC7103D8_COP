@@ -1195,6 +1195,25 @@ c_SRC_FILES += \
 	apps/common/third_party_profile/jieli/rcsp/server/functions/device_info/rcsp_device_feature.c \
 	apps/common/third_party_profile/jieli/rcsp/server/functions/device_info/rcsp_device_status.c \
 
+
+#if (RCSP_ADV_AURCAST_SINK || RCSP_ADV_AURCAST_SOURCE)
+
+c_SRC_FILES += \
+	apps/common/third_party_profile/jieli/rcsp/server/functions/rcsp_auracast/rcsp_auracast.c \
+
+#if RCSP_ADV_AURCAST_SINK
+c_SRC_FILES += \
+	apps/common/third_party_profile/jieli/rcsp/server/functions/rcsp_auracast/rcsp_auracast_sink.c \
+
+#endif
+
+#if RCSP_ADV_AURCAST_SOURCE
+c_SRC_FILES += \
+	apps/common/third_party_profile/jieli/rcsp/server/functions/rcsp_auracast/rcsp_auracast_source.c \
+
+#endif
+#endif
+
 #if (JL_RCSP_EXTRA_FLASH_OPT)
 c_SRC_FILES += \
 	apps/common/third_party_profile/jieli/rcsp/server/functions/external_flash/rcsp_extra_flash_cmd.c \
@@ -1454,16 +1473,6 @@ c_SRC_FILES += \
 #if TCFG_THIRD_PARTY_PROTOCOLS_ENABLE && (THIRD_PARTY_PROTOCOLS_SEL & MULTI_CLIENT_EN)
 c_SRC_FILES += \
     apps/common/third_party_profile/multi_ble_client/ble_multi_client.c \
-
-#endif
-
-#if (THIRD_PARTY_PROTOCOLS_SEL & AURACAST_APP_EN)
-c_SRC_FILES += \
-    apps/common/third_party_profile/auracast_app/auracast_app_protocol.c \
-    apps/common/third_party_profile/auracast_app/auracast_app_ble.c \
-    apps/common/third_party_profile/auracast_app/auracast_app_gatt_over_edr.c \
-    apps/common/third_party_profile/auracast_app/auracast_app_source_api.c \
-    apps/common/third_party_profile/auracast_app/auracast_app_sink_api.c \
 
 #endif
 

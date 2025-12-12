@@ -140,6 +140,8 @@ u32 pmalloc_get_idle_ram(void);
 void memory_trace_dump();
 void memory_trace_reset();
 
+void mem_unfree_dump();
+
 #ifdef __cplusplus
 }
 #endif

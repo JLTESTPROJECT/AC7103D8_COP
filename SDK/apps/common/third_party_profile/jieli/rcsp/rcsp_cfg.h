@@ -283,6 +283,10 @@ RCSP_BTMATE_EN
 
 #endif // RCSP_MODE
 
+// RCSP 支持 AURACAST
+#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SINK_EN)
+#define RCSP_ADV_AURCAST_SINK								    1
+#endif
 
 #if (defined CONFIG_CPU_BR21)
 #define		RCSP_SDK_TYPE		RCSP_SDK_TYPE_AC692X
@@ -509,6 +513,14 @@ RCSP_BTMATE_EN
 
 #ifndef RCSP_KARAOKE_SOUND_PARAM
 #define RCSP_KARAOKE_SOUND_PARAM								0
+#endif
+
+#ifndef RCSP_ADV_AURCAST_SINK
+#define RCSP_ADV_AURCAST_SINK								    0
+#endif
+
+#ifndef RCSP_ADV_AURCAST_SOURCE
+#define RCSP_ADV_AURCAST_SOURCE								    0
 #endif
 
 #endif // __RCSP_CFG_H__

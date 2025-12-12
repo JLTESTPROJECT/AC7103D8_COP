@@ -154,6 +154,12 @@
 
 #endif
 
+#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN)))
+#define AUDIO_LC3_CODEC_AT_RAM		        1	//LC3 编解码
+#else
+#define AUDIO_LC3_CODEC_AT_RAM		        0	//LC3 编解码
+#endif
+#define AUDIO_JLA_V2_CODEC_AT_RAM	0	//JLA_V2 编解码
 
 /*语音识别算法编译链接配置*/
 #ifdef CONFIG_SOUNDBOX_CASE_ENABLE

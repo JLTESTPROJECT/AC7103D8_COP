@@ -49,11 +49,7 @@ ele_profile profiler;
 #endif
 #endif
 
-#if defined(TCFG_CVP_DEVELOP_ENABLE) && \
-    ((TCFG_CVP_DEVELOP_ENABLE == CVP_CFG_ELEVOC_1MIC_VPU) || \
-    (TCFG_CVP_DEVELOP_ENABLE == CVP_CFG_ELEVOC_2MIC_VPU) || \
-    (TCFG_CVP_DEVELOP_ENABLE == CVP_CFG_ELEVOC_2MIC_VPU_CLIP) || \
-    (TCFG_CVP_DEVELOP_ENABLE == CVP_CFG_ELEVOC_3MIC_VPU))
+#if defined(TCFG_CVP_DEVELOP_ENABLE) && (CVP_THIRD_ALGO_TYPE & CVP_ELEVOC_ALGO_BITMAP)
 
 #define AEC_CLK				(160 * 1000000L)	/*模块运行时钟(MaxFre:160MHz)*/
 #define AEC_FRAME_POINTS	256					/*AEC处理帧长，跟mic采样长度关联*/
@@ -321,23 +317,45 @@ static void sw_src_exit(void)
  * inref1---->fb
  * ref---->ref参考
  */
-static s16 talk1_mic[256];
-static s16 talk2_mic[256];
-static s16 talk3_mic[256];
-static s16 talk4_mic[256];
-static s16 ref_data[256];
+
+static s16 talk2_mic[256];	//talk
+static s16 talk4_mic[256];	//vpu
+static s16 ref_data[256];	//ref
+#if (CVP_ALGO_MIC_NUM >= 3)
+static s16 talk1_mic[256];	//ff
+#endif
+#if (CVP_ALGO_MIC_NUM >= 4)
+static s16 talk3_mic[256];	//fb
+#endif
 static int audio_aec_run(s16 *in, s16 *inref, s16 *inref1, s16 *inref2, s16 *ref, s16 *out, u16 points)
 {
     int out_size = 0;
     for (int i = 0; i < points; i++) {
-        talk1_mic[i] = inref[i];	//FF
         talk2_mic[i] = in[i]; 		//TALK
+        ref_data[i]  = ref[i];
+#if (CVP_ALGO_MIC_NUM == 2)
+        talk4_mic[i] = inref[i];	//VPU
+#endif
+#if (CVP_ALGO_MIC_NUM == 3)
+        talk1_mic[i] = inref[i];	//FF
+        talk4_mic[i] = inref1[i];	//VPU
+#endif
+#if (CVP_ALGO_MIC_NUM == 4)
+        talk1_mic[i] = inref[i];	//FF
         talk3_mic[i] = inref1[i];	//FB
         talk4_mic[i] = inref2[i];	//VPU
-        ref_data[i]  = ref[i];
+#endif
     }
     // printf("audio_aec_run--> in:%p inref:%p inref1:%p ref:%p out:%p points:%d\n", in, inref, inref1, ref, out, points);
-    short *near_in[4]   = {talk1_mic, talk3_mic, talk2_mic, talk4_mic};
+#if (CVP_ALGO_MIC_NUM == 2)
+    short *near_in[2]   = {talk2_mic, talk4_mic};
+#endif
+#if (CVP_ALGO_MIC_NUM == 3)
+    short *near_in[3]   = {talk1_mic, talk2_mic, talk4_mic};
+#endif
+#if (CVP_ALGO_MIC_NUM == 4)
+    short *near_in[4]   = {talk1_mic, talk3_mic, talk2_mic, talk4_mic}; // 算法顺序: FF FB TALK VPU
+#endif
     short *far_in[1]    = {ref_data};
     short *near_out[1]  = {out};
 

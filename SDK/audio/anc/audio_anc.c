@@ -2759,7 +2759,7 @@ void audio_anc_env_avc_thr_to_lvl_sync(int noise_thr)
         env_lvl = audio_anc_env_thr_to_lvl(noise_thr);
         struct audio_anc_lvl_sync *env_hdl = audio_anc_lvl_sync_get_hdl_by_name(ANC_LVL_SYNC_ENV);
         if (env_hdl) {
-            user_anc_log("env cur_lvl %d, wind_lvl %d\n", env_hdl->cur_lvl, env_lvl);
+            user_anc_log("env cur_lvl %d, env_lvl %d\n", env_hdl->cur_lvl, env_lvl);
             if (env_hdl->cur_lvl == env_lvl) {
                 env_lvl = -1;
             }
@@ -2769,7 +2769,7 @@ void audio_anc_env_avc_thr_to_lvl_sync(int noise_thr)
         avc_lvl = audio_anc_avc_thr_to_lvl(noise_thr);
         struct audio_anc_lvl_sync *avc_hdl = audio_anc_lvl_sync_get_hdl_by_name(ANC_LVL_SYNC_AVC);
         if (avc_hdl) {
-            user_anc_log("avc cur_lvl %d, wind_lvl %d\n", avc_hdl->cur_lvl, avc_lvl);
+            user_anc_log("avc cur_lvl %d, avc_lvl %d\n", avc_hdl->cur_lvl, avc_lvl);
             if (avc_hdl->cur_lvl == avc_lvl) {
                 avc_lvl = -1;
             }

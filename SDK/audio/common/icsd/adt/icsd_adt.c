@@ -380,7 +380,8 @@ int audio_dac_read_anc(s16 points_offset, void *data, int len, u8 read_channel)
         s32 *tmp_buf = anc_malloc("ICSD_DAC", len * 2 * read_channel);
         rlen = audio_dac_read_base(&icsd_dac_read_hdl, points_offset, tmp_buf, len * 2, read_channel, 0);
         if (rlen) {
-            audio_convert_data_32bit_to_16bit_round((s32 *)tmp_buf, (s16 *)data, (len * 2 * read_channel) >> 2);
+            audio_convert_data_32bit_to_16bit_round((s32 *)tmp_buf, (s16 *)data, (rlen >> 2));
+            rlen >>= 1;
         }
         anc_free(tmp_buf);
     } else {

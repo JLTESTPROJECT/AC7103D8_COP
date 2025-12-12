@@ -338,7 +338,7 @@ static u32 target_feature_md5_game_support(void *priv, u8 attr, u8 *buf, u16 buf
 #if RCSP_ADV_ADAPTIVE_NOISE_REDUCTION
     ext_function_flag_byte1 |= BIT(1);
 #endif
-#if RCSP_ADV_TRANSLATOR
+#if (RCSP_ADV_TRANSLATOR || RCSP_ADV_AURCAST_SINK)
     ext_function_flag_byte1 |= BIT(2);
 #endif
 #if RCSP_ADV_AI_NO_PICK

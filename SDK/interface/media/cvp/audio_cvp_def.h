@@ -45,6 +45,9 @@
 #define CVP_CFG_ELEVOC_2MIC_VPU_CLIP	((1UL << 20) | (1UL << 2))	//大象声科Elevoc：2mic+VPU（耳夹形态FreeClip）
 #define CVP_CFG_ELEVOC_3MIC_VPU			((1UL << 20) | (1UL << 3))	//大象声科Elevoc：3mic+VPU
 
+//CVP ALGO BITMAP ENABLE
+#define CVP_ELEVOC_ALGO_BITMAP			(1UL << 20)	//大象声科Elevoc算法使能映射
+
 /*SMS DNS版本定义*/
 #define SMS_DNS_V100        0xC1
 #define SMS_DNS_V200        0xC2

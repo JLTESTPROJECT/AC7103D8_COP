@@ -83,6 +83,7 @@ const u8 ICSD_AVC_DATAPATH  = 0;//0:ancdma_ref + dac 1:ref mic  2:talk mic
 
 const u16 ANC_DMA_POINTS    = 512; //ANC DMA长度，支持配置为：512 1024 2048
 const u8 icsd_dac_micread   = 0;
+const u8 rtanc_ancout_2ch_en = 0; //rtanc使用2通道ancout数据
 //==============================================//
 //    环境声参数配置
 //==============================================//

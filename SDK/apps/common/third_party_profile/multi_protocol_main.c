@@ -22,10 +22,6 @@
 #include "dma_platform_api.h"
 #endif
 
-#if (THIRD_PARTY_PROTOCOLS_SEL & AURACAST_APP_EN)
-#include "auracast_app_protocol.h"
-#endif
-
 #if THIRD_PARTY_PROTOCOLS_SEL & JL_SBOX_EN
 #include "jl_earbox/sbox_protocol.h"
 #endif
@@ -34,7 +30,7 @@
 extern void app_ble_ancs_ams_init();
 #endif
 
-#if ((THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN | GFPS_EN | MMA_EN | FMNA_EN | TUYA_DEMO_EN | REALME_EN | SWIFT_PAIR_EN | DMA_EN | ONLINE_DEBUG_EN | CUSTOM_DEMO_EN | XIMALAYA_EN | AURACAST_APP_EN| MULTI_CLIENT_EN | JL_SBOX_EN | HID_ISO_EN)) || \
+#if ((THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN | GFPS_EN | MMA_EN | FMNA_EN | TUYA_DEMO_EN | REALME_EN | SWIFT_PAIR_EN | DMA_EN | ONLINE_DEBUG_EN | CUSTOM_DEMO_EN | XIMALAYA_EN | MULTI_CLIENT_EN | JL_SBOX_EN | HID_ISO_EN)) || \
 		(TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN | LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN | LE_AUDIO_JL_BIS_RX_EN | LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_BIS_TX_EN)))
 #define ATT_LOCAL_PAYLOAD_SIZE    (517)//(517)              //note: need >= 20
 #define ATT_SEND_CBUF_SIZE        (512*2)                   //note: need >= 20,缓存大小，可修改
@@ -232,46 +228,6 @@ SDP_RECORD_REGISTER(custom_demo_sdp_record_item) = {
 #if (THIRD_PARTY_PROTOCOLS_SEL & MULTI_CLIENT_EN)
 extern void ble_multi_client_init();
 extern void ble_multi_client_exit(void);
-#endif
-
-#if (THIRD_PARTY_PROTOCOLS_SEL & AURACAST_APP_EN)
-
-const u8 sdp_att_service_data[60] = {                           //
-    0x36, 0x00, 0x31, 0x09, 0x00, 0x00, 0x0A, 0x00, 0x01, 0x00, 0x21, 0x09, 0x00, 0x01, 0x35, 0x03,
-    0x19, 0x18, 0x01, 0x09, 0x00, 0x04, 0x35, 0x13, 0x35, 0x06, 0x19, 0x01, 0x00, 0x09, 0x00, 0x1F,
-    0x35, 0x09, 0x19, 0x00, 0x07, 0x09, 0x00, 0x01, 0x09, 0x00, 0x04, 0x09, 0x00, 0x05, 0x35, 0x03,
-    0x19, 0x10, 0x02, 0x00                    //                //
-};
-
-const u8 sdp_att_service_data1[60] = {
-    0x36, 0x00, 0x31, 0x09, 0x00, 0x00, 0x0A, 0x00, 0x01, 0x00, 0x22, 0x09, 0x00, 0x01, 0x35, 0x03,
-    0x19, 0xAE, 0x00, 0x09, 0x00, 0x04, 0x35, 0x13, 0x35, 0x06, 0x19, 0x01, 0x00, 0x09, 0x00, 0x1F,
-    0x35, 0x09, 0x19, 0x00, 0x07, 0x09, 0x00, 0x05, 0x09, 0x00, 0x0a, 0x09, 0x00, 0x05, 0x35, 0x03,
-    0x19, 0x10, 0x02, 0x00
-};
-
-const u8 sdp_att_service_data2[60] = {
-    0x36, 0x00, 0x31, 0x09, 0x00, 0x00, 0x0A, 0x00, 0x01, 0x00, 0x23, 0x09, 0x00, 0x01, 0x35, 0x03,
-    0x19, 0xBF, 0x00, 0x09, 0x00, 0x04, 0x35, 0x13, 0x35, 0x06, 0x19, 0x01, 0x00, 0x09, 0x00, 0x1F,
-    0x35, 0x09, 0x19, 0x00, 0x07, 0x09, 0x00, 0x0b, 0x09, 0x00, 0x10, 0x09, 0x00, 0x05, 0x35, 0x03,
-    0x19, 0x10, 0x02, 0x00
-};
-
-SDP_RECORD_REGISTER(spp_att_record_item) = {
-    .service_record = (u8 *)sdp_att_service_data,
-    .service_record_handle = 0x00010021,
-};
-
-SDP_RECORD_REGISTER(spp_att_record_item1) = {
-    .service_record = (u8 *)sdp_att_service_data1,
-    .service_record_handle = 0x00010022,
-};
-
-/* SDP_RECORD_REGISTER(spp_att_record_item2) = { */
-/* .service_record = (u8 *)sdp_att_service_data2, */
-/* .service_record_handle = 0x00010023, */
-/* } */;
-
 #endif
 
 bool check_tws_master_role()
@@ -494,12 +450,6 @@ void multi_protocol_bt_init(void)
     ximalaya_protocol_init();
 #endif
 
-#if (THIRD_PARTY_PROTOCOLS_SEL & AURACAST_APP_EN)
-    extern void bredr_adt_init();
-    bredr_adt_init();
-    auracast_app_all_init();
-#endif
-
 #if (THIRD_PARTY_PROTOCOLS_SEL & MULTI_CLIENT_EN)
     ble_multi_client_init();
 #endif
@@ -566,9 +516,6 @@ void multi_protocol_bt_exit(void)
     le_audio_uninit(1);
 #endif
 
-#if (THIRD_PARTY_PROTOCOLS_SEL & AURACAST_APP_EN)
-    auracast_app_all_exit();
-#endif
 #if (THIRD_PARTY_PROTOCOLS_SEL & JL_SBOX_EN)
     sbox_demo_all_exit();
 #endif

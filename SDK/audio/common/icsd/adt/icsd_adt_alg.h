@@ -59,6 +59,7 @@ typedef struct {
     u8  part1_cnt;
     u8  dac_flag_iszero;
     s16 *inptr_h;
+    s16 *inptr_m;
     s16 *inptr_l;
     int   p1dac_max_vld;
 

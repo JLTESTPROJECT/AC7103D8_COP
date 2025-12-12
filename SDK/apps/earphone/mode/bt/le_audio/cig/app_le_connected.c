@@ -584,7 +584,7 @@ static int app_connected_conn_status_event_handler(int *msg)
 
     case CIG_EVENT_ACL_CONNECT:
         log_info("CIG_EVENT_ACL_CONNECT");
-#if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
+#if (TCFG_LE_AUDIO_RCSP_USE_SAME_ACL)
         rcsp_bt_ble_adv_enable(0);
 #endif
 #if (THIRD_PARTY_PROTOCOLS_SEL & HID_ISO_EN)
@@ -604,7 +604,7 @@ static int app_connected_conn_status_event_handler(int *msg)
         put_buf((u8 *)&acl_info->pri_ch, sizeof(acl_info->pri_ch));
 #if TCFG_JL_UNICAST_BOUND_PAIR_EN
         u8 le_com_addr_new[6];
-        ret = syscfg_read(CFG_TWS_CONNECT_AA, le_com_addr_new, 6);
+        ret = syscfg_read(CFG_USER_COMMON_ADDR, le_com_addr_new, 6);
         log_info("read binding common addr\n");
         put_buf(le_com_addr_new, 6);
 
@@ -658,7 +658,7 @@ static int app_connected_conn_status_event_handler(int *msg)
 
     case CIG_EVENT_ACL_DISCONNECT:
         log_info("CIG_EVENT_ACL_DISCONNECT");
-#if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
+#if (TCFG_LE_AUDIO_RCSP_USE_SAME_ACL)
 #if TCFG_USER_TWS_ENABLE
         if (tws_api_get_role() != TWS_ROLE_SLAVE) {
             rcsp_bt_ble_adv_enable(1);
@@ -778,7 +778,7 @@ static int app_connected_conn_status_event_handler(int *msg)
         play_tone_file(get_tone_files()->cis_connect);
 #endif
 
-#if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
+#if (TCFG_LE_AUDIO_RCSP_USE_SAME_ACL)
 #if TCFG_USER_TWS_ENABLE
         if (tws_api_get_role() != TWS_ROLE_SLAVE) {
             rcsp_bt_ble_adv_enable(1);
@@ -979,10 +979,12 @@ static void app_connected_suspend()
 
 int tws_check_user_conn_open_quick_type()
 {
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN))
     /* log_debug("tws_check_user_conn_open_quick_type=%d\n",check_le_audio_tws_conn_role() ); */
     if (is_cig_phone_conn()) {
         return g_le_audio_hdl.le_audio_tws_role;
     }
+#endif
     return 0xff;
 }
 
@@ -1673,7 +1675,7 @@ void le_audio_profile_init()
 {
     printf("le_audio_profile_init:%d\n", g_le_audio_hdl.le_audio_profile_ok);
     if (get_bt_le_audio_config() && (g_le_audio_hdl.le_audio_profile_ok == 0)) {
-#if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
+#if (TCFG_LE_AUDIO_RCSP_USE_SAME_ACL)
         le_audio_user_server_profile_init(rcsp_profile_data);
 #endif
 #if (THIRD_PARTY_PROTOCOLS_SEL & HID_ISO_EN)

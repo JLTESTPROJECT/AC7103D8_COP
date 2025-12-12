@@ -306,6 +306,8 @@
 
 // ------------表单节点全局配置宏------------
 #define CVP_BF_VERSION 2 // VERSION
+#define CVP_THIRD_ALGO_TYPE CVP_CFG_USER_DEFINED // 算法预设
+#define CVP_ALGO_MIC_NUM 1 // 算法类型
 // ------------表单节点全局配置宏------------
 #endif
 

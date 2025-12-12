@@ -325,7 +325,14 @@
     *(.lc3_dec.text)
     *(.lc3_enc.text.const)
     *(.lc3_enc.text)
-#if !AUDIO_LC3_CODEC_AT_RAM
+
+#if (AUDIO_LC3_CODEC_AT_RAM) && (defined CONFIG_CPU_BR56)
+    *(.lc3_codec_c_const)
+    *(.lc3_codec_c_code)
+    *(.lc3_codec_c_sparse_code)
+    *(.lc3_codec_d_code)
+    *(.lc3_codec_e_code)
+#elif !AUDIO_LC3_CODEC_AT_RAM
     *(.lc3_enc.text.cache.L2.run)
     *(.lc3_dec.text.cache.L2.run)
     *(.lc3_codec_c_const)
@@ -347,7 +354,14 @@
     *(.jla_codec_e_code)
     . = ALIGN(4);
 #endif
-#if !(AUDIO_LC3_CODEC_AT_RAM || AUDIO_JLA_CODEC_AT_RAM)
+
+#if (AUDIO_LC3_CODEC_AT_RAM || AUDIO_JLA_CODEC_AT_RAM) && (defined CONFIG_CPU_BR56)
+	*(.jl_codec_t8k_code)
+	*(.jl_codec_t16k_code)
+	*(.jl_codec_t24k_code)
+	*(.jl_codec_t32k_code)
+	*(.jl_codec_t441k_code)
+#elif !(AUDIO_LC3_CODEC_AT_RAM || AUDIO_JLA_CODEC_AT_RAM)
 	*(.jl_codec_c_const) 
 	*(.jl_codec_c_code)  
 	*(.jl_codec_ari_c_const)

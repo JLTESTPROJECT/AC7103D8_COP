@@ -263,7 +263,12 @@ static void app_testbox_loader_update_recv(u8 cmd, u8 *buf, u32 len)
                 .p_op_api = &app_testbox_uart_ch_update_op,
                 .task_en = 1,
             };
+#if CONFIG_UPDATE_MUTIL_CPU_UART
+            printf("\n >>>[test]:func = %s,line= %d\n", __FUNCTION__, __LINE__);
+            update_interactive_task_start((void *)&info, bt_update_set_offset_addr, 1);
+#else
             app_active_update_task_init(&info);
+#endif
         }
         break;
 

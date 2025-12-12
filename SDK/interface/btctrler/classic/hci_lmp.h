@@ -321,5 +321,6 @@ void dut_idle_run_slot(u16 slot);
 void set_le_audio_unicast_witch_phone_play_mix(u8 en);
 
 void bt_set_rxtx_status_io(u32 tx_pin, u32 rx_pin);
+void set_local_tws_3m_type_support(u8 enable);
 
 #endif

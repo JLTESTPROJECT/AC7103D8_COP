@@ -139,11 +139,12 @@ static struct list_head connected_list_head = LIST_HEAD_INIT(connected_list_head
 static struct list_head acl_data_recv_list_head = LIST_HEAD_INIT(acl_data_recv_list_head);
 static struct le_audio_mode_ops *le_audio_switch_ops = NULL; /*!< 广播音频和本地音频切换回调接口指针 */
 #if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_UNICAST_SINK_EN)
-u8 cig_peripheral_support_lea_profile  = 0;			// 是否支持公有的cis协议
+u8 cig_peripheral_support_lea_profile  = 1;			// 是否支持公有的cis协议
 u8 cig_peripheral_support_dongle = 1;
 u8 lea_cfg_only_dongle_support = 1;
 #elif (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_UNICAST_SINK_EN )
 u8 cig_peripheral_support_lea_profile  = 1;			// 是否支持公有的cis协议
+u8 lea_cfg_only_dongle_support = 0;
 u8 cig_peripheral_support_dongle = 0;
 #endif
 const cig_callback_t cig_perip_cb = {

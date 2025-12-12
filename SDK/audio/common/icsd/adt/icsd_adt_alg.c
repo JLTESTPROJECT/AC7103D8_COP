@@ -319,6 +319,7 @@ void icsd_adt_alg_rtanc_run_part1(__adt_anc_part1_parm *_part1_parm)
     part1_parm.part1_cnt = _part1_parm->part1_cnt;
     part1_parm.inptr_h  = _part1_parm->inptr_h;
     part1_parm.inptr_l  = _part1_parm->inptr_l;
+    part1_parm.inptr_m  = _part1_parm->inptr_m;
     part1_parm.out0_sum = _part1_parm->out0_sum;
     part1_parm.out1_sum = _part1_parm->out1_sum;
     part1_parm.out2_sum = _part1_parm->out2_sum;
