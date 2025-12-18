@@ -113,6 +113,7 @@ struct audio_cvp_dev {
     u8 adc_ref_en;
     u16 ref_size;
     u32 ref_sr;
+    u32 algo_type;
     int (*output_handle)(s16 *dat, u16 len);//输出回调函数
 };
 struct audio_cvp_dev *cvp_dev = NULL;
@@ -317,55 +318,59 @@ static void sw_src_exit(void)
  * inref1---->fb
  * ref---->ref参考
  */
-
+static s16 talk1_mic[256];	//ff
 static s16 talk2_mic[256];	//talk
+static s16 talk3_mic[256];	//fb
 static s16 talk4_mic[256];	//vpu
 static s16 ref_data[256];	//ref
-#if (CVP_ALGO_MIC_NUM >= 3)
-static s16 talk1_mic[256];	//ff
-#endif
-#if (CVP_ALGO_MIC_NUM >= 4)
-static s16 talk3_mic[256];	//fb
-#endif
+static s16 *near_in_2[2];
+static s16 *near_in_3[3];
+static s16 *near_in_4[4];
+
 static int audio_aec_run(s16 *in, s16 *inref, s16 *inref1, s16 *inref2, s16 *ref, s16 *out, u16 points)
 {
     int out_size = 0;
-    for (int i = 0; i < points; i++) {
-        talk2_mic[i] = in[i]; 		//TALK
-        ref_data[i]  = ref[i];
-#if (CVP_ALGO_MIC_NUM == 2)
-        talk4_mic[i] = inref[i];	//VPU
-#endif
-#if (CVP_ALGO_MIC_NUM == 3)
-        talk1_mic[i] = inref[i];	//FF
-        talk4_mic[i] = inref1[i];	//VPU
-#endif
-#if (CVP_ALGO_MIC_NUM == 4)
-        talk1_mic[i] = inref[i];	//FF
-        talk3_mic[i] = inref1[i];	//FB
-        talk4_mic[i] = inref2[i];	//VPU
-#endif
-    }
-    // printf("audio_aec_run--> in:%p inref:%p inref1:%p ref:%p out:%p points:%d\n", in, inref, inref1, ref, out, points);
-#if (CVP_ALGO_MIC_NUM == 2)
-    short *near_in[2]   = {talk2_mic, talk4_mic};
-#endif
-#if (CVP_ALGO_MIC_NUM == 3)
-    short *near_in[3]   = {talk1_mic, talk2_mic, talk4_mic};
-#endif
-#if (CVP_ALGO_MIC_NUM == 4)
-    short *near_in[4]   = {talk1_mic, talk3_mic, talk2_mic, talk4_mic}; // 算法顺序: FF FB TALK VPU
-#endif
-    short *far_in[1]    = {ref_data};
-    short *near_out[1]  = {out};
-
-
+    short **near_in = NULL;
 #if CVP_PRE_GAIN_ENABLE
     GainProcess_16Bit(in, in, CVP_PRE_GAIN, 1, 1, 1, points);
     GainProcess_16Bit(inref, inref, CVP_PRE_GAIN, 1, 1, 1, points);
     //    GainProcess_16Bit_test(inref1, inref1, 0.f, 1, 1, 1, points);
 #endif/*CVP_PRE_GAIN_ENABLE*/
-
+    short *far_in[1]    = {ref_data};
+    short *near_out[1]  = {out};
+    for (int i = 0; i < points; i++) {
+        talk2_mic[i] = in[i]; 		//TALK
+        ref_data[i]  = ref[i];
+        if (cvp_dev->mic_num == 2) {
+            talk4_mic[i] = inref[i];	//VPU
+        } else if (cvp_dev->mic_num == 3) {
+            talk1_mic[i] = inref[i];	//FF
+            talk4_mic[i] = inref1[i];	//VPU
+        } else if (cvp_dev->mic_num == 4) {
+            talk1_mic[i] = inref[i];	//FF
+            talk3_mic[i] = inref1[i];	//FB
+            talk4_mic[i] = inref2[i];	//VPU
+        }
+    }
+    if (cvp_dev->algo_type == CVP_CFG_ELEVOC_1MIC_VPU) {
+        /* short *near_in[2]   = {talk2_mic, talk4_mic}; */
+        near_in_2[0] = talk2_mic;
+        near_in_2[1] = talk4_mic;
+        near_in = near_in_2;
+    } else if ((cvp_dev->algo_type == CVP_CFG_ELEVOC_2MIC_VPU) || (cvp_dev->algo_type == CVP_CFG_ELEVOC_2MIC_VPU_CLIP)) {
+        /* short *near_in[3]   = {talk1_mic, talk2_mic, talk4_mic}; */
+        near_in_3[0] = talk1_mic;
+        near_in_3[1] = talk2_mic;
+        near_in_3[2] = talk4_mic;
+        near_in = near_in_3;
+    } else if (cvp_dev->algo_type == CVP_CFG_ELEVOC_3MIC_VPU) {
+        /* short *near_in[4]   = {talk1_mic, talk3_mic, talk2_mic, talk4_mic}; // 算法顺序: FF FB TALK VPU */
+        near_in_4[0] = talk1_mic;
+        near_in_4[1] = talk3_mic;
+        near_in_4[2] = talk2_mic;
+        near_in_4[3] = talk4_mic;
+        near_in = near_in_4;
+    }
 #ifdef ELEVOC
     // printf("audio_aec_run elevoc_vocplus_process\n");
 #if defined(ELEVOC_TX_MIPS_PROFILE)
@@ -612,6 +617,7 @@ int audio_aec_open(struct audio_aec_init_param_t *init_param, s16 enablebit, int
 
     spin_lock_init(&cvp_lock);
     cvp_dev->mic_num = init_param->mic_num;
+    cvp_dev->algo_type = init_param->algo_type;
 
     cvp_dev->dump_packet = CVP_OUT_DUMP_PACKET;
     cvp_dev->output_fade_in = 1;
@@ -783,8 +789,6 @@ void audio_aec_close(void)
 
         if (CONST_AEC_EXPORT) {
             aec_uart_close();
-            extern void uartSendExit();
-            uartSendExit();
         }
 
         if (CONST_REF_SRC) {

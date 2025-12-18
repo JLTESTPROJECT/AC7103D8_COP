@@ -188,7 +188,7 @@ typedef struct {
     int (*fset_vol)(struct vfs_partition *, const char *name);
     int (*fget_free_space)(struct vfs_devinfo *, struct vfs_partition *, u32 *space);
     int (*fread_fast)(FILE *, void *buf, u32 len);
-    int (*fseek_fast)(FILE *, int offset, int);
+    int (*fseek_fast)(FILE *, u32 offset, int);
     int (*fcopy)(FILE *, FILE *);
     int (*fmove)(FILE *file, const char *path_dst, FILE *, int clr_attr, int path_len);
     int (*frename)(FILE *, const char *path);
@@ -209,9 +209,9 @@ struct vfs_operations {
     int (*fopen)(FILE *, const char *path, const char *mode);
     int (*fread)(FILE *, void *buf, u32 len);
     int (*fwrite)(FILE *, void *buf, u32 len);
-    int (*fseek)(FILE *, int offset, int);
-    int (*flen)(FILE *);
-    int (*fpos)(FILE *);
+    int (*fseek)(FILE *, u32 offset, int);
+    u32(*flen)(FILE *);
+    u32(*fpos)(FILE *);
     int (*fget_name)(FILE *, u8 *name, int len);
     int (*fget_path)(FILE *, struct vfscan *, u8 *name, int len, u8 is_relative_path);
     int (*fclose)(FILE *);
@@ -374,7 +374,7 @@ int fwrite(void *buf, u32 size, u32 count, FILE *file);
 * @return 返回偏移得值
 */
 /* ----------------------------------------------------------------------------*/
-int fseek(FILE *file, int offset, int orig);
+int fseek(FILE *file, u32 offset, int orig);
 
 /* --------------------------------------------------------------------------*/
 /**
@@ -388,7 +388,7 @@ int fseek(FILE *file, int offset, int orig);
 * @return 返回偏移得值
 */
 /* ----------------------------------------------------------------------------*/
-int fseek_fast(FILE *file, int offset, int orig);// 快速seek
+int fseek_fast(FILE *file, u32 offset, int orig);// 快速seek
 
 /* --------------------------------------------------------------------------*/
 /**
@@ -414,7 +414,7 @@ int fread_fast(void *buf, u32 size, u32 count, FILE *file);//快速read
 * @return 当前文件长度
 */
 /* ----------------------------------------------------------------------------*/
-int flen(FILE *file);
+u32 flen(FILE *file);
 
 /* --------------------------------------------------------------------------*/
 /**
@@ -425,7 +425,7 @@ int flen(FILE *file);
 * @return 当前文件指针位置
 */
 /* ----------------------------------------------------------------------------*/
-int ftell(FILE *file);
+u32 ftell(FILE *file);
 
 
 int fcopy(const char *format, ...);

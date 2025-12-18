@@ -18,7 +18,8 @@
 #define CVP_INPUT_SIZE		256*3	//CVP输入缓存，short
 
 struct cvp_cfg_t {
-    u8 mic_num;
+    u8 	mic_num;
+    u32 algo_type;
 } __attribute__((packed));
 
 struct cvp_node_hdl {
@@ -79,10 +80,35 @@ int cvp_node_param_cfg_read(void *priv, u8 ignore_subid)
         printf("cvp_develop_param read ncfg err\n");
         return -1 ;
     }
-    g_printf("mic_num %d\n", hdl->cfg.mic_num);
+    g_printf("mic_num %d algo_type %d\n", hdl->cfg.mic_num, hdl->cfg.algo_type);
     if (!hdl->cfg.mic_num) {
         hdl->cfg.mic_num = 1;
     }
+#if (CVP_THIRD_ALGO_TYPE & CVP_ELEVOC_ALGO_BITMAP)
+    switch (hdl->cfg.algo_type) {
+    case CVP_CFG_ELEVOC_1MIC_VPU:
+        ASSERT(hdl->cfg.mic_num == 2,
+               "cfg error: alg=0x%08X mic=%d (expect 2)\n",
+               hdl->cfg.algo_type, hdl->cfg.mic_num);
+        break;
+    case CVP_CFG_ELEVOC_2MIC_VPU:
+    case CVP_CFG_ELEVOC_2MIC_VPU_CLIP:
+        ASSERT(hdl->cfg.mic_num == 3,
+               "cfg error: alg=0x%08X mic=%d (expect 3)\n",
+               hdl->cfg.algo_type, hdl->cfg.mic_num);
+        break;
+    case CVP_CFG_ELEVOC_3MIC_VPU:
+        ASSERT(hdl->cfg.mic_num == 4,
+               "cfg error: alg=0x%08X mic=%d (expect 4)\n",
+               hdl->cfg.algo_type, hdl->cfg.mic_num);
+        break;
+    default:
+        ASSERT(0,
+               "cfg error: unknown elevoc alg=0x%08X mic=%d\n",
+               hdl->cfg.algo_type, hdl->cfg.mic_num);
+        break;
+    }
+#endif
     return len;
 }
 
@@ -235,6 +261,7 @@ static void cvp_ioc_start(struct cvp_node_hdl *hdl)
     init_param.sample_rate = fmt->sample_rate;
     init_param.ref_sr = hdl->ref_sr;
     init_param.mic_num = hdl->cfg.mic_num;
+    init_param.algo_type = hdl->cfg.algo_type;
 
     if (hdl->source_uuid == NODE_UUID_ADC) {
         if (audio_adc_file_get_esco_mic_num() != hdl->cfg.mic_num) {

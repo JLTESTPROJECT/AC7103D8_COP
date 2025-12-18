@@ -20,6 +20,7 @@
 #include "clock.h"
 #include "dual_a2dp_play.h"
 #include "mix_record_api.h"
+#include "app_main.h"
 #include "local_tws.h"
 #include "bt_tws.h"
 
@@ -496,6 +497,11 @@ static int get_output_node_delay(int arg)
     return 0;
 }
 
+static int a2dp_get_disconnect_state(u8 *bt_addr)
+{
+    return get_charge_online_flag();
+}
+
 int jlstream_event_notify(enum stream_event event, int arg)
 {
     int ret = 0;
@@ -567,6 +573,9 @@ int jlstream_event_notify(enum stream_event event, int arg)
         ret = get_output_node_delay(arg);
         break;
 #endif
+    case STREAM_EVENT_GET_A2DP_STATE:
+        ret = a2dp_get_disconnect_state((u8 *)arg);
+        break;
     default:
         break;
     }

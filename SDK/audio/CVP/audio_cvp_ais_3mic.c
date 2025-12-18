@@ -669,8 +669,6 @@ void audio_aec_close(void)
 
         if (CONST_AEC_EXPORT) {
             aec_uart_close();
-            extern void uartSendExit();
-            uartSendExit();
         }
 
 #ifdef CONFIG_BOARD_AISPEECH_NR

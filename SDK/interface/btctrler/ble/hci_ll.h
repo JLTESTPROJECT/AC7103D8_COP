@@ -663,6 +663,8 @@ int ll_vendor_close_latency(u16 conn_handle);
 
 int ll_vendor_rxmaxbuf(u16 conn_handle, u8 rxmaxbuf);
 
+int ll_vendor_more_data(u16 conn_handle, u8 enable);
+
 int ll_vendor_leagcy_scan_priority(u16 param);
 int ll_vendor_leagcy_init_priority(u16 param);
 
@@ -790,4 +792,6 @@ void ll_set_ext_scan_priority(uint8_t priority);
 void ll_set_wifi_detec_param(uint8_t enable_detec, uint8_t enable_log_info, uint8_t skip_num);
 
 uint32_t ll_big_slave_get_timer_gap(uint16_t big_handle);
+
+uint32_t ll_cis_get_aa_by_handle(uint16_t handle);
 #endif

@@ -1897,6 +1897,7 @@ c_SRC_FILES += \
 	  cpu/components/iic_api.c \
 	  cpu/components/ir_encoder.c \
 	  cpu/components/ir_decoder.c \
+	  cpu/components/led_spi.c \
 	  cpu/components/rdec_soft.c \
 
 #if TCFG_PWMLED_ENABLE

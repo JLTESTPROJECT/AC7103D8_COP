@@ -189,6 +189,13 @@ void write_scan_conn_enable(bool scan_enable, bool conn_enable)
         scan_enable = 0;
         conn_enable = 0;
     }
+#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE
+    // local_tws模式，关可发现可连接，防止带宽不够
+    if (!app_in_mode(APP_MODE_BT)) {
+        scan_enable = 0;
+        conn_enable = 0;
+    }
+#endif
     r_printf("write_scan_conn_enable=%d,%d\n", scan_enable, conn_enable);
 
     lmp_hci_write_scan_enable((conn_enable << 1) | scan_enable);
@@ -432,8 +439,11 @@ void tws_dual_conn_state_handler()
     int connect_device      = bt_get_total_connect_dev();
     int have_page_device    = page_list_empty() ? false : true;
 
-#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE && TCFG_BACKGROUND_WITHOUT_EDR_CONNECT
-    u8 edr_background_active = 0;
+#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE
+    u8 edr_background_active = 1;
+    if (bt_background_active()) {
+        edr_background_active = 0;
+    }
 #endif
 
 #if (TCFG_BT_BACKGROUND_ENABLE == 0)
@@ -457,7 +467,7 @@ void tws_dual_conn_state_handler()
             return;
         }
         if (connect_device == 0) {
-#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE && TCFG_BACKGROUND_WITHOUT_EDR_CONNECT
+#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE
             if (!edr_background_active) {
             } else
 #endif
@@ -535,7 +545,7 @@ void tws_dual_conn_state_handler()
     } else if (state & TWS_STA_TWS_PAIRED) {
         if (connect_device == 0) {
             tws_api_create_connection(0);
-#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE && TCFG_BACKGROUND_WITHOUT_EDR_CONNECT
+#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE
             if (!edr_background_active) {
             } else
 #endif
@@ -621,7 +631,7 @@ void tws_dual_conn_state_handler()
         }
 #else
         if (connect_device == 0) {
-#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE && TCFG_BACKGROUND_WITHOUT_EDR_CONNECT
+#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLET
             if (!edr_background_active) {
             } else
 #endif
@@ -698,7 +708,7 @@ void dual_conn_page_device()
         return;
     }
 
-#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE && TCFG_BACKGROUND_WITHOUT_EDR_CONNECT
+#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE
     if (bt_background_active()) {
         return;
     }
@@ -976,7 +986,7 @@ static int dual_conn_hci_event_handler(int *_event)
     if (tws_api_get_role() == TWS_ROLE_SLAVE) {
         return 0;
     }
-#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE && TCFG_BACKGROUND_WITHOUT_EDR_CONNECT     //后台不支持edr连接，不处理直接返回
+#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE     //后台不支持edr连接，不处理直接返回
     if (g_bt_hdl.wait_exit) {
         return 0;
     }

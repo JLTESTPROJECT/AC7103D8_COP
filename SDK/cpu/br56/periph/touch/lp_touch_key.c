@@ -182,6 +182,7 @@ void lp_touch_key_ctmu_res_deal(u32 pnd_type)
     }
 
     const struct touch_key_cfg *key_cfg;
+    const struct touch_key_algo_cfg *algo_cfg;
 
     u32 algo_valid;
     u16 ref_lim_l;
@@ -209,6 +210,7 @@ void lp_touch_key_ctmu_res_deal(u32 pnd_type)
 #endif
 
         key_cfg = &(__this->pdata->key_cfg[ch_idx]);
+        algo_cfg = &(key_cfg->algo_cfg[key_cfg->index]);
 
         touch_ch_res_buf[ch] = ch_res;
 
@@ -254,7 +256,7 @@ void lp_touch_key_ctmu_res_deal(u32 pnd_type)
         if (algo_valid) {
             __this->identify_algo_invalid &= ~BIT(ch_idx);
             lpctmu_cache_ch_res_key_msg_lim(ch, ref_lim_l, ref_lim_h);
-            if ((ch_res < ref_lim_l) || (ch_res > ref_lim_h)) {
+            if ((ch_res < (ref_lim_l + algo_cfg->algo_cfg0)) || (ch_res > (ref_lim_h - algo_cfg->algo_cfg0))) {
                 key_msg_state |=  BIT(ch_idx);
             } else {
                 key_msg_state &= ~BIT(ch_idx);

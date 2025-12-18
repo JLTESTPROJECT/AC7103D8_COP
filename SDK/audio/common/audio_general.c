@@ -37,6 +37,7 @@ const int config_bt_audio_enable = 1;
 #else
 const int config_bt_audio_enable = 0;
 #endif
+const int CONFIG_A2DP_AFATER_TONE_COEXIST_ENABLE = 0;
 
 const int config_audio_dac_ng_debug = 0;
 const int config_audio_dac_enable = TCFG_DAC_NODE_ENABLE;

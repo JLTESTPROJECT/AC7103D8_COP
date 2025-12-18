@@ -423,7 +423,6 @@ static void update_param_content_fill(int type, UPDATA_PARM *p, void (*priv_para
                 log_info_hexdump(ext_data, ext_len);
                 update_param_ext_fill(p, EXT_BT_WLA_INFO, ext_data, ext_len);
             }
-
             free(ext_data);
         }
         update_param_ext_fill(p, EXT_BT_MAC_ADDR, (u8 *)bt_get_mac_addr(), 6);
@@ -444,8 +443,8 @@ static void update_param_content_fill(int type, UPDATA_PARM *p, void (*priv_para
 static void update_param_ram_set(u8 *buf, u16 len)
 {
     u8 *update_ram = UPDATA_FLAG_ADDR;
-    if (len > (u32)(&UPDATA_SIZE)) {
-        len = (u32)(&UPDATA_SIZE);
+    if (len > (u32)(&UPDATA_SIZE) - (UPDATA_FLAG_ADDR - BOOT_STATUS_ADDR)) {
+        len = (u32)(&UPDATA_SIZE) - (UPDATA_FLAG_ADDR - BOOT_STATUS_ADDR);
     }
     memcpy(update_ram, (u8 *)buf, len);
 }

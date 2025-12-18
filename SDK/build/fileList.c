@@ -1365,6 +1365,7 @@ objs += \
 	  $(ROOT)/cpu/components/iic_api.o \
 	  $(ROOT)/cpu/components/ir_encoder.o \
 	  $(ROOT)/cpu/components/ir_decoder.o \
+	  $(ROOT)/cpu/components/led_spi.o \
 	  $(ROOT)/cpu/components/rdec_soft.o \
 
 objs += \

@@ -47,6 +47,7 @@ extern const u8 CONST_AEC_SIMPLEX;
 struct audio_aec_init_param_t {
     s32 sample_rate;
     u32 ref_sr;
+    u32 algo_type;
     u8 ref_channel;
     u8 mic_num;
     u16 node_uuid;

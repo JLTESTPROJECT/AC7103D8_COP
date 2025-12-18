@@ -238,6 +238,8 @@ static void local_tws_become_to_sink(enum app_mode_t mode)
 {
     __this->role = LOCAL_TWS_ROLE_SINK;
     app_sink_set_sink_mode_rsp_arg(mode);                //sink记录当前Source模式
+    // 进入local_tws，关闭可发现可连接,防止带宽不够
+    write_scan_conn_enable(0, 0);
     if (app_in_mode(APP_MODE_SINK) == 0) {
         app_send_message(APP_MSG_GOTO_MODE, APP_MODE_SINK);
         /* app_send_message2(APP_MSG_GOTO_MODE, APP_MODE_SINK, mode); */
@@ -297,6 +299,12 @@ int local_tws_enter_mode(const char *file_name, void *priv)
                     return -1;
                 }
             }
+        }
+        // 进入local_tws，关闭可发现可连接，防止带宽不够
+        if (!app_in_mode(APP_MODE_BT)) {
+            write_scan_conn_enable(0, 0);
+        } else {
+            app_send_message(APP_MSG_BT_PAGE_DEVICE, 0);
         }
         return 0;
     }

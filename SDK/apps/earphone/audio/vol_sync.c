@@ -79,6 +79,15 @@ void vol_sys_tab_init(void)
 void set_music_device_volume(int volume)
 {
     r_printf("set_music_device_volume=%d\n", volume);
+
+#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE && TCFG_BT_BACKGROUND_ENABLE
+    if (bt_background_active()) {
+        // local_tws蓝牙后台时不响应手机调节音量
+        y_printf("local_tws doesn't respond to phone volume!\n");
+        return ;
+    }
+#endif
+
 #if TCFG_BT_VOL_SYNC_ENABLE
     s16 music_volume;
 

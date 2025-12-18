@@ -852,6 +852,11 @@ int charge_init(const struct charge_platform_data *data)
     CHG_VILOOP2_EN(0);
     PMU_NVDC_EN(1);
     L5V_IO_MODE(0);
+#if (!SUPER_FOLLOW_CHARGE_ENABLE)
+    //关闭VMAX,PB5作为IO使用
+    CHG_EXT_MODE(0);
+    CHG_EXT_EN(0);
+#endif
 
     //消除vbat到vpwr的漏电再判断ldo5v状态
     u8 temp = 10;

@@ -98,6 +98,7 @@ typedef enum {
     BLE_CMD_PERIODIC_ADV_CREATE_SYNC_CANCEL,
     BLE_CMD_EXT_ADV_ADRESS,  //如果支持两个广播包，操作地址的配置流程也要统一。
     BLE_CMD_SET_RXMAXBUF,
+    BLE_CMD_SET_MORE_DATA,
 
     //client
     BLE_CMD_SEARCH_PROFILE = 0x80,
@@ -1213,6 +1214,20 @@ void lib_make_ble_address(u8 *ble_address, u8 *edr_address);
 /*************************************************************************************************/
 #define ble_op_set_rxmaxbuf(con_handle, rxmaxbuf)     \
 	ble_user_cmd_prepare(BLE_CMD_SET_RXMAXBUF, 2, con_handle, rxmaxbuf)
+
+/*************************************************************************************************/
+/*!
+ *  \brief      设置acl的 more dat
+ *
+ *  \function   ble_cmd_ret_e ble_op_set_more_data(con_handle, enable).
+ *
+ *  \param      [in] con_handle     range：>0.
+ *
+ *  \return     see ble_cmd_ret_e.
+ */
+/*************************************************************************************************/
+#define ble_op_set_more_data(con_handle, enable)     \
+	ble_user_cmd_prepare(BLE_CMD_SET_MORE_DATA, 2, con_handle, enable)
 
 /*************************************************************************************************/
 /*!

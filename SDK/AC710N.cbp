@@ -1676,6 +1676,7 @@
 <Unit filename="cpu/components/ir_decoder.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="cpu/components/ir_encoder.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="cpu/components/led_api.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="cpu/components/led_spi.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="cpu/components/pwm_led_v2.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="cpu/components/rdec_soft.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="cpu/components/touch/lp_touch_key_tool.c"><Option compilerVer="CC"/></Unit>
@@ -1792,6 +1793,7 @@
 <Unit filename="interface/driver/cpu/periph/ir_decoder.h" />
 <Unit filename="interface/driver/cpu/periph/ir_encoder.h" />
 <Unit filename="interface/driver/cpu/periph/led_api.h" />
+<Unit filename="interface/driver/cpu/periph/led_spi.h" />
 <Unit filename="interface/driver/cpu/periph/lp_touch_key_common.h" />
 <Unit filename="interface/driver/cpu/periph/lp_touch_key_identify_algo.h" />
 <Unit filename="interface/driver/cpu/periph/lp_touch_key_range_algo.h" />
