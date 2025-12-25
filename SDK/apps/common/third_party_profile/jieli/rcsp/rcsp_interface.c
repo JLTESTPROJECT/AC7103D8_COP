@@ -88,6 +88,14 @@ u8 *rcsp_get_ble_hdl_remote_mac_addr(u16 ble_con_handle)
     return NULL;
 }
 
+// 获取rcsp_ble_con_handle
+u16 rcsp_ble_con_handle_get()
+{
+    u16 rcsp_ble_con_handle = app_ble_get_hdl_con_handle(rcsp_server_ble_hdl);
+    rcsp_lib_printf("%s, %s, %d, rcsp_ble_con_handle:%d\n", __FILE__, __FUNCTION__, __LINE__, rcsp_ble_con_handle);
+    return rcsp_ble_con_handle;
+}
+
 // 获取当前已连接ble数目
 u8 bt_rcsp_ble_conn_num(void)
 {

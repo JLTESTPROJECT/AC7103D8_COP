@@ -13,6 +13,7 @@
 #include "a2dp_player.h"
 #include "app_msg.h"
 #include "dac_node.h"
+#include "tws_dual_conn.h"
 
 #if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE
 #define LOG_TAG             "[LOCAL_TWS]"
@@ -240,6 +241,7 @@ static void local_tws_become_to_sink(enum app_mode_t mode)
     app_sink_set_sink_mode_rsp_arg(mode);                //sink记录当前Source模式
     // 进入local_tws，关闭可发现可连接,防止带宽不够
     write_scan_conn_enable(0, 0);
+    bt_cmd_prepare(USER_CTRL_PAGE_CANCEL, 0, NULL);
     if (app_in_mode(APP_MODE_SINK) == 0) {
         app_send_message(APP_MSG_GOTO_MODE, APP_MODE_SINK);
         /* app_send_message2(APP_MSG_GOTO_MODE, APP_MODE_SINK, mode); */
@@ -303,6 +305,7 @@ int local_tws_enter_mode(const char *file_name, void *priv)
         // 进入local_tws，关闭可发现可连接，防止带宽不够
         if (!app_in_mode(APP_MODE_BT)) {
             write_scan_conn_enable(0, 0);
+            bt_cmd_prepare(USER_CTRL_PAGE_CANCEL, 0, NULL);
         } else {
             app_send_message(APP_MSG_BT_PAGE_DEVICE, 0);
         }
@@ -651,5 +654,40 @@ REGISTER_LP_TARGET(local_tws_target) = {
     .name = "localtws",
     .is_idle = local_tws_idle_query,
 };
+
+#if (TCFG_BT_BACKGROUND_ENABLE == 0)
+// local_tws不开蓝牙后台的进出蓝牙模式处理
+void local_tws_without_background_enter_bt_mode(void)
+{
+    g_bt_hdl.init_ok = 1;
+
+    void *devices[2];
+    if (btstack_get_conn_devices(devices, 2) < 1) {          //无设备连接才打开自动关机
+        sys_auto_shut_down_enable();
+    }
+
+    app_send_message(APP_MSG_ENTER_MODE, APP_MODE_BT);
+    app_send_message(APP_MSG_BT_PAGE_DEVICE, 0);
+}
+
+void local_tws_without_background_exit_bt_mode(void)
+{
+    g_bt_hdl.exiting = 0;
+    sys_auto_shut_down_disable(); // 防止无连接关机
+
+    if (bt_get_total_connect_dev() > 0) {
+        bt_cmd_prepare(USER_CTRL_DISCONNECTION_HCI, 0, NULL);
+    }
+    bt_cmd_prepare(USER_CTRL_WRITE_SCAN_DISABLE, 0, NULL);
+    bt_cmd_prepare(USER_CTRL_WRITE_CONN_DISABLE, 0, NULL);
+    bt_cmd_prepare(USER_CTRL_PAGE_CANCEL, 0, NULL);
+
+    /*关掉解码*/
+    u8 addr[6];
+    if (a2dp_player_get_btaddr(addr)) {
+        a2dp_player_close(addr);
+    }
+}
+#endif
 
 #endif

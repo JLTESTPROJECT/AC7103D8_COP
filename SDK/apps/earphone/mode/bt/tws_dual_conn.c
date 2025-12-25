@@ -19,6 +19,7 @@
 #include "app_testbox.h"
 #include "update.h"
 #include "btstack_rcsp_user.h"
+#include "adapter/include/misc_interface.h"
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
 #include "app_le_connected.h"
 #endif
@@ -419,11 +420,21 @@ static void tws_auto_pair_timeout(void *p)
     dual_conn_page_device();
 }
 
+u16 tws_auto_pair_timeout_rand(void)
+{
+    u16 time_out_rand;
+    pseudo_random_genrate((void *)&time_out_rand, 2);
+
+    time_out_rand = time_out_rand & 0x7FF;
+    printf("tws_auto_pair_timeout_rand = %d\n", time_out_rand);
+    return time_out_rand;  /*0-2047*/
+}
+
 static void tws_pair_new_tws(void *p)
 {
     tws_api_cancle_create_connection();
     tws_api_auto_pair(0);
-    g_dual_conn.timer = sys_timeout_add(NULL, tws_auto_pair_timeout, 3000);
+    g_dual_conn.timer = sys_timeout_add(NULL, tws_auto_pair_timeout, 1000 + tws_auto_pair_timeout_rand());
 }
 
 static void tws_wait_conn_timeout(void *p)

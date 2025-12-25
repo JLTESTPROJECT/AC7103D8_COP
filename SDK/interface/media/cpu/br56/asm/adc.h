@@ -173,7 +173,6 @@ struct linein_open_param {
 
 struct audio_adc_hdl {
     struct list_head head;
-    //const struct adc_platform_data *pd;
     struct audio_adc_private_param *private;
     spinlock_t lock;
     struct mic_capless_trim_result capless_trim;
@@ -183,42 +182,37 @@ struct audio_adc_hdl {
     u8 adc_dcc_en[AUDIO_ADC_MAX_NUM];
     struct mic_open_param mic_param[AUDIO_ADC_MIC_MAX_NUM];
     struct linein_open_param linein_param[AUDIO_ADC_MAX_NUM];
-    u8 mic_ldo_state;
-    u8 state;
-    u8 channel;
-    u8 channel_num;
-    u8 mic_num;
-    u8 linein_num;
-    s16 *hw_buf;   //ADC 硬件buffer的地址
-    u8 max_adc_num; //默认打开的ADC通道数
-    u8 buf_fixed;  //是否固定adc硬件使用的buffer地址
+    OS_MUTEX mutex;
+    u32 timestamp;
+    s16 *hw_buf;                    //ADC硬件buffer的地址，buffer由外部传入，digital_close时会释放，外部只需将buffer置NULL即可
+    u8 mic_ldo_state;               //是否手动调用接口打开MIC_LDO
+    u8 state;                       //用于获取当前ADC状态以及防重入
+    u8 digital_mic_open;            //普通ADC数字打开通道(不包含ANC)
+    u8 anc_mic_open;                //ANC打开通道
+    u8 adc_mic_open;                //ADC所有打开的通道(包含ANC)
+    u8 channel_num;                 //用于统计当前ADC数字通道打开的数量，用于dev_mem低功耗的开关选择
+    u8 max_adc_num;                 //ADC使能的最大通道数，若使能ADC复用，则max_adc_num为该cpu支持的最大通道数
+    u8 buf_fixed;                   //是否固定adc硬件使用的buffer地址(@BR28)
     u8 bit_width;
-    u8 lpadc_en;
+    u8 lpadc_en;                    //LPADC使能(@BR50)
     u8 plnk_en;
     u8 analog_common_inited;
     u8 micbias_en_port[AUDIO_ADC_MAX_NUM]; //记录各个MIC使用的供电来源
-    u32 timestamp;
+    u8 audio_anc_mic_toggle;
 };
 
 struct adc_mic_ch {
     struct audio_adc_hdl *adc;
+    void (*handler)(struct adc_mic_ch *, s16 *, u16);
+    u32 sample_rate;
+    s16 *bufs;
+    u16 buf_size;
+    u16 ch;         //当前应用打开的adc通道
     u8 gain[AUDIO_ADC_MIC_MAX_NUM];
     u8 buf_num;
-    u16 buf_size;
-    s16 *bufs;
-    u32 sample_rate;
-    void (*handler)(struct adc_mic_ch *, s16 *, u16);
 };
 
-struct adc_linein_ch {
-    struct audio_adc_hdl *adc;
-    u8 gain[AUDIO_ADC_LINEIN_MAX_NUM];
-    u8 buf_num;
-    u16 buf_size;
-    s16 *bufs;
-    u32 sample_rate;
-    void (*handler)(struct adc_linein_ch *, s16 *, u16);
-};
+#define adc_linein_ch adc_mic_ch //linein与mic使用同一个句柄
 
 //MIC相关管理结构
 typedef struct {

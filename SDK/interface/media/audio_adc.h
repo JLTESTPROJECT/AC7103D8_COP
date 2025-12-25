@@ -9,6 +9,10 @@
 #include "asm/adc.h"
 #include "media_config.h"
 
+#ifndef AUDIO_ADC_LPADC_NUM
+#define AUDIO_ADC_LPADC_NUM      0
+#endif
+
 //ADC模拟增益档位对应的dB table表
 extern const s8 audio_adc_gain_dB_table[];
 /*

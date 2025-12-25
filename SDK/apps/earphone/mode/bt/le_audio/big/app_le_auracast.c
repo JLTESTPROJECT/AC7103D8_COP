@@ -66,6 +66,7 @@ static u16 multi_bis_rx_temp_buf_len = 0;
 static u8 *multi_bis_rx_buf[7];
 static u16 multi_bis_data_offect[7];
 static bool multi_bis_plc_flag[7];
+static DEFINE_SPINLOCK(auracast_lock);
 
 #if TCFG_USER_TWS_ENABLE
 static u8 g_cur_auracast_is_scanning = 0;											// 当前设备是否正在扫描广播设备，0:否，非零:是
@@ -153,13 +154,16 @@ static void le_auracast_audio_open(uint8_t *packet, uint16_t length)
     params.conn = config->Connection_Handle[0];
     g_printf("nch:%d, coding_type:0x%x, dec_ch_mode:%d, conn:%d, dms:%d, sdu_period:%d, br:%d\n",
              params.fmt.nch, params.fmt.coding_type, params.fmt.dec_ch_mode, params.conn, params.fmt.frame_dms, params.fmt.sdu_period, params.fmt.bit_rate);
-    g_rx_audio.rx_player.le_audio = le_audio_stream_create(params.conn, &params.fmt);
-    g_rx_audio.rx_player.rx_stream = le_audio_stream_rx_open(g_rx_audio.rx_player.le_audio, params.fmt.coding_type);
-    err = le_audio_player_open(g_rx_audio.rx_player.le_audio, &params);
+    void *le_audio_stream_ctx = le_audio_stream_create(params.conn, &params.fmt);
+    void *rx_stream = le_audio_stream_rx_open(le_audio_stream_ctx, params.fmt.coding_type);
+    err = le_audio_player_open(le_audio_stream_ctx, &params);
     if (err != 0) {
         ASSERT(0, "player open fail");
     }
 
+    spin_lock(&auracast_lock);
+    g_rx_audio.rx_player.le_audio = le_audio_stream_ctx;
+    g_rx_audio.rx_player.rx_stream = rx_stream;
     if (g_rx_audio.bis_num > 1) {
         for (u8 i = 0; i < g_sink_bn; i++) {
             if (!multi_bis_rx_buf[i]) {
@@ -169,6 +173,7 @@ static void le_auracast_audio_open(uint8_t *packet, uint16_t length)
             }
         }
     }
+    spin_unlock(&auracast_lock);
 }
 
 static bool le_auracast_iso_sdu_all_zeros(uint8_t *array, int length)
@@ -214,10 +219,11 @@ static void le_auracast_iso_rx_callback(uint8_t *packet, uint16_t size)
         putchar('p');
         plc_flag = 1;
     }
-
+    spin_lock(&auracast_lock);
     for (i = 0; i < g_rx_audio.bis_num; i++) {
         if (g_rx_audio.audio_hdl[i].bis_hdl == hdr.handle) {
             if ((!g_rx_audio.rx_player.le_audio) || (!g_rx_audio.rx_player.rx_stream)) {
+                spin_unlock(&auracast_lock);
                 return;
             }
             index = i;
@@ -226,6 +232,7 @@ static void le_auracast_iso_rx_callback(uint8_t *packet, uint16_t size)
     }
 
     if (index == -1) {
+        spin_unlock(&auracast_lock);
         return;
     }
 
@@ -269,12 +276,14 @@ static void le_auracast_iso_rx_callback(uint8_t *packet, uint16_t size)
         /* u32 local = bb_le_clk_get_time_us(); */
         /* printf("[%d, %d, %d, %d]\n", local, hdr.time_stamp, TCFG_LE_AUDIO_PLAY_LATENCY, local - hdr.time_stamp - TCFG_LE_AUDIO_PLAY_LATENCY); */
     }
+    spin_unlock(&auracast_lock);
 }
 
 static void le_auracast_audio_close(void)
 {
     printf("le_auracast_audio_close\n");
     if (g_rx_audio.rx_player.le_audio && g_rx_audio.rx_player.rx_stream) {
+        spin_lock(&auracast_lock);
         for (int i = 0; i < g_sink_bn; i++) {
             if (multi_bis_rx_buf[i]) {
                 free(multi_bis_rx_buf[i]);
@@ -282,11 +291,15 @@ static void le_auracast_audio_close(void)
             }
         }
 
-        le_audio_player_close(g_rx_audio.rx_player.le_audio);
-        le_audio_stream_rx_close(g_rx_audio.rx_player.rx_stream);
-        le_audio_stream_free(g_rx_audio.rx_player.le_audio);
+        void *le_audio_stream_ctx = g_rx_audio.rx_player.le_audio;
+        void *rx_stream = g_rx_audio.rx_player.rx_stream;
         g_rx_audio.rx_player.le_audio = NULL;
         g_rx_audio.rx_player.rx_stream = NULL;
+        spin_unlock(&auracast_lock);
+        le_audio_player_close(le_audio_stream_ctx);
+        le_audio_stream_rx_close(rx_stream);
+        le_audio_stream_free(le_audio_stream_ctx);
+        printf("le_auracast_audio_close end!\n");
     }
 }
 
@@ -852,6 +865,7 @@ static int le_auracast_app_hci_event_handler(int *_event)
 #else
         le_auracast_stop(0);
 #endif
+        le_auracast_stop(0);
         break;
     }
     return 0;

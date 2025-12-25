@@ -8,7 +8,7 @@
  */
 #include "system/includes.h"
 #include "hw_fft_ext_v2.h"
-#include "audio_config_def.h"
+#include "audio_platform_config.h"
 
 const int JL_HW_FFT_V = HW_FFT_VERSION ;    //FFT硬件版本
 /*FFT模块资源互斥方式配置*/

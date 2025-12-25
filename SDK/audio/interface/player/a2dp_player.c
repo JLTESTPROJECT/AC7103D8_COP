@@ -156,11 +156,6 @@ static void a2dp_player_callback(void *private_data, int event)
 #endif
         music_vocal_remover_update_parm();
         break;
-    case STREAM_EVENT_PREEMPTED:
-#if ANC_EAR_ADAPTIVE_EN
-        audio_anc_ear_adaptive_a2dp_suspend_cb();
-#endif
-        break;
     }
 }
 
@@ -213,8 +208,6 @@ static int a2dp_player_create(u8 *btaddr)
     int uuid;
     struct a2dp_player *player = g_a2dp_player;
 
-    uuid = jlstream_event_notify(STREAM_EVENT_GET_PIPELINE_UUID, (int)"a2dp");
-
     if (player) {
         if (player->stream) {
             if (!memcmp(player->bt_addr, btaddr, 6))  {
@@ -234,6 +227,8 @@ static int a2dp_player_create(u8 *btaddr)
         }
         g_a2dp_player = player;
     }
+
+    uuid = jlstream_event_notify(STREAM_EVENT_GET_PIPELINE_UUID, (int)"a2dp");
 
     memcpy(player->bt_addr, btaddr, 6);
 

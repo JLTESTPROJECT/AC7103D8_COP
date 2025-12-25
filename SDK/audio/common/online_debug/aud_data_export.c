@@ -11,6 +11,8 @@
 #include "app_config.h"
 #include "time.h"
 
+#if TCFG_AUDIO_DATA_EXPORT_DEFINE
+
 #define AUD_DE_LOG	y_printf
 
 /*支持的数据通道数：1~3*/
@@ -233,3 +235,5 @@ int aud_data_export_close(void)
     }
     return 0;
 }
+
+#endif

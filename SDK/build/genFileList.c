@@ -156,6 +156,7 @@ c_SRC_FILES += \
 
 #if TCFG_AI_RX_NODE_ENABLE
 c_SRC_FILES += \
+	  audio/interface/player/ai_rx_player.c \
       audio/framework/plugs/source/ai_rx_file.c
 #endif
 
@@ -215,14 +216,10 @@ c_SRC_FILES += \
 	  audio/common/audio_dvol.c \
 	  audio/common/audio_general.c \
 	  audio/common/audio_build_needed.c \
-	  audio/common/online_debug/aud_data_export.c \
-	  audio/common/online_debug/audio_online_debug.c \
-	  audio/common/online_debug/audio_capture.c \
 	  audio/common/audio_plc.c \
 	  audio/common/audio_noise_gate.c \
 	  audio/common/audio_ns.c \
 	  audio/common/audio_utils.c \
-	  audio/common/audio_export_demo.c \
 	  audio/common/amplitude_statistic.c \
 	  audio/common/frame_length_adaptive.c \
 	  audio/common/bt_audio_energy_detection.c \
@@ -232,6 +229,14 @@ c_SRC_FILES += \
 	  audio/common/audio_volume_mixer.c \
 	  audio/common/audio_effect_verify.c \
 	  audio/common/pcm_data/sine_pcm.c \
+
+#if TCFG_AUDIO_DATA_EXPORT_DEFINE
+c_SRC_FILES += \
+	  audio/common/audio_export_demo.c \
+	  audio/common/online_debug/audio_capture.c \
+	  audio/common/online_debug/aud_data_export.c \
+	  audio/common/online_debug/audio_online_debug.c
+#endif
 
 #if AUDIO_IIS_LRCLK_CAPTURE_EN
 c_SRC_FILES += \
@@ -302,7 +307,6 @@ c_SRC_FILES += \
 	  audio/interface/player/key_tone_player.c \
 	  audio/interface/player/dev_flow_player.c \
 	  audio/interface/player/adda_loop_player.c \
-	  audio/interface/player/ai_rx_player.c \
 
 #if TCFG_APP_LINEIN_EN
 c_SRC_FILES += \
@@ -374,16 +378,37 @@ c_SRC_FILES += \
 // Audio Effects
 c_SRC_FILES += \
       audio/effect/eq_config.c \
-	  audio/effect/spk_eq.c \
-	  audio/effect/audio_voice_changer_api.c \
-	  audio/effect/esco_ul_voice_changer.c \
-	  audio/effect/bass_treble.c \
 	  audio/effect/audio_dc_offset_remove.c \
 	  audio/effect/effects_adj.c \
 	  audio/effect/effects_dev.c \
 	  audio/effect/effects_default_param.c \
 	  audio/effect/node_param_update.c \
-	  audio/effect/scene_update.c \
+
+#if TCFG_SPEAKER_EQ_NODE_ENABLE
+c_SRC_FILES += \
+	  audio/effect/spk_eq.c
+#endif
+
+
+#if TCFG_VOICE_CHANGER_NODE_ENABLE
+c_SRC_FILES += \
+	  audio/effect/esco_ul_voice_changer.c
+#endif
+
+#if TCFG_BASS_TREBLE_NODE_ENABLE
+c_SRC_FILES += \
+	  audio/effect/bass_treble.c
+#endif
+
+#if TCFG_VOICE_CHANGER_NODE_ENABLE
+c_SRC_FILES += \
+	  audio/effect/audio_voice_changer_api.c
+#endif
+
+#if TCFG_SCENE_UPDATE_ENABLE
+c_SRC_FILES += \
+	  audio/effect/scene_update.c
+#endif
 
 // ICSD
 #if EXPORT_PLATFORM_ICSD_ENABLE
@@ -527,18 +552,51 @@ c_SRC_FILES += \
 c_SRC_FILES += \
 	  audio/CVP/audio_aec.c \
 	  audio/CVP/audio_cvp.c \
-	  audio/CVP/audio_cvp_sms_vf.c \
 	  audio/CVP/audio_cvp_dms.c \
-	  audio/CVP/audio_cvp_3mic.c \
-	  audio/CVP/audio_cvp_v3.c \
 	  audio/CVP/audio_cvp_online.c \
-	  audio/CVP/audio_cvp_demo.c \
-	  audio/CVP/audio_cvp_develop.c \
-	  audio/CVP/audio_cvp_sync.c \
-	  audio/CVP/audio_cvp_ais_3mic.c \
 	  audio/CVP/audio_cvp_ref_task.c \
 	  audio/CVP/audio_cvp_config.c \
-	  audio/CVP/audio_cvp_elevoc.c \
+
+
+#if defined(TCFG_CVP_DEVELOP_ENABLE) && (CVP_THIRD_ALGO_TYPE & CVP_ELEVOC_ALGO_BITMAP)
+c_SRC_FILES += \
+	  audio/CVP/audio_cvp_elevoc.c
+#endif
+
+#if TCFG_AUDIO_CVP_SYNC
+c_SRC_FILES += \
+	  audio/CVP/audio_cvp_sync.c
+#endif
+
+#if defined(TCFG_CVP_DEVELOP_ENABLE) && (TCFG_CVP_DEVELOP_ENABLE == CVP_CFG_USER_DEFINED)
+c_SRC_FILES += \
+	  audio/CVP/audio_cvp_develop.c
+#endif
+
+#if TCFG_AUDIO_CVP_V3_MODE
+c_SRC_FILES += \
+	  audio/CVP/audio_cvp_v3.c
+#endif
+
+#if TCFG_AUDIO_CVP_SMS_VF_MODE
+c_SRC_FILES += \
+	  audio/CVP/audio_cvp_sms_vf.c
+#endif
+
+#if 0
+c_SRC_FILES += \
+  audio/CVP/audio_cvp_demo.c
+#endif
+
+#if TCFG_AUDIO_TRIPLE_MIC_ENABLE
+c_SRC_FILES += \
+	  audio/CVP/audio_cvp_3mic.c
+#endif
+
+#if defined(TCFG_CVP_DEVELOP_ENABLE) && (TCFG_CVP_DEVELOP_ENABLE == CVP_CFG_AIS_3MIC)
+c_SRC_FILES += \
+	  audio/CVP/audio_cvp_ais_3mic.c
+#endif
 
 #if TCFG_USER_TWS_ENABLE
 c_SRC_FILES += \
@@ -705,6 +763,20 @@ c_SRC_FILES += \
     apps/common/lib_log_config/system_log_config.c \
     apps/common/lib_log_config/update_log_config.c \
 
+#if CONFIG_DEBUG_ENABLE == 0
+c_SRC_FILES += \
+	apps/common/debug/debug.c
+#endif
+
+#if CONFIG_DEBUG_ENABLE || CONFIG_DEBUG_LITE_ENABLE
+c_SRC_FILES += \
+	apps/common/debug/debug_uart_config.c
+#endif
+
+#if CONFIG_DEBUG_LITE_ENABLE
+c_SRC_FILES += \
+	apps/common/debug/debug_lite.c
+#endif
 
 //------
 #if TCFG_CFG_TOOL_ENABLE
@@ -927,12 +999,15 @@ c_SRC_FILES += \
 
 // *INDENT-OFF*
 
+#if BT_FOR_APP_EN
 c_SRC_FILES += \
-    apps/common/third_party_profile/common/3th_profile_api.c \
-	apps/common/third_party_profile/multi_protocol_main.c \
+    apps/common/third_party_profile/common/3th_profile_api.c
+#endif
+
 
 #if THIRD_PARTY_PROTOCOLS_SEL || TCFG_LE_AUDIO_APP_CONFIG
 c_SRC_FILES += \
+	apps/common/third_party_profile/multi_protocol_main.c \
 	apps/common/third_party_profile/multi_protocol_common.c \
 	apps/common/third_party_profile/multi_protocol_event.c \
 
@@ -1075,6 +1150,10 @@ c_SRC_FILES += \
 	apps/common/third_party_profile/tuya_protocol/app/demo/tuya_app_func.c \
 	apps/common/third_party_profile/tuya_protocol/tuya_protocol.c \
 	apps/common/third_party_profile/tuya_protocol/tuya_event.c \
+
+c_SRC_FILES += \
+    apps/common/cJSON/cJSON.c \
+
 
 #endif
 
@@ -1368,8 +1447,10 @@ c_SRC_FILES += \
 
 
 
+#if (RCSP_MODE)
 c_SRC_FILES += \
-	apps/common/third_party_profile/jieli/rcsp/server/functions/rcsp_switch_device.c \
+	apps/common/third_party_profile/jieli/rcsp/server/functions/rcsp_switch_device.c
+#endif
 
 #if (RCSP_UPDATE_EN && !RCSP_BLE_MASTER)
 c_SRC_FILES += \
@@ -1618,8 +1699,27 @@ c_SRC_FILES += \
 #endif
 #endif
 
+#if TCFG_NORFLASH_SFC_DEV_ENABLE
+c_SRC_FILES += \
+	apps/common/device/storage_device/norflash/norflash_sfc.c
+#endif
+
+#if TCFG_NANDFLASH_DEV_ENABLE
+c_SRC_FILES += \
+	apps/common/device/storage_device/nandflash/ftl_device.c \
+	apps/common/device/storage_device/nandflash/nandflash.c
+#endif
+
+
+
+
 
 // *INDENT-OFF*
+
+#if TCFG_GSENSOR_ENABLE || TCFG_HRSENSOR_ENABLE
+c_SRC_FILES += \
+	apps/common/device/sensor/app_sensor.c
+#endif
 
 #if NTC_DET_EN
 c_SRC_FILES += \
@@ -2157,8 +2257,118 @@ c_SRC_FILES += \
 	apps/common/device/sensor/hr_sensor/hx3011/hx3011_factory_test.c \
 
 MASK_LIBS+= \
-   $(ROOT)/apps/common/device/sensor/hr_sensor/hx3011/CodeBlocks_3011_hrs_spo2_20250606_v2.2.a \
+   apps/common/device/sensor/hr_sensor/hx3011/CodeBlocks_3011_hrs_spo2_20250606_v2.2.a \
 
 #endif
 
 #endif
+
+
+#if TCFG_USER_RSSI_TEST_EN
+c_SRC_FILES += \
+	$(ROOT)/apps/earphone/test/rssi.c
+#endif
+
+#if TCFG_KWS_VOICE_RECOGNITION_ENABLE || TCFG_CALL_KWS_SWITCH_ENABLE
+c_SRC_FILES += \
+	apps/earphone/mode/bt/bt_call_kws_handler.c
+#endif
+
+#if TCFG_KWS_VOICE_EVENT_HANDLE_ENABLE
+c_SRC_FILES += \
+	apps/earphone/mode/bt/kws_voice_event_deal.c
+#endif
+
+
+#if TCFG_BATTERY_PRODUCT_MANAGE_ENABLE
+c_SRC_FILES += \
+    apps/earphone/battery/battery_product_manage.c
+#endif
+
+#if TCFG_CHARGE_CALIBRATION_ENABLE
+c_SRC_FILES += \
+	apps/earphone/battery/charge_clibration.c
+#endif
+
+#if TCFG_BT_BLE_ADV_ENABLE
+c_SRC_FILES += \
+	apps/earphone/ble/bt_ble.c \
+	apps/earphone/ble/ble_adv.c
+#endif
+
+
+#if TCFG_CONFIG_DEBUG_RECORD_ENABLE
+c_SRC_FILES += \
+	apps/earphone/demo/debug_record_demo.c
+#endif
+
+c_SRC_FILES += \
+	apps/earphone/demo/pbg_demo.c
+
+#if (THIRD_PARTY_PROTOCOLS_SEL & TRANS_DATA_EN)
+c_SRC_FILES += \
+	apps/earphone/demo/trans_data_demo.c
+#endif
+
+#if 0
+c_SRC_FILES += \
+	apps/earphone/demo/read_sn_demo.c
+#endif
+
+#if ATT_OVER_EDR_DEMO_EN
+c_SRC_FILES += \
+	apps/earphone/demo/att_over_edr_demo.c
+#endif
+
+
+#if TCFG_BT_SUPPORT_PAN
+c_SRC_FILES += \
+	apps/earphone/mode/bt/bt_net_event.c
+#endif
+
+#if TCFG_USER_TWS_ENABLE == 0
+c_SRC_FILES += \
+	apps/earphone/mode/bt/poweroff.c \
+	apps/earphone/mode/bt/dual_conn.c \
+	apps/earphone/mode/bt/phone_call.c \
+	apps/earphone/mode/bt/a2dp_play.c
+#endif
+
+#if TCFG_TWS_AUDIO_SHARE_ENABLE
+c_SRC_FILES += \
+	apps/earphone/mode/bt/tws_dual_share.c
+#endif
+
+#if CONFIG_TWS_PAIR_MODE == CONFIG_TWS_PAIR_BY_CHIP_CONN
+c_SRC_FILES += \
+	apps/earphone/mode/bt/tws_pair_by_chip_conn.c
+#endif
+
+
+#if TCFG_ANC_BOX_ENABLE && TCFG_AUDIO_ANC_ENABLE
+c_SRC_FILES += \
+	apps/earphone/tools/app_ancbox.c
+#endif
+
+#if (TCFG_ANC_TOOL_DEBUG_ONLINE && TCFG_AUDIO_ANC_ENABLE)
+c_SRC_FILES += \
+	apps/earphone/tools/app_anctool.c
+#endif
+
+#if TCFG_TEST_BOX_ENABLE
+c_SRC_FILES += \
+	apps/earphone/tools/app_testbox.c
+#endif
+
+#if TCFG_APP_KEY_DUT_ENABLE
+c_SRC_FILES += \
+	apps/earphone/tools/app_key_dut.c
+#endif
+
+#if (TCFG_PWMLED_ENABLE)
+c_SRC_FILES += \
+	apps/earphone/ui/led/led_config.c \
+	apps/earphone/ui/led/led_ui_msg_handler.c
+#endif
+
+

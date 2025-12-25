@@ -140,5 +140,15 @@ u8 local_tws_get_role(void);
  */
 u8 local_tws_mode_exit();
 
+/**
+ * @brief local_tws不开蓝牙后台，进入蓝牙模式的处理
+ */
+void local_tws_without_background_enter_bt_mode(void);
+
+/**
+ * @brief local_tws不开蓝牙后台，退出蓝牙模式的处理
+ */
+void local_tws_without_background_exit_bt_mode(void);
+
 #endif
 

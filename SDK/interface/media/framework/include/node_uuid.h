@@ -205,7 +205,7 @@
 #define NODE_UUID_NF_SUPPRESSOR            0x9F3F
 #define NODE_UUID_VIRTUAL_SURROUND_HP      0XDCD4//虚拟环绕音（耳机适用）
 #define NODE_UUID_AVC                      0xD2BF//音量自适应
-
+#define NODE_UUID_AUDIO_DEBUG              0x96DE
 
 #define NODE_UUID_VIBRATO                  0x40DC//人声高音颤音
 #define NODE_UUID_HARMONY                  0xAE43//谐波

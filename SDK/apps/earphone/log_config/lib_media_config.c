@@ -53,6 +53,13 @@ const int config_jlstream_node_report_enable = TCFG_CFG_TOOL_ENABLE;
 const int CONFIG_JLSTREAM_SCENE_DEBUG = STREAM_SCENE_NONE;
 const int CONFIG_JLSTREAM_ASYNC_NODE_ENABLE = 0;
 
+
+const int CONFIG_A2DP_SBC_SILENCE_DETECT_ENABLE	    = 1;
+const int CONFIG_A2DP_AAC_SILENCE_DETECT_ENABLE     = TCFG_BT_SUPPORT_AAC;
+const int CONFIG_A2DP_LDAC_SILENCE_DETECT_ENABLE    = TCFG_BT_SUPPORT_LDAC;
+
+
+
 //音频流位宽配置
 #ifndef MEDIA_24BIT_ENABLE
 #define MEDIA_24BIT_ENABLE 		0
@@ -101,8 +108,7 @@ const int CONFIG_SPATIAL_EFFECT_VERSION  = 1;
 #endif/*TCFG_SUPPORT_MIC_CAPLESS*/
 const u8 const_mic_capless_en = TCFG_SUPPORT_MIC_CAPLESS;
 /*是否支持多个ADC 异步打开功能*/
-#if TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN && defined(TCFG_AUDIO_ADC_ENABLE_ALL_DIGITAL_CH)
-//ICSD ADT功能, 需支持多个ADC异步
+#ifdef TCFG_AUDIO_ADC_ENABLE_ALL_DIGITAL_CH
 const u8 const_adc_async_en = 1;
 #else
 const u8 const_adc_async_en = 0;

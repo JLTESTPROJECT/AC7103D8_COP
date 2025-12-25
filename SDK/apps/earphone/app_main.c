@@ -227,6 +227,9 @@ const struct task_info task_info_table[] = {
 #if (CONFIG_UPDATE_MUTIL_CPU_UART)
     {"update_interactive_uart",   1,  0,   768,   512	},
 #endif
+#if TCFG_AUDIO_CVP_DEMO_ENABLE
+    {"cvp_demo",			3,	   1,   768,   128 },
+#endif
     {0, 0},
 };
 

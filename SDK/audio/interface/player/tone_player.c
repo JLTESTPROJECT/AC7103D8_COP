@@ -223,7 +223,9 @@ static int tone_file_read(void *p_file, u8 *buf, int len)
                 player->sample_rate == fmt.sample_rate &&
                 player->channel_mode == fmt.channel_mode &&
                 (player->scene != STREAM_SCENE_TONE || player->coding_type != AUDIO_CODING_MTY) && //mty格式提示音不能在原先的基础上接着读,同一个文件的铃声可以
-                player->coding_type != AUDIO_CODING_F2A) {
+                player->coding_type != AUDIO_CODING_F2A &&
+                player->coding_type != AUDIO_CODING_MP3
+               ) {
                 resfile_close(player->file);
                 player->file = file;
                 if (player->coding_type == AUDIO_CODING_WTGV2) {

@@ -13,10 +13,8 @@
 #include "media/bt_audio_timestamp.h"
 #include "reference_time.h"
 #include "classic/tws_api.h"
-#include "app_config.h"
 #include "audio_time.h"
 
-#if TCFG_USER_TWS_ENABLE
 
 #define MAX_FNAME_LEN 32
 
@@ -458,4 +456,3 @@ int tws_play_tone_file_preemption_callback(const char *file_name, int delay_msec
 
 
 
-#endif

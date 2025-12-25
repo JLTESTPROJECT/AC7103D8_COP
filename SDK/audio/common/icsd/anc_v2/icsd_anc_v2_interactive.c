@@ -236,7 +236,6 @@ static void audio_anc_dac_check_slience_cb(void *buf, int len)
                 anc_log("EAR_ADAPTIVE_STATE:ALOGM_PART1\n");
                 hdl->adaptive_state = EAR_ADAPTIVE_STATE_ALOGM_PART1;
                 icsd_anc_v2_part1_run(i, dac_hdl.sample_rate, anc_ear_adaptive_part1_end_cb);
-                dac_node_write_callback_del("ANC_ADAP");
                 break;
             }
         }
@@ -465,6 +464,13 @@ int anc_ear_adaptive_close(void)
         //恢复播歌
         clock_free("ANC_ADAP");
         jlstream_global_resume();
+
+        /*
+         * 关闭耳道自适应时删除dac写数回调
+         * 原因：若在写数回调中删除，会出现链表轮询嵌套，
+         *       此时删除两个以上链表时存在异常
+        */
+        dac_node_write_callback_del("ANC_ADAP");
 
         anc_ext_tool_ear_adaptive_end_cb(hdl->adaptive_iir.result);
         //强退模式设置不恢复默认ANC

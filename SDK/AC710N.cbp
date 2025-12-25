@@ -585,6 +585,8 @@
 <Unit filename="apps/common/device/sensor/ir_sensor/jsa1221.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/device/sensor/ntc/ntc_det.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/device/sensor/ntc/ntc_det_api.h" />
+<Unit filename="apps/common/device/storage_device/nandflash/ftl_device.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="apps/common/device/storage_device/nandflash/nandflash.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/device/storage_device/norflash/norflash.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/device/storage_device/norflash/norflash_sfc.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/device/usb/demo/host/udisk_block_test.c"><Option compilerVer="CC"/></Unit>
@@ -642,11 +644,11 @@
 <Unit filename="apps/common/fat_nor/cfg_private.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/fat_nor/cfg_private.h" />
 <Unit filename="apps/common/fat_nor/nor_fs.h" />
-<Unit filename="apps/common/fat_nor/virfat_flash.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/file_operate/file_bs_deal.h" />
 <Unit filename="apps/common/file_operate/file_manager.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/file_operate/file_manager.h" />
 <Unit filename="apps/common/include/bt_common.h" />
+<Unit filename="apps/common/include/nandflash.h" />
 <Unit filename="apps/common/include/net/bt_netif.h" />
 <Unit filename="apps/common/include/norflash.h" />
 <Unit filename="apps/common/include/norflash_sfc.h" />
@@ -1125,7 +1127,6 @@
 <Unit filename="apps/earphone/board/br56/board_config.h" />
 <Unit filename="apps/earphone/board/br56/jlstream_node_cfg.h" />
 <Unit filename="apps/earphone/board/br56/sdk_config.h" />
-<Unit filename="apps/earphone/board/br56/undef_func.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/earphone/board/instruction_forbidden.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/earphone/board/sdk_board_config.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/earphone/demo/att_over_edr_demo.c"><Option compilerVer="CC"/></Unit>
@@ -1133,7 +1134,6 @@
 <Unit filename="apps/earphone/demo/pbg_demo.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/earphone/demo/read_sn_demo.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/earphone/demo/trans_data_demo.c"><Option compilerVer="CC"/></Unit>
-<Unit filename="apps/earphone/device_config.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/earphone/include/adkey_config.h" />
 <Unit filename="apps/earphone/include/app_action.h" />
 <Unit filename="apps/earphone/include/app_charge.h" />
@@ -1206,13 +1206,9 @@
 <Unit filename="apps/earphone/log_config/lib_system_config.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/earphone/log_config/lib_update_config.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/earphone/message/adapter/app_msg.c"><Option compilerVer="CC"/></Unit>
-<Unit filename="apps/earphone/message/adapter/audio_player.c"><Option compilerVer="CC"/></Unit>
-<Unit filename="apps/earphone/message/adapter/battery.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/earphone/message/adapter/btstack.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/earphone/message/adapter/driver.c"><Option compilerVer="CC"/></Unit>
-<Unit filename="apps/earphone/message/adapter/eartouch.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/earphone/message/adapter/key.c"><Option compilerVer="CC"/></Unit>
-<Unit filename="apps/earphone/message/adapter/tws.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/earphone/mode/bt/a2dp_play.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/earphone/mode/bt/bt_background.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/earphone/mode/bt/bt_call_kws_handler.c"><Option compilerVer="CC"/></Unit>
@@ -1226,7 +1222,6 @@
 <Unit filename="apps/earphone/mode/bt/dual_conn.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/earphone/mode/bt/dual_phone_call.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/earphone/mode/bt/earphone.c"><Option compilerVer="CC"/></Unit>
-<Unit filename="apps/earphone/mode/bt/eartch_event_deal.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/earphone/mode/bt/kws_voice_event_deal.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/earphone/mode/bt/le_audio/big/app_le_auracast.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/earphone/mode/bt/le_audio/big/le_broadcast.c"><Option compilerVer="CC"/></Unit>
@@ -1265,7 +1260,6 @@
 <Unit filename="apps/earphone/mode/power_on/power_on.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/earphone/sdk_version.z.S" />
 <Unit filename="apps/earphone/test/rssi.c"><Option compilerVer="CC"/></Unit>
-<Unit filename="apps/earphone/test/tws_role_switch.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/earphone/third_part/app_protocol_deal.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/earphone/tools/app_ancbox.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/earphone/tools/app_anctool.c"><Option compilerVer="CC"/></Unit>
@@ -1695,6 +1689,7 @@
 <Unit filename="cpu/periph_demo/spi_test.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="cpu/periph_demo/two_io_led_test.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="cpu/periph_demo/uart_test.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="interface/btctrler/adapter/include/misc_interface.h" />
 <Unit filename="interface/btctrler/ble/hci_ll.h" />
 <Unit filename="interface/btctrler/ble/ll_config.h" />
 <Unit filename="interface/btctrler/btcontroller_mode.h" />
@@ -1833,6 +1828,7 @@
 <Unit filename="interface/driver/utils/resource_multiplex.h" />
 <Unit filename="interface/lib_config/earphone/lib_btctrler_config.h" />
 <Unit filename="interface/lib_config/earphone/lib_driver_config.h" />
+<Unit filename="interface/lib_config/earphone/lib_media_config.h" />
 <Unit filename="interface/lib_config/earphone/lib_system_config.h" />
 <Unit filename="interface/lib_config/earphone/lib_update_config.h" />
 <Unit filename="interface/media/PLC.h" />
@@ -2072,11 +2068,11 @@
 <Unit filename="interface/utils/device/includes.h" />
 <Unit filename="interface/utils/device/ioctl_cmds.h" />
 <Unit filename="interface/utils/device/vm.h" />
+<Unit filename="interface/utils/flash_translation_layer/ftl_api.h" />
 <Unit filename="interface/utils/fs/fs.h" />
 <Unit filename="interface/utils/fs/fs_file_name.h" />
 <Unit filename="interface/utils/fs/resfile.h" />
 <Unit filename="interface/utils/fs/sdfile.h" />
-<Unit filename="interface/utils/fs/virfat_flash.h" />
 <Unit filename="interface/utils/generic/ascii.h" />
 <Unit filename="interface/utils/generic/atomic.h" />
 <Unit filename="interface/utils/generic/circular_buf.h" />
@@ -2090,6 +2086,5 @@
 <Unit filename="interface/utils/math/asm/math_fast_function.h" />
 <Unit filename="interface/utils/sys_time.h" />
 <Unit filename="interface/utils/syscfg_id.h" />
-<Unit filename="interface/utils/ui/res/resfile.h" />
 </Project>
 </CodeBlocks_project_file>

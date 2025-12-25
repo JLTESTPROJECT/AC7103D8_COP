@@ -7,7 +7,7 @@
 #include "jlstream.h"
 #include "audio_plc.h"
 #include "tech_lib/LFaudio_plc_api.h"
-#include "app_config.h"
+#include "jlstream_node_cfg.h"
 #include "effects/effects_adj.h"
 #include "media/audio_splicing.h"
 

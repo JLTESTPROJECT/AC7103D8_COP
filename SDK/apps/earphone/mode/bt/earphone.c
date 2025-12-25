@@ -667,7 +667,7 @@ static int bt_connction_status_event_handler(struct bt_event *bt)
         log_info("++++++++ BT_STATUS_DISCON_A2DP_CH +++++++++  \n");
         break;
     case BT_STATUS_AVRCP_INCOME_OPID:
-        log_info("BT_STATUS_AVRCP_INCOME_OPID:%d\n", bt->value);
+        log_info("BT_STATUS_AVRCP_INCOME_OPID:0x%x\n", bt->value);
         if (bt->value == AVC_VOLUME_UP) {
             app_audio_volume_up(1);
         } else if (bt->value == AVC_VOLUME_DOWN) {
@@ -1073,6 +1073,10 @@ bool bt_check_already_initializes(void)
     return g_bt_hdl.init_start;
 }
 
+#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE
+bool local_tws_without_bg_bt_mode = 0;
+#endif
+
 int bt_mode_init()
 {
     log_info("bt mode\n");
@@ -1128,6 +1132,15 @@ int bt_mode_init()
     }
 
     bt_background_init(bt_hci_event_handler, bt_connction_status_event_handler);
+#else
+#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE
+    if (local_tws_without_bg_bt_mode) {
+        // local_tws（没开蓝牙后台）导致
+        local_tws_without_bg_bt_mode = 0;
+        local_tws_without_background_enter_bt_mode();
+        return 0;
+    }
+#endif
 #endif  //endif TCFG_BT_BACKGROUND_ENABLE
 
     bt_function_select_init();
@@ -1188,7 +1201,14 @@ int bt_mode_try_exit()
 #if (TCFG_BT_BACKGROUND_ENABLE)
     bt_background_suspend();
 #else
+#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE
+    if (!local_tws_without_bg_bt_mode) {
+        local_tws_without_bg_bt_mode = 1;
+        local_tws_without_background_exit_bt_mode();
+    }
+#else
     bt_nobackground_exit();
+#endif
 #endif
     return -EBUSY;
 }

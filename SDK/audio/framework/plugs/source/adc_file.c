@@ -417,7 +417,8 @@ void audio_all_adc_file_init(void)
         }
     }
 #else
-    for (int i = 0; i < AUDIO_ADC_MAX_NUM; i++) { //默认按最大通道开ADC 数字
+    for (int i = 0; i < AUDIO_ADC_MAX_NUM - AUDIO_ADC_LPADC_NUM; i++) {
+        //ADC复用全通道使能，默认不add LPADC，若有节点配置LPADC，在节点cfg_init内add
         audio_adc_add_ch(&adc_hdl, i);
     }
 #endif
@@ -426,7 +427,6 @@ void audio_all_adc_file_init(void)
 __AUDIO_INIT_BANK_CODE
 void audio_adc_file_init(void)  //通话的ADC节点配置
 {
-    u32 i;
     if (!esco_adc_f.read_flag) {
         esco_adc_f.hdl = NULL;
         /*
@@ -452,7 +452,7 @@ void audio_adc_file_init(void)  //通话的ADC节点配置
 
 #if 0//dump出ESCO通话ADC节点参数配置
         adc_file_log("esco_adc_f.cfg.mic_en_map = 0x%x\n", esco_adc_f.cfg.mic_en_map);
-        for (i = 0; i < AUDIO_ADC_MAX_NUM; i++) {
+        for (u8 i = 0; i < AUDIO_ADC_MAX_NUM; i++) {
             adc_file_log("esco_adc_f.cfg.mic[%d] enable = %d\n", i, !!(esco_adc_f.cfg.mic_en_map & BIT(i)));
             adc_file_log("esco_adc_f.cfg.param[%d].mic_gain      = %d\n", i, esco_adc_f.cfg.param[i].mic_gain);
             adc_file_log("esco_adc_f.cfg.param[%d].mic_pre_gain  = %d\n", i, esco_adc_f.cfg.param[i].mic_pre_gain);
@@ -472,24 +472,28 @@ void audio_adc_file_init(void)  //通话的ADC节点配置
 
         }
 #endif /*TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN*/
-        for (i = 0; i < AUDIO_ADC_MAX_NUM; i++) {
+#ifdef TCFG_AUDIO_ADC_ENABLE_ALL_DIGITAL_CH
+        //ADC复用，在初始化阶段注册所有ADC通道
+        audio_all_adc_file_init();
+#else
+        for (u8 i = 0; i < AUDIO_ADC_MAX_NUM; i++) {
             if (mic_ch & BIT(i)) {
                 audio_adc_add_ch(&adc_hdl, i);
             }
         }
+#endif
     }
 
 #if 0//TCFG_MC_BIAS_AUTO_ADJUST
     extern u8 mic_bias_rsel_use_save[AUDIO_ADC_MAX_NUM];
     extern u8 save_mic_bias_rsel[AUDIO_ADC_MAX_NUM];
-    for (i = 0; i < AUDIO_ADC_MAX_NUM; i++) {
+    for (u8 i = 0; i < AUDIO_ADC_MAX_NUM; i++) {
         if (mic_bias_rsel_use_save[i]) {
             esco_adc_f.platform_cfg[i].mic_bias_rsel = save_mic_bias_rsel[i];
         }
     }
 #endif
 
-    /* audio_all_adc_file_init(); */
     audio_adc_file_global_cfg_init();
 }
 

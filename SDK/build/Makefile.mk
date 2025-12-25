@@ -2,15 +2,8 @@
 c_SRC_FILES := \
 	apps/common/app_mode_manager/app_mode_manager.c \
 	apps/common/bt_common/bt_fre_offset_storage.c \
-	apps/common/cJSON/cJSON.c \
 	apps/common/clock_manager/clock_manager.c \
-	apps/common/debug/debug.c \
-	apps/common/debug/debug_lite.c \
-	apps/common/debug/debug_uart_config.c \
 	apps/common/dev_manager/dev_manager.c \
-	apps/common/device/sensor/app_sensor.c \
-	apps/common/device/storage_device/norflash/norflash_sfc.c \
-	apps/common/fat_nor/virfat_flash.c \
 	apps/common/temp_trim/dtemp_pll_trim.c \
 	apps/earphone/app_main.c \
 	apps/earphone/audio/jlstream_event_handler.c \
@@ -18,23 +11,12 @@ c_SRC_FILES := \
 	apps/earphone/audio/tone_table.c \
 	apps/earphone/audio/vol_sync.c \
 	apps/earphone/battery/battery_level.c \
-	apps/earphone/battery/battery_product_manage.c \
 	apps/earphone/battery/charge.c \
-	apps/earphone/battery/charge_clibration.c \
 	apps/earphone/battery/charge_device_handle.c \
 	apps/earphone/battery/charge_store.c \
-	apps/earphone/ble/ble_adv.c \
-	apps/earphone/ble/bt_ble.c \
 	apps/earphone/board/br56/board_config.c \
-	apps/earphone/board/br56/undef_func.c \
 	apps/earphone/board/instruction_forbidden.c \
 	apps/earphone/board/sdk_board_config.c \
-	apps/earphone/demo/att_over_edr_demo.c \
-	apps/earphone/demo/debug_record_demo.c \
-	apps/earphone/demo/pbg_demo.c \
-	apps/earphone/demo/read_sn_demo.c \
-	apps/earphone/demo/trans_data_demo.c \
-	apps/earphone/device_config.c \
 	apps/earphone/log_config/app_config.c \
 	apps/earphone/log_config/lib_btctrler_config.c \
 	apps/earphone/log_config/lib_btstack_config.c \
@@ -44,36 +26,22 @@ c_SRC_FILES := \
 	apps/earphone/log_config/lib_system_config.c \
 	apps/earphone/log_config/lib_update_config.c \
 	apps/earphone/message/adapter/app_msg.c \
-	apps/earphone/message/adapter/audio_player.c \
-	apps/earphone/message/adapter/battery.c \
 	apps/earphone/message/adapter/btstack.c \
 	apps/earphone/message/adapter/driver.c \
-	apps/earphone/message/adapter/eartouch.c \
 	apps/earphone/message/adapter/key.c \
-	apps/earphone/message/adapter/tws.c \
-	apps/earphone/mode/bt/a2dp_play.c \
 	apps/earphone/mode/bt/bt_background.c \
-	apps/earphone/mode/bt/bt_call_kws_handler.c \
 	apps/earphone/mode/bt/bt_event_func.c \
 	apps/earphone/mode/bt/bt_key_func.c \
 	apps/earphone/mode/bt/bt_key_msg_table.c \
-	apps/earphone/mode/bt/bt_net_event.c \
 	apps/earphone/mode/bt/bt_slience_detect.c \
 	apps/earphone/mode/bt/bt_tws.c \
 	apps/earphone/mode/bt/dual_a2dp_play.c \
-	apps/earphone/mode/bt/dual_conn.c \
 	apps/earphone/mode/bt/dual_phone_call.c \
 	apps/earphone/mode/bt/earphone.c \
-	apps/earphone/mode/bt/eartch_event_deal.c \
-	apps/earphone/mode/bt/kws_voice_event_deal.c \
 	apps/earphone/mode/bt/low_latency.c \
-	apps/earphone/mode/bt/phone_call.c \
-	apps/earphone/mode/bt/poweroff.c \
 	apps/earphone/mode/bt/sniff.c \
 	apps/earphone/mode/bt/tone.c \
 	apps/earphone/mode/bt/tws_dual_conn.c \
-	apps/earphone/mode/bt/tws_dual_share.c \
-	apps/earphone/mode/bt/tws_pair_by_chip_conn.c \
 	apps/earphone/mode/bt/tws_phone_call.c \
 	apps/earphone/mode/bt/tws_poweroff.c \
 	apps/earphone/mode/common/app_default_msg_handler.c \
@@ -82,15 +50,7 @@ c_SRC_FILES := \
 	apps/earphone/mode/key_tone.c \
 	apps/earphone/mode/mic_effect/mic_effect.c \
 	apps/earphone/mode/power_on/power_on.c \
-	apps/earphone/test/rssi.c \
-	apps/earphone/test/tws_role_switch.c \
 	apps/earphone/third_part/app_protocol_deal.c \
-	apps/earphone/tools/app_ancbox.c \
-	apps/earphone/tools/app_anctool.c \
-	apps/earphone/tools/app_key_dut.c \
-	apps/earphone/tools/app_testbox.c \
-	apps/earphone/ui/led/led_config.c \
-	apps/earphone/ui/led/led_ui_msg_handler.c \
 	apps/earphone/user_cfg.c \
 
 

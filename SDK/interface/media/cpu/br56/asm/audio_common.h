@@ -96,6 +96,7 @@ void audio_common_cic_clk_div_set(u8 ff_div, u8 fb_div, u8 sz_div);
 void audio_common_anc_clock_open(void);
 
 int audio_adc_digital_status_add_check(int add);
+int audio_adc_digital_common_status_add_check(int add);
 int audio_adc_analog_status_add_check(u8 ch_index, int add);
 int audio_dac_digital_status_add_check(int add);
 int audio_dac_analog_status_add_check(int add);

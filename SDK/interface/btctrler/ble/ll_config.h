@@ -132,13 +132,9 @@
 #define LE_FEATURES_PAST                (LL_FEAT_PAST_SENDER | \
                                             LL_FEAT_PAST_RECIPIENT)
 
-#define LE_FEATURES_CIS                 (LL_FEAT_CIS_MASTER_ROLE | \
-                                            LL_FEAT_CIS_SLAVE_ROLE | \
-                                            LL_FEAT_ISO_HOST_SUPPORT)
+#define LE_FEATURES_CIS                 (LL_FEAT_CIS_MASTER_ROLE | LL_FEAT_CIS_SLAVE_ROLE)
 
-#define LE_FEATURES_BIS                 (LL_FEAT_ISO_BROADCASTER | \
-                                            LL_FEAT_ISO_SYNC | \
-                                            LL_FEAT_ISO_HOST_SUPPORT)
+#define LE_FEATURES_BIS                 (LL_FEAT_ISO_BROADCASTER | LL_FEAT_ISO_SYNC)
 
 #define LE_FEATURES_ISO                 (LE_FEATURES_BIS|LE_FEATURES_CIS)
 
@@ -202,6 +198,7 @@ extern const int config_btctler_le_acl_total_nums;
 extern const int config_btctler_le_slave_conn_update_winden;
 extern const int config_btctler_le_iso_tx;
 extern const int config_btctler_le_iso_rx;
+extern const bool config_tws_le_role_sw;
 
 /*-----------------------------------------------------------*/
 

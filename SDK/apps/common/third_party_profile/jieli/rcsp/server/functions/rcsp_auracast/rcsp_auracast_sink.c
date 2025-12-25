@@ -5,6 +5,9 @@
 #pragma code_seg(".rcsp_auracast.text")
 #endif
 
+#if TCFG_USER_TWS_ENABLE
+#include "classic/tws_api.h"
+#endif
 #include "rcsp_auracast.h"
 
 #if (defined(RCSP_ADV_AURCAST_SINK) && RCSP_ADV_AURCAST_SINK)
@@ -190,6 +193,25 @@ int auracast_app_recv_scan_control_deal(u8 opcode, u8 sn, u8 *payload, u32 paylo
     return auracast_app_packet_response(status, opcode, sn, tbuf, 2, ble_con_handle, spp_remote_addr);
 }
 
+static void __auracast_sink_set_broadcast_code(void *_data, u16 len, bool rx)
+{
+    u8 *broadcast_code = (u8 *)_data;
+    r_printf("auracast_sink_set_broadcast_code %d!\n", __LINE__);
+    put_buf(broadcast_code, 16);
+    int argv[3];
+    argv[0] = (int)auracast_sink_set_broadcast_code;
+    argv[1] = 1;
+    argv[2] = (int)broadcast_code;
+    int ret = os_taskq_post_type("app_core", Q_CALLBACK, 3, argv);
+    if (ret) {
+        r_printf("le_auracast taskq post err %d!\n", __LINE__);
+    }
+}
+
+REGISTER_TWS_FUNC_STUB(auracast_sink_set_code) = {
+    .func_id = 0x23482C66,
+    .func = __auracast_sink_set_broadcast_code,
+};
 static int auracast_app_source_control_add(u8 opcode, u8 sn, u8 action, u8 *payload, u32 payload_len, u16 ble_con_handle, u8 *spp_remote_addr)
 {
     printf("auracast_app_source_control_add");
@@ -258,7 +280,13 @@ static int auracast_app_source_control_add(u8 opcode, u8 sn, u8 action, u8 *payl
         app_auracast_sink_big_sync_terminate(0);
     }
 
+#if TCFG_USER_TWS_ENABLE
+    if (tws_api_get_role() == TWS_ROLE_MASTER) {
+        tws_api_send_data_to_sibling(temp_broadcast_code, 16, 0x23482C66);
+    }
+#else
     auracast_sink_set_broadcast_code(temp_broadcast_code);
+#endif
     ret = app_auracast_sink_big_sync_create(&temp_info);
     if (ret != 0) {
         tbuf[0] = AURACAST_APP_OPCODE_RECV_LISTENING_CONTROL;

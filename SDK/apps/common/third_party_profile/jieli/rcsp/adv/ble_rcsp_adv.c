@@ -144,7 +144,7 @@ int JL_AES_BASE_BT = (int)JL_AES;	// add for btcon_hash, by lingxuanfeng, 202205
 int rcsp_make_set_adv_data(void)
 {
     u8 *buf = adv_data;
-#if ((RCSP_CHANNEL_SEL == RCSP_USE_GATT_OVER_EDR) || RCSP_ADV_AURCAST_SINK || RCSP_ADV_AURCAST_SOURCE)
+#if (RCSP_ADV_VERSION == 6)
     u8 offset = 0;
 
     buf[offset++] = 0;  // length
@@ -210,7 +210,7 @@ int rcsp_make_set_adv_data(void)
     adv_data_len = offset;
     buf[0] = adv_data_len - 1;
 
-#else
+#elif (RCSP_ADV_VERSION < 6)
     u8 i;
     buf[0] = 0x1E;
     buf[1] = 0xFF;
@@ -296,6 +296,8 @@ int rcsp_make_set_adv_data(void)
 
     adv_data_len = 31;
 
+#else
+#error "RCSP_ADV_VERSION unsupport"
 #endif
     __this->modify_flag = 0;
 

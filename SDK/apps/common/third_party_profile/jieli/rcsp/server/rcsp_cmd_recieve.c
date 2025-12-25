@@ -368,7 +368,8 @@ static void get_device_config_info(void *priv, u8 OpCode, u8 OpCode_SN, u8 *data
 {
 #if RCSP_MODE == RCSP_MODE_EARPHONE
     struct RcspModel *rcspModel = (struct RcspModel *)priv;
-    u8 resp_buf[6] = {0};
+    u8 resp_buf[64] = {0};
+    u32 resp_len;
     if (rcspModel == NULL) {
         return ;
     }
@@ -391,20 +392,48 @@ static void get_device_config_info(void *priv, u8 OpCode, u8 OpCode_SN, u8 *data
 #endif
 
     resp_buf[2] |= BIT(4);  // support LTV
+    resp_len = 3;
 
     // aurcast feature LTV
-    resp_buf[3] = 2;        // length
-    resp_buf[4] = 0x01;     // type
+    resp_buf[resp_len] = 2;        // length
+    resp_buf[resp_len + 1] = 0x01;     // type
     // value
     // Bit0: 是否支持Auracast功能
     // Bit1: 是否支持私有Auracast 接收端功能
     // Bit2: 是否支持 私有Aurafast 发射端功能
-    if (RCSP_ADV_AURCAST_SINK) {
-        resp_buf[5] |= BIT(0) | BIT(1);   // value
+#if RCSP_ADV_AURCAST_SINK
+    resp_buf[resp_len + 2] |= BIT(0) | BIT(1);   // value
+#endif
+#if RCSP_ADV_AURCAST_SOURCE
+    resp_buf[resp_len + 2] |= BIT(0) | BIT(2);   // value
+#endif
+    resp_len += 3;
+
+    // TWS功能LTV
+    resp_buf[resp_len] = 2;  //length
+    resp_buf[resp_len + 1] = 0x02;  //type
+#if RCSP_MODE == RCSP_MODE_EARPHONE
+    //BIT0: 是否支持TWS设备功能：设备名、弹窗快连、按键设置、灯效设置等
+    //BIT1: 是否支持修改设备名
+    resp_buf[resp_len + 2] |= BIT(0);
+    //resp_buf[resp_len + 2] |= BIT(1);
+#endif
+    resp_len += 3;
+
+    // 翻译功能LTV
+    resp_buf[resp_len] = 2;  //length
+    resp_buf[resp_len + 1] = 0x03;  //type
+#if RCSP_ADV_TRANSLATOR
+    //BIT0: 是否支持翻译功能
+    //BIT1: 是否使用A2DP播报
+    //BIT2: 是否支持通话翻译OPUS立体声编码
+    resp_buf[resp_len + 2] |= BIT(0);
+    if (!JL_rcsp_translator_whether_play_by_ai_rx()) {
+        resp_buf[resp_len + 2] |= BIT(1);
     }
-    if (RCSP_ADV_AURCAST_SOURCE) {
-        resp_buf[5] |= BIT(0) | BIT(2);   // value
-    }
+    resp_buf[resp_len + 2] |= BIT(2);
+#endif
+    resp_len += 3;
 
 
 #elif RCSP_MODE == RCSP_MODE_SOUNDBOX
