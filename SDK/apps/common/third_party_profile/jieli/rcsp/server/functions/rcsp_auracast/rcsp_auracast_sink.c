@@ -5,6 +5,7 @@
 #pragma code_seg(".rcsp_auracast.text")
 #endif
 
+#include "app_config.h"
 #if TCFG_USER_TWS_ENABLE
 #include "classic/tws_api.h"
 #endif
