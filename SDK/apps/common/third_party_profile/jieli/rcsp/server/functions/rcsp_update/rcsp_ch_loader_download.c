@@ -85,6 +85,8 @@ extern void rcsp_clear_all_buffer(void);
 static rcsp_update_param_t	rcsp_update_param;
 #define __this (&rcsp_update_param)
 
+#define RCSP_SUPPORT_UPDATE_DATA_WITH_CRC   1
+
 static u8 *bt_read_buf = NULL;
 static u16 g_bt_read_len = 0;
 static u32 rcsp_file_offset = 0;
@@ -178,11 +180,49 @@ void rcsp_update_set_offset_addr(u32 offset)
     rcsp_f_seek(NULL, SEEK_SET, 0); //确定好偏移
 }
 
+#define RETRY_TIMES		3
+u8 get_rcsp_connect_status();
+
+#if RCSP_SUPPORT_UPDATE_DATA_WITH_CRC
+static u8 rcsp_update_with_crc_flag = 0;
+static u8 rcsp_update_crc_retry_cnt = 0;
+u8 rcsp_update_with_crc_flag_set(u8 flag)
+{
+    rcsp_update_with_crc_flag = flag;
+    return rcsp_update_with_crc_flag;
+}
+
+static int rcsp_update_data_check(void *buf, int len)
+{
+    if (0 == rcsp_update_with_crc_flag || (len <= __this->need_rx_len)) {
+        return len;
+    }
+    if (len > __this->need_rx_len) {
+        u16 data_crc = READ_BIG_U16(buf + len - 2);
+        if (data_crc != CRC16(buf, __this->need_rx_len) && get_rcsp_connect_status()) {
+            if (RETRY_TIMES > rcsp_update_crc_retry_cnt++) {
+                printf("err: pack data verify fail, %x, %x\n", __this->file_offset, __this->need_rx_len);
+                put_buf(buf, len);
+                __this->data_send_hdl(NULL, __this->file_offset, __this->need_rx_len);
+            }
+            return -1;
+        } else {
+            rcsp_update_crc_retry_cnt = 0;
+        }
+    }
+    return __this->need_rx_len;
+}
+#else
+u8 rcsp_update_with_crc_flag_set(u8 flag)
+{
+    return 0;
+}
+#endif
 
 static u16 rcsp_f_stop(u8 err);
 
-#define RETRY_TIMES		3
-u8 get_rcsp_connect_status();
+/* #define RETRY_TIMES		3 */
+/* u8 get_rcsp_connect_status(); */
 u16 rcsp_f_read(void *fp, u8 *buff, u16 len)
 {
     //printf("===rcsp_read:%x %x\n", __this->file_offset, len);
@@ -211,6 +251,11 @@ u16 rcsp_f_read(void *fp, u8 *buff, u16 len)
     }
 
 __RETRY:
+#if RCSP_SUPPORT_UPDATE_DATA_WITH_CRC
+    if (rcsp_update_crc_retry_cnt > RETRY_TIMES) {
+        return -1;
+    }
+#endif
     if (!get_rcsp_connect_status() || g_rcsp_ancs_state_flag) {   //如果已经断开连接直接返回-1
         return -1;
     }
@@ -389,6 +434,16 @@ void rcsp_update_handle(u8 state, void *buf, int len)
         return;
     }
 
+#if RCSP_SUPPORT_UPDATE_DATA_WITH_CRC
+    len = rcsp_update_data_check(buf, len);
+    if (len < 0) {
+        if (rcsp_update_crc_retry_cnt > RETRY_TIMES) {
+            goto __ERR_RET;
+        }
+        return;
+    }
+#endif
+
     switch (state) {
     case UPDATA_REV_DATA:
         if (__this->read_buf) {
@@ -402,7 +457,7 @@ void rcsp_update_handle(u8 state, void *buf, int len)
         __this->state = 0;
         break;
     }
-
+__ERR_RET:
     if (__this->resume_hdl) {
         __this->resume_hdl(NULL);
     }
@@ -433,6 +488,9 @@ void rcsp_ch_update_init(void (*resume_hdl)(void *priv), int (*sleep_hdl)(void *
 
     g_rcsp_ancs_state_flag = 0;
     rcsp_update_resume_hdl_register(resume_hdl, sleep_hdl);
+#if RCSP_SUPPORT_UPDATE_DATA_WITH_CRC
+    rcsp_update_crc_retry_cnt = 0;
+#endif
     //register_receive_fw_update_block_handle(rcsp_updata_handle);
 }
 
@@ -574,7 +632,13 @@ void cis_rcsp_recv_handle(u16 conn_handle, const void *const buf, size_t length,
             rcsp_clear_all_buffer();
         }
         g_cis_conn_handle = conn_handle;
-        bt_rcsp_recieve_callback(rcsp_server_ble_hdl, NULL, (u8 *)buf, length);
+        if (!JL_rcsp_get_auth_flag_with_bthdl(conn_handle, NULL)) {
+            if (!rcsp_protocol_head_check((u8 *)buf, (u16)length)) {
+                JL_rcsp_auth_recieve(conn_handle, NULL, (u8 *)buf, length);
+            }
+            return;
+        }
+        JL_protocol_data_recieve(NULL, (u8 *)buf, length, conn_handle, NULL);
     }
 }
 
@@ -582,12 +646,12 @@ int bt_rcsp_data_send_filter(u16 ble_con_hdl, u8 *remote_addr, u8 *buf, u16 len)
 {
     int ret = 0;
     if (g_cis_conn_handle) {
-        if (!JL_rcsp_get_auth_flag_with_bthdl(ble_con_hdl, NULL)) {
+        if (!JL_rcsp_get_auth_flag_with_bthdl(g_cis_conn_handle, NULL)) {
             if (!rcsp_protocol_head_check(buf, len)) {
-                connected_send_acl_data(ble_con_hdl, buf, len);
+                connected_send_acl_data(g_cis_conn_handle, buf, len);
             }
         } else {
-            connected_send_acl_data(ble_con_hdl, buf, len);
+            connected_send_acl_data(g_cis_conn_handle, buf, len);
         }
         ret = 1;
     }

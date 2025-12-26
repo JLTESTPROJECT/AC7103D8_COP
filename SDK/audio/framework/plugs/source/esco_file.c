@@ -45,6 +45,12 @@ static void esco_frame_pack_timestamp(struct esco_file_hdl *hdl, struct stream_f
 
     if (hdl->first_timestamp) {
         hdl->first_timestamp = 0;
+#if TCFG_NS_NODE_ENABLE
+        u32 esco_clock[2];
+        esco_clock[0] = frame_clkn;
+        esco_clock[1] = hdl->frame_time;
+        stream_node_ioctl(hdl->node, NODE_UUID_NOISE_SUPPRESSOR, NODE_IOC_SET_PRIV_FMT, (int)esco_clock);
+#endif
     } else {
         if (((frame_clkn - hdl->clkn) & 0x7fffff) != hdl->frame_time) {
             printf("frame_clkn =%d ,clkn %d %d\n", frame_clkn, ((frame_clkn - hdl->clkn) & 0x7fffff), hdl->frame_time);

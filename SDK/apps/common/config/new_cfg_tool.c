@@ -556,7 +556,7 @@ static void cfg_tool_callback(u8 *packet, u32 size)
     struct resfile_attrs attr;
     RESFILE *cfg_fp = NULL;
     R_QUERY_SYS_INFO upload_param = {0};
-    int cpu_use[CPU_CORE_NUM] = {0};
+    int cpu_use[2] = {0};
 
     u8 use_malloc_buf = 0;
     u32 local_buf[128 / 4];
@@ -826,6 +826,7 @@ static void cfg_tool_callback(u8 *packet, u32 size)
     case ONLINE_SUB_OP_ONLINE_INSPECTION:
         upload_param.use_mem = memory_get_size(P_MEMORY_USED);//使用的mem;
         upload_param.total_mem = memory_get_size(P_MEMORY_TOTAL);//总的mem
+        // 第2个参数必须恒为int [2]数组
         os_cpu_usage(NULL, cpu_use);
         int cpu_usage = 0;
         for (int i = 0; i < CPU_CORE_NUM; i++) {

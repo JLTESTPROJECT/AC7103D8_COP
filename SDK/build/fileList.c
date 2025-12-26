@@ -146,6 +146,7 @@ objs += \
 	  $(ROOT)/audio/common/audio_volume_mixer.o \
 	  $(ROOT)/audio/common/audio_effect_verify.o \
 	  $(ROOT)/audio/common/pcm_data/sine_pcm.o \
+	  $(ROOT)/audio/common/tws_frame_sync.o \
 
 objs += \
 	  $(ROOT)/audio/common/audio_iis_lrclk_capture.o
@@ -1247,6 +1248,7 @@ objs += \
 	  $(ROOT)/cpu/components/iic_api.o \
 	  $(ROOT)/cpu/components/ir_encoder.o \
 	  $(ROOT)/cpu/components/ir_decoder.o \
+	  $(ROOT)/cpu/components/led_spi.o \
 	  $(ROOT)/cpu/components/rdec_soft.o \
 
 objs += \

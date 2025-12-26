@@ -767,4 +767,6 @@ void ll_hci_setup_iso_data_path(uint8_t *data, size_t size);
 
 void ll_hci_remove_iso_data_path(uint8_t *data, size_t size);
 uint8_t ble_vendor_priv_get_case_user();
+
+uint32_t ll_cis_get_aa_by_handle(uint16_t handle);
 #endif

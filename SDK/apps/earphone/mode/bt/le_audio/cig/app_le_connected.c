@@ -77,6 +77,17 @@ extern int ll_hci_vendor_send_priv_cmd(u16 conn_handle, u8 *data, u16 size); //�
 extern u8 lmp_get_esco_conn_statu(void);
 extern void ll_set_param_aclMaxPduCToP(uint8_t aclMaxRxPdu);
 
+enum {
+    LE_AUDIO_CONFIG_EN = 1,
+    LE_AUDIO_CONN_STATUES,
+    LE_AUDIO_CONFIG_SIRK,
+    LE_AUDIO_GET_SLAVE_VOL,  //when tws connect,if slave playing cis then it will send vol to master
+    LE_AUDIO_ADV_MAC_INFO,
+    LE_AUDIO_CONN_CHECK,
+};
+
+u8 cig_support_ce = 0; //临时关闭加密音频数据功能，等dongle支持再开启
+
 /**************************************************************************************************
   Macros
 **************************************************************************************************/
@@ -87,6 +98,20 @@ extern void ll_set_param_aclMaxPduCToP(uint8_t aclMaxRxPdu);
 /* #define LOG_DUMP_ENABLE */
 #define LOG_CLI_ENABLE
 #include "debug.h"
+
+
+#define VENDOR_PRIV_DEVICE_TYPE_REQ     0x01
+//Central -> Peripheral
+#define VENDOR_PRIV_LC3_INFO            0x03
+#define VENDOR_PRIV_OPEN_MIC            0x04
+#define VENDOR_PRIV_CLOSE_MIC           0x05
+#define VENDOR_PRIV_ACL_MUSIC_VOLUME    0x07
+#define VENDOR_PRIV_ACL_MIC_VOLUME      0x08
+#define VENDOR_PRIV_HOST_TYPE           0x10   //主机告知从机dongle连接设备类型
+//Peripheral -> Central
+#define VENDOR_PRIV_DEVICE_TYPE_RSP     0x02
+#define VENDOR_PRIV_ACL_OPID_CONTORL    0x06
+#define VENDOR_PRIV_SET_DUAL_UAC_VOL    0x20   //从机告知主机调节对应声卡的音量值
 
 /**************************************************************************************************
   Data Types
@@ -262,7 +287,6 @@ void le_audio_unicast_play_remove_by_phone_call()
 /* --------------------------------------------------------------------------*/
 /**
  * @brief   le audio恢复播歌by phone hangup
- * 			LE_AUDIO_JL_DONGLE_UNICAST_WITH_PHONE_CONN_PLAY_PREEMPTEDK的时候使用
  */
 /* ----------------------------------------------------------------------------*/
 void le_audio_unicast_try_resume_play_by_phone_call_remove()
@@ -544,7 +568,7 @@ static int app_connected_conn_status_event_handler(int *msg)
             //这个时候靠近手机没有重新建立CIG的。---主动断开等手机重连
             log_info("CIG disconnect for timeout\n");
             //le_audio_disconn_le_audio_link();
-            ll_hci_disconnect(acl_handle_for_disconnect_cis, 0x13);
+            ll_hci_disconnect(acl_handle_for_disconnect_cis, CONNECTION_TERMINATED_BY_LOCAL_HOST);
         }
 #endif
         //释放互斥量
@@ -579,14 +603,14 @@ static int app_connected_conn_status_event_handler(int *msg)
         put_buf((u8 *)&acl_info->pri_ch, sizeof(acl_info->pri_ch));
 #if TCFG_JL_UNICAST_BOUND_PAIR_EN
         u8 le_com_addr_new[6];
-        ret = syscfg_read(CFG_TWS_CONNECT_AA, le_com_addr_new, 6);
+        ret = syscfg_read(CFG_USER_COMMON_ADDR, le_com_addr_new, 6);
         log_info("read binding common addr\n");
         put_buf(le_com_addr_new, 6);
 
         if (memcmp(le_com_addr_new, "\0\0\0\0\0\0", 6) != 0) { //防止空地址触发读零异常
             if (memcmp(&acl_info->pri_ch, le_com_addr_new, 6) != 0) { //地址不匹配
                 log_info("Device mismatched, connection denied!!!\n");
-                ll_hci_disconnect(acl_info->acl_hdl, 0x13);
+                ll_hci_disconnect(acl_handle_for_disconnect_cis, CONNECTION_TERMINATED_BY_LOCAL_HOST);
                 break;
             }
             log_info("Bind information error!!!\n");
@@ -766,6 +790,18 @@ static int app_connected_conn_status_event_handler(int *msg)
         hid_iso_adv_enable(1);
 #endif
 
+#if JL_UNICAST_DUAL_UAC_ENABLE
+        u8 uac_vol[2] = {0};
+        int ret = syscfg_read(CFG_JL_CIS_DUAL_UAC_VOL, uac_vol, 2);
+        //log_info("syscfg_read, uac0_vol:%d , uac1_vol:%d\n", uac_vol[0], uac_vol[1]);
+        if (ret != 2) {
+            log_info("no uac_vol\n");
+            app_var.uac0_vol = uac_vol[0] = 50;
+            app_var.uac1_vol = uac_vol[1] = 50;
+        }
+        log_info("acl conn, set_dual_uac_vol");
+        le_audio_set_dual_uac_vol(uac_vol[0], uac_vol[1]);
+#endif
         break;
     case CIG_EVENT_JL_DONGLE_DISCONNECT:
     case CIG_EVENT_PHONE_DISCONNECT:
@@ -777,6 +813,7 @@ static int app_connected_conn_status_event_handler(int *msg)
 #endif
 #if TCFG_USER_TWS_ENABLE
         tws_sync_le_audio_conn_info();
+        tws_sync_le_audio_conn_check();
         tws_dual_conn_state_handler();
         if (tws_api_get_role() == TWS_ROLE_SLAVE) {
             break;
@@ -941,8 +978,8 @@ static void app_connected_suspend()
 
 int tws_check_user_conn_open_quick_type()
 {
-    /* log_debug("tws_check_user_conn_open_quick_type=%d\n",check_le_audio_tws_conn_role() ); */
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN))
+    /* log_debug("tws_check_user_conn_open_quick_type=%d\n",check_le_audio_tws_conn_role() ); */
     if (is_cig_phone_conn()) {
         return g_le_audio_hdl.le_audio_tws_role;
     }
@@ -1367,16 +1404,6 @@ void le_audio_adv_open_success(void *le_audio_ble_hdl, u8 *addr)
     log_info("le_audio_adv_open_success\n");
     memcpy(le_audio_adv_local_mac, addr, 6);
 }
-#define VENDOR_PRIV_DEVICE_TYPE_REQ     0x01
-#define VENDOR_PRIV_DEVICE_TYPE_RSP     0x02
-#define VENDOR_PRIV_LC3_INFO            0x03
-#define VENDOR_PRIV_OPEN_MIC            0x04
-#define VENDOR_PRIV_CLOSE_MIC           0x05
-//for earphone control
-#define VENDOR_PRIV_ACL_OPID_CONTORL    0x06
-#define VENDOR_PRIV_ACL_MUSIC_VOLUME    0x07
-#define VENDOR_PRIV_ACL_MIC_VOLUME      0x08
-#define VENDOR_PRIV_HOST_TYPE           0x10   //dongle主机类型
 
 enum {
     UNICAST_INDXT = 1,
@@ -1385,7 +1412,7 @@ enum {
 
 };
 
-static u32 ear_version[2] = {0x00, 0x00};           // 临时定义耳机版本号，后面可以考虑存在VM
+static u32 ear_version[2] = {0x00, 0x04};           // 临时定义耳机版本号，后面可以考虑存在VM，小端对齐
 static u32 dongle_common_version[2] = {0x00, 0x00}; // 耳机和dongle协商共用用双方中的低版本
 
 static u32 dongle_codec_type = 0;
@@ -1430,7 +1457,10 @@ void le_audio_send_priv_cmd(u16 conn_handle, u8 cmd, u8 *data, u8 len)
     /* if (cmd == VENDOR_PRIV_LC3_INFO) { */
     /*     send_len += get_unicast_lc3_info(&pri_data[1]); */
     /* } */
-
+    if (cmd == VENDOR_PRIV_DEVICE_TYPE_REQ) {
+        log_info("VENDOR_PRIV_DEVICE_TYPE_REQ\n");
+    }
+    log_info("le_audio_send_priv_cmd, handle:0x%x , cmd:0x%x\n", conn_handle, cmd);
     ll_hci_vendor_send_priv_cmd(conn_handle, pri_data, send_len);
 }
 
@@ -1453,6 +1483,26 @@ static u16 get_conn_handle(void)
     return con_handle;
 }
 
+#if JL_UNICAST_DUAL_UAC_ENABLE
+void le_audio_set_dual_uac_vol(u8 _uac0_vol, u8 _uac1_vol)
+{
+    u8 uac_vol_max = 100;
+    u8 uac_vol_min = 0;
+    u8 valid_uac0_vol = (_uac0_vol > uac_vol_max) ? uac_vol_max :
+                        (_uac0_vol < uac_vol_min) ? uac_vol_min : _uac0_vol;
+    u8 valid_uac1_vol = (_uac1_vol > uac_vol_max) ? uac_vol_max :
+                        (_uac1_vol < uac_vol_min) ? uac_vol_min : _uac1_vol;
+    u16 con_handle = get_conn_handle();
+    if (con_handle) {
+        log_info("le_audio_set_dual_uac_vol, valid_uac0_vol:%d , valid_uac1_vol:%d\n", valid_uac0_vol, valid_uac1_vol);
+        u8 uac_vol[2] = {valid_uac0_vol, valid_uac1_vol};
+        syscfg_write(CFG_JL_CIS_DUAL_UAC_VOL, uac_vol, 2);
+        le_audio_send_priv_cmd(con_handle, VENDOR_PRIV_SET_DUAL_UAC_VOL, uac_vol, 2);
+    } else {
+        log_error("no cis conn\n");
+    }
+}
+#endif
 /* --------------------------------------------------------------------------*/
 /**
  * @brief   le audio媒体控制接口
@@ -1520,10 +1570,12 @@ static u16 ble_user_priv_cmd_handle(u16 handle, u8 *cmd, u8 len, u8 *rsp)
         if (tws_api_get_tws_state() & TWS_STA_SIBLING_CONNECTED) {
             /* if (tws_api_get_tws_state() & TWS_STA_SIBLING_CONNECTED && tws_api_get_role() == TWS_ROLE_MASTER) { */
             memcpy(rsp + 2, le_audio_adv_slave_mac, 6);
+            log_info("RSP, le_audio_adv_slave_mac:");
             put_buf(le_audio_adv_slave_mac, 6);
         } else
 #endif
         {
+            log_info("RSP, le_audio_adv_slave_mac null");
             memset(rsp + 2, 0xff, 6);
         }
         if (lmp_get_esco_conn_statu()) {
@@ -1545,8 +1597,8 @@ static u16 ble_user_priv_cmd_handle(u16 handle, u8 *cmd, u8 len, u8 *rsp)
 
         memcpy(dongle_common_version, cmd + 1, 2);   // 先用dongle的版本号做公共版本号
         u16 dongle_current_version = (u16)(cmd[1] << 8 | cmd[2]);
-        u16 ear_current_version = (u16)(ear_version[1] << 8 | ear_version[0]);
-        printf("dongle_version:%d, ear_version:%d\n", dongle_current_version, ear_current_version);
+        u16 ear_current_version = (u16)(ear_version[0] << 8 | ear_version[1]);
+        log_info("dongle_version:%04x, ear_version:%04x\n", dongle_current_version, ear_current_version);
         if (!dongle_current_version) {
             // 耳机和dongle的版本号都为空，临时用个最低的版本号，或者报错
             r_f_printf("ERROR dongle version are NULL!!\n");
@@ -1561,7 +1613,8 @@ static u16 ble_user_priv_cmd_handle(u16 handle, u8 *cmd, u8 len, u8 *rsp)
             printf("use dongle version!!\n");
         }
 
-        memcpy(rsp + 10, ear_version, 2);
+        rsp[10] = ear_version[0];
+        rsp[11] = ear_version[1];
 
         // 命令类型	远端设备类型 Tws对耳地址 手机通话状态 Tws左右声道 从机版本号
         rsp_len = 1 + 1 + 6 + 1 + 1 + 2;
@@ -1724,11 +1777,11 @@ static int le_audio_app_msg_handler(int *msg)
         tws_sync_le_audio_conn_info();
         //配对之后主从广播的情况不一样
         if (tws_api_get_role() == TWS_ROLE_MASTER) {
-            tws_sync_le_audio_sirk();
+            y_printf("APP_MSG_TWS_CONNECTED,sync adv mac");
             le_audio_adv_api_enable(0);
             le_audio_adv_api_enable(1);
-            tws_sync_le_audio_adv_mac_to_slave();//主机同步地址给tws从机
-            //TWS连上的时候，从机收到SIRK再刷新广播信息
+            tws_sync_le_audio_adv_mac_to_slave();  //主机同步地址给从机
+            tws_sync_le_audio_sirk();   //从机同步地址给主机
         } else {
             //if slave cis is playing,then send vol to master
             if (is_cig_music_play() || is_cig_phone_call_play()) {
@@ -1740,6 +1793,16 @@ static int le_audio_app_msg_handler(int *msg)
 #endif
 
         break;
+    case APP_MSG_TWS_DISCONNECTED:
+        log_info("APP_MSG_TWS_DISCONNECTED -in app le connect");
+#if TCFG_USER_TWS_ENABLE
+        puts("to master le_audio_adv_mac null\n");
+        u16 con_handle = get_conn_handle();
+        if (con_handle) {
+            le_audio_send_priv_cmd(con_handle, VENDOR_PRIV_DEVICE_TYPE_REQ, NULL, 0);
+        }
+        break;
+#endif
     case APP_MSG_POWER_OFF://1
         log_info("APP_MSG_POWER_OFF");
         break;
@@ -1879,13 +1942,6 @@ void le_audio_profile_event_to_user(u16 type, u8 *data, u16 len)
         set_music_device_volume(phone_vol / 2);
     }
 }
-enum {
-    LE_AUDIO_CONFIG_EN = 1,
-    LE_AUDIO_CONN_STATUES,
-    LE_AUDIO_CONFIG_SIRK,
-    LE_AUDIO_GET_SLAVE_VOL,  //when tws connect,if slave playing cis then it will send vol to master
-    LE_AUDIO_ADV_MAC_INFO,
-};
 /**
  * 有些手机连接过同一个地址之后会记忆耳机的服务，所以动态配置le audio的功能的时候，
  * 仅经典蓝牙功能和经典蓝牙+le audio功能的地址要不一样
@@ -2051,6 +2107,21 @@ static void tws_sync_le_audio_config_func(u8 *data, int len)
             le_audio_send_priv_cmd(con_handle, VENDOR_PRIV_DEVICE_TYPE_REQ, NULL, 0);
         }
         break;
+    case LE_AUDIO_CONN_CHECK:
+#if TCFG_USER_TWS_ENABLE
+        if ((is_cig_phone_conn() == 0) && (is_cig_other_phone_conn() == 0)) {
+            log_info("LE_AUDIO_CONN_CHECK, tws_dual_conn_state_handler\n");
+            tws_dual_conn_state_handler();
+        } else if ((is_cig_phone_conn() == 1) && (is_cig_other_phone_conn() == 0) && get_bt_tws_connect_status()) {
+            log_info("LE_AUDIO_CONN_CHECK, need dongle creat cis conn\n");
+            u16 con_handle = get_conn_handle();
+            if (con_handle) {
+                y_printf("LE_AUDIO_CONN_CHECK, tws_sync_le_audio_sirk\n");
+                tws_sync_le_audio_sirk();
+            }
+        }
+        break;
+#endif
     }
     free(data);
 
@@ -2118,6 +2189,15 @@ static void tws_sync_le_audio_sirk()
     tws_api_send_data_to_slave(data, 17, 0x23782C5B);
 
 }
+
+void tws_sync_le_audio_conn_check()
+{
+    log_info("tws_sync_le_audio_conn_check");
+    u8 data[1];
+    data[0] = LE_AUDIO_CONN_CHECK;
+    tws_api_send_data_to_sibling(data, 1, 0x23782C5B);
+}
+
 void bt_tws_slave_sync_volume_to_master()
 {
     u8 data[4];
@@ -2253,7 +2333,7 @@ static void jl_unicast_edr_mode_switch_in_app_core()
 }
 
 /**
- * @brief 控制dongle模式和手机模式切换，切换后复位生效
+ * @brief 控制dongle模式和手机模式切换
  */
 void jl_unicast_edr_mode_switch(void)
 {

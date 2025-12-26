@@ -151,6 +151,8 @@
 
 #define JL_UNICAST_ACL_MAX_PDU_CTOP				36 // 与LEA dongle传输的私有命令最大数据长度
 
+#define JL_UNICAST_DUAL_UAC_ENABLE              0 // JL_UNICAST双声卡模式使能
+
 // #undef TCFG_LOWPOWER_LOWPOWER_SEL
 // #define  TCFG_LOWPOWER_LOWPOWER_SEL 0x0//低功耗连接还有问题
 #endif
@@ -1151,6 +1153,14 @@
 #undef  TCFG_BT_SUPPORT_MAP
 #define  TCFG_BT_SUPPORT_MAP 0x1
 #endif
+
+#define  TCFG_BT_SUPPORT_FTP 0x0    //FTP client角色
+#define  TCFG_BT_SUPPORT_FTP_SERVER 0x0 //FTP server角色
+#if TCFG_BT_SUPPORT_FTP_SERVER
+#undef  TCFG_BT_SUPPORT_FTP
+#define  TCFG_BT_SUPPORT_FTP 0x1
+#endif
+
 #define  TCFG_BLE_BRIDGE_EDR_ENALBE 0x0   //ios 一键连接，ctkd
 #if TCFG_BLE_BRIDGE_EDR_ENALBE   //一键连接必须同地址
 #undef  TCFG_BT_BLE_BREDR_SAME_ADDR

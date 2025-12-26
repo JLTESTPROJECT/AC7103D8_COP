@@ -541,6 +541,13 @@ void rcsp_cbk_packet_handler(uint8_t packet_type, uint16_t channel, uint8_t *pac
                 }
                 hci_con_handle_t con_handle = little_endian_read_16(packet, 4);
                 printf("RCSP HCI_SUBEVENT_LE_CONNECTION_COMPLETE: %0x\n", con_handle);
+#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_UNICAST_SINK_EN)
+#if (!TCFG_LE_AUDIO_RCSP_USE_SAME_ACL)
+                // 私有unicast与 RCSP 共存，需要单独设置RCSP 的rxmaxbuf，否则长数据会有问题
+                ble_op_set_rxmaxbuf(con_handle, 255);
+#endif
+#endif
+
 #if !TCFG_THIRD_PARTY_PROTOCOLS_SIMPLIFIED
 #if TCFG_USER_TWS_ENABLE
                 if (app_var.goto_poweroff_flag) {
@@ -1076,8 +1083,8 @@ static int set_adv_enable(void *priv, u32 en)
             if (!is_cig_phone_conn()) {
 #endif
                 // 防止ios只连上ble的情况下，android(spp)回连导致ble断开后重新开广播的情况
-                if (bt_rcsp_spp_conn_num() > 0 || bt_rcsp_ble_conn_num() > 0) {
-                    log_info("spp is connecting\n");
+                if ((bt_rcsp_spp_conn_num() > 0) || (bt_rcsp_ble_conn_num() > 0)) {
+                    log_info("rcsp is connecting\n");
                     printf("%s, %s, %d\n", __FILE__, __FUNCTION__, __LINE__);
                     return APP_BLE_OPERATION_ERROR;
                 }

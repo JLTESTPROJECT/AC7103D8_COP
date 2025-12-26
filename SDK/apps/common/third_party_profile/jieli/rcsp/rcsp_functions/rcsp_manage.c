@@ -54,6 +54,7 @@ extern void sport_data_func_init(void);
 void sport_data_func_release(void);
 static void rcsp_user_state_handler(u8 *param, u8 param_len);
 extern const int support_dual_bank_update_en;
+extern u8 rcsp_update_with_crc_flag_set(u8 flag);
 
 // 获取当前ble/spp的连接状态
 u8 get_rcsp_connect_status(void)
@@ -61,6 +62,12 @@ u8 get_rcsp_connect_status(void)
     if (bt_rcsp_device_conn_num() > 0) {
         return 1;
     }
+#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN)))
+    extern u16 cis_rcsp_update_flag(void);
+    if (cis_rcsp_update_flag()) {
+        return 1;
+    }
+#endif
     return 0;
 }
 
@@ -244,6 +251,7 @@ static void rcsp_ble_disconnect(void)
 #endif
 #if RCSP_UPDATE_EN && !RCSP_BLE_MASTER
     rcsp_update_resume();
+    rcsp_update_with_crc_flag_set(0);
 #endif
 #if JL_RCSP_SENSORS_DATA_OPT
     sport_data_func_release();

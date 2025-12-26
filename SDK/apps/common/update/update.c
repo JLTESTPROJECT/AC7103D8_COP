@@ -48,6 +48,8 @@
 #endif
 
 #include "custom_cfg.h"
+#include "ble_rcsp_server.h"
+#include "app_ble_spp_api.h"
 
 #define LOG_TAG "[APP-UPDATE]"
 #define LOG_INFO_ENABLE
@@ -413,6 +415,7 @@ static void update_param_content_fill(int type, UPDATA_PARM *p, void (*priv_para
             ext_len = get_bt_trim_info_for_update(ext_data);
             printf("ext_len:%d\n", ext_len);
             update_param_ext_fill(p, EXT_LDO_TRIM_RES, ext_data, ext_len);
+
             free(ext_data);
         }
         update_param_ext_fill(p, EXT_BT_MAC_ADDR, (u8 *)bt_get_mac_addr(), 6);
@@ -433,8 +436,8 @@ static void update_param_content_fill(int type, UPDATA_PARM *p, void (*priv_para
 static void update_param_ram_set(u8 *buf, u16 len)
 {
     u8 *update_ram = UPDATA_FLAG_ADDR;
-    if (len > (u32)(&UPDATA_SIZE)) {
-        len = (u32)(&UPDATA_SIZE);
+    if (len > (u32)(&UPDATA_SIZE) - (UPDATA_FLAG_ADDR - BOOT_STATUS_ADDR)) {
+        len = (u32)(&UPDATA_SIZE) - (UPDATA_FLAG_ADDR - BOOT_STATUS_ADDR);
     }
     memcpy(update_ram, (u8 *)buf, len);
 }
@@ -603,6 +606,14 @@ static void update_init_common_handle(int type)
     if (UPDATE_DUAL_BANK_IS_SUPPORT()) {
 #if TCFG_AUTO_SHUT_DOWN_TIME
         sys_auto_shut_down_disable();
+#endif
+
+#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN)) && (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN))
+        u16 rcsp_ble_con_handle = rcsp_ble_con_handle_get();
+        if (rcsp_ble_con_handle) {
+            log_info("ble_op_set_rxmaxbuf, rcsp_ble_con_handle = 0x%x", rcsp_ble_con_handle);
+            ble_op_set_rxmaxbuf(rcsp_ble_con_handle, 255);
+        }
 #endif
 
 #if OTA_TWS_SAME_TIME_ENABLE

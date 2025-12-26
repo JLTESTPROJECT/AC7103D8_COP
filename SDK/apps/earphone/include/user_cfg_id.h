@@ -70,7 +70,9 @@
 #define     CFG_VOLUME_ENHANCEMENT_MODE        58
 #define     CFG_ANC_ADAPTIVE_DATA_ID   		59//保存ANC自适应参数id
 
-
+//=========================================================================================================================//
+//                APP CASE相关配置项，新增ID范围：[170 ~ 250]，确保不与interface\utils\syscfg_id.h中的ID号相同             //
+//=========================================================================================================================//
 
 // ll sync
 #define     CFG_LLSYNC_RECORD_ID        170
@@ -85,6 +87,6 @@
 
 // le_audio
 #define		CFG_JL_UNICAST_EDR_MODE			 186 // jlunicast模式切换
-
+#define		CFG_JL_CIS_DUAL_UAC_VOL	         187 // jlunicast双声卡音量
 
 #endif /* #ifndef _USER_CFG_ID_H_ */

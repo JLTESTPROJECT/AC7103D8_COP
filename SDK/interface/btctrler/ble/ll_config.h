@@ -241,6 +241,10 @@ extern const int config_bb_optimized_ctrl;
 #define LE_ADV_PWR_CTRL_EN()	(config_bb_optimized_ctrl & BIT(7))
 #define LE_BIS_RX_PRE_CLOSE()	(config_bb_optimized_ctrl & BIT(8))
 #define LE_SUPPORT_LE_PER_CHECK()				(config_bb_optimized_ctrl & BIT(13))
+
+// 公用流程选择不同功能配置
+#define LE_DYM_VDR_FEAT_SELECTION_EA_RANDOM (BIT(0))
+
 /*-----------------------------------------------------------*/
 
 /*

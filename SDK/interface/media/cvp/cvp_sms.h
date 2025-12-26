@@ -36,6 +36,16 @@ typedef struct __AEC_CONFIG {
     float init_noise_lvl;	//初始噪声水平，default:-75dB,range[-100:-30]
 } AEC_CONFIG;
 
+typedef struct __AEC_NLP_CONFIG {
+    u8 aec_mode;        	//AEC模式,default:advance(diable(0), reduce(1), advance(2))
+    /*AEC*/
+    float aec_dt_aggress;   //原音回音追踪等级, default: 1.0f(1 ~ 5)
+    float aec_refengthr;    //进入回音消除参考值, default: -70.0f(-90 ~ -60 dB)
+    /*ES*/
+    float es_aggress_factor;//回音前级动态压制,越小越强,default: -3.0f(-1 ~ -5)
+    float es_min_suppress;	//回音后级静态压制,越大越强,default: 4.f(0 ~ 10)
+} AEC_NLP_CONFIG;
+
 struct aec_s_attr {
     u8 agc_en: 1;				//AGC使能配置
     u8 ul_eq_en: 1;				//上行EQ使能配置
@@ -185,6 +195,7 @@ void aec_toggle(u8 toggle);
 */
 int aec_cfg_update(AEC_CONFIG *cfg);
 int sms_tde_cfg_update(AEC_CONFIG *cfg);
+int aec_nlp_cfg_update(AEC_NLP_CONFIG *cfg);//仅更新aec、nlp参数
 /*
 *********************************************************************
 *                  			AEC Reboot

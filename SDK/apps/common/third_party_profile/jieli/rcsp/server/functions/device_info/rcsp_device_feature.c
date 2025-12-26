@@ -163,6 +163,7 @@ static u32 target_feature_ota_double_parition(void *priv, u8 attr, u8 *buf, u16 
     u8 double_partition_value;
     u8 ota_loader_need_download_flag;
     u8 update_channel_sel;
+    u8 update_data_crc_verify_sel;
 
     if (rcspModel->ota_type) {
         double_partition_value = 0x1;
@@ -172,10 +173,12 @@ static u32 target_feature_ota_double_parition(void *priv, u8 attr, u8 *buf, u16 
         ota_loader_need_download_flag = 0x01;
     }
     update_channel_sel = 0x1;       //强制使用BLE升级
-    u8 update_param[3] = {
+    update_data_crc_verify_sel = BIT(1); // 升级数据携带crc
+    u8 update_param[4] = {
         double_partition_value,
         ota_loader_need_download_flag,
         update_channel_sel,
+        update_data_crc_verify_sel,
     };
 
     rlen = add_one_attr(buf, buf_size, offset, attr, (u8 *)update_param, sizeof(update_param));

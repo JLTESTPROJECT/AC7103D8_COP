@@ -214,7 +214,7 @@ SDP_RECORD_HANDLER_REGISTER(pbap_sdp_record_item) = {
 #if (TCFG_BT_SUPPORT_MAP==1)
 extern const u8 sdp_map_mce_service_data[];
 #if (defined TCFG_BT_SUPPORT_MAP_MESSAGE && (TCFG_BT_SUPPORT_MAP_MESSAGE==1))
-#if (!defined TCFG_BT_SUPPORT_BIP || (TCFG_BT_SUPPORT_BIP==0))
+#if (TCFG_BT_SUPPORT_BIP==0)
 u8 l2cap_support_ertm_enable = 1;
 #endif
 u8 user_map_support_message = 1;
@@ -234,6 +234,21 @@ const int  ntp_get_time_init = 0;
 SDP_RECORD_HANDLER_REGISTER(pan_sdp_record_item) = {
     .service_record = (u8 *)sdp_pan_service_data,
     .service_record_handle =  0x0001000E,
+};
+#endif
+
+#if (TCFG_BT_SUPPORT_FTP==1)
+#if ((TCFG_BT_SUPPORT_BIP==0) && (TCFG_BT_SUPPORT_MAP_MESSAGE==0))
+u8 l2cap_support_ertm_enable = 1;
+#endif
+u8 ftp_profile_support = 1;
+#endif
+#if (TCFG_BT_SUPPORT_FTP_SERVER==1)
+extern const u8 sdp_ftp_service_data[];
+u8 ftp_server_profile_support = 1;
+SDP_RECORD_HANDLER_REGISTER(ftp_sdp_record_item) = {
+    .service_record = (u8 *)sdp_ftp_service_data,
+    .service_record_handle = 0x0001000F,
 };
 #endif
 

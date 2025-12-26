@@ -73,6 +73,7 @@ extern void ble_app_disconnect(void);
 extern void updata_parm_set(UPDATA_TYPE up_type, void *priv, u32 len);
 extern u8 check_le_pakcet_sent_finish_flag(void);
 extern void rcsp_update_ancs_disconn_handler(void);
+extern u8 rcsp_update_with_crc_flag_set(u8 flag);
 
 static u8 update_flag = 0;
 static u8 tws_need_update = 0;             //标志耳机是否需要强制升级
@@ -493,6 +494,22 @@ int JL_rcsp_update_cmd_resp(void *priv, u8 OpCode, u8 OpCode_SN, u8 *data, u16 l
         JL_CMD_response_send(OpCode, JL_PRO_STATUS_SUCCESS, OpCode_SN, NULL, 0, ble_con_handle, spp_remote_addr);
         rcsp_rcsp_reboot_dev();
 
+        break;
+    case JL_OPCODE_CHECK_DEVICE_CONN_NUM:
+        switch (data[0]) {
+        case 0:
+            u8 resp[3] = {0};
+            resp[0] = data[0];
+            resp[1] = data[1];
+            if (1 == resp[1]) {
+                resp[2] = rcsp_update_with_crc_flag_set(data[2]);
+            }
+            JL_CMD_response_send(OpCode, JL_PRO_STATUS_SUCCESS, OpCode_SN, resp, sizeof(resp), ble_con_handle, spp_remote_addr);
+            break;
+        default:
+            JL_CMD_response_send(OpCode, JL_PRO_STATUS_FAIL, OpCode_SN, NULL, 0, ble_con_handle, spp_remote_addr);
+            break;
+        }
         break;
 #if 0//TCFG_RCSP_DUAL_CONN_ENABLE
     case JL_OPCODE_CHECK_DEVICE_CONN_NUM:

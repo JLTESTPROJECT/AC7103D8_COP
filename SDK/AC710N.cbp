@@ -1382,6 +1382,8 @@
 <Unit filename="audio/common/pcm_data/sine_pcm.h" />
 <Unit filename="audio/common/power/mic_power_manager.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/common/power/mic_power_manager.h" />
+<Unit filename="audio/common/tws_frame_sync.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="audio/common/tws_frame_sync.h" />
 <Unit filename="audio/common/uartPcmSender.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="audio/common/uartPcmSender.h" />
 <Unit filename="audio/cpu/br56/audio_accelerator/hw_fft.c"><Option compilerVer="CC"/></Unit>
@@ -1618,6 +1620,7 @@
 <Unit filename="cpu/components/ir_decoder.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="cpu/components/ir_encoder.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="cpu/components/led_api.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="cpu/components/led_spi.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="cpu/components/pwm_led_v2.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="cpu/components/rdec_soft.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="cpu/components/touch/lp_touch_key_tool.c"><Option compilerVer="CC"/></Unit>
@@ -1636,6 +1639,7 @@
 <Unit filename="cpu/periph_demo/spi_test.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="cpu/periph_demo/two_io_led_test.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="cpu/periph_demo/uart_test.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="interface/btctrler/adapter/include/misc_interface.h" />
 <Unit filename="interface/btctrler/ble/hci_ll.h" />
 <Unit filename="interface/btctrler/ble/ll_config.h" />
 <Unit filename="interface/btctrler/btcontroller_mode.h" />
@@ -1736,6 +1740,7 @@
 <Unit filename="interface/driver/cpu/periph/ir_decoder.h" />
 <Unit filename="interface/driver/cpu/periph/ir_encoder.h" />
 <Unit filename="interface/driver/cpu/periph/led_api.h" />
+<Unit filename="interface/driver/cpu/periph/led_spi.h" />
 <Unit filename="interface/driver/cpu/periph/lp_touch_key_common.h" />
 <Unit filename="interface/driver/cpu/periph/lp_touch_key_identify_algo.h" />
 <Unit filename="interface/driver/cpu/periph/lp_touch_key_range_algo.h" />

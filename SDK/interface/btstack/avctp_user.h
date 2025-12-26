@@ -382,6 +382,11 @@ typedef enum {
     USER_CTRL_ATWS_AUDIO_SHARE_CMD_SUSPEND					,
     USER_CTRL_ADT_SYNC_CONNECT_FLAG,
 
+    USER_CTRL_FTP_CMD_BEGIN = 0x200,
+    USER_CTRL_FTP_CONNECTION,
+    USER_CTRL_FTP_DISCONNECTION,
+    USER_CTRL_FTP_CMD_END,
+
     USER_CTRL_LAST
 } USER_CMD_TYPE;
 
@@ -464,6 +469,35 @@ typedef enum {
     BT_STATUS_PHONE_NAME,   /*获取来电号码name*/
     BT_STATUS_CALL_MIC_VOL_CHANGE,
 } STATUS_FOR_USER;
+
+typedef enum {
+    FTP_NOT_USE,
+    FTP_WAIT_OPEN_RFCOMM_L2CAP,            /* 等待RFCOMM/L2CAP连接 */
+    FTP_OBEX_SEND_CONNECT,                 /* 发送连接请求 */
+    FTP_OBEX_CONNECT_SUCCESS,              /* 连接成功 */
+    FTP_OBEX_SEND_PATH,                    /* 发送路径设置请求 */
+    FTP_OBEX_SEND_LISTING,                 /* 发送列表获取请求 */
+    FTP_OBEX_SEND_PUT_OBJ,                 /* 发送上传文件请求 */
+    FTP_OBEX_SEND_GEI_OBJ,                 /* 发送获取文件请求 */
+    FTP_OBEX_SEND_SET_PERMISSION_OBJ,      /* 发送设置权限请求 */
+    FTP_OBEX_SEND_MOVE_RENAME_OBJ,         /* 发送移动/重命名请求 */
+    FTP_OBEX_SEND_CPY_OBJ,                 /* 发送复制文件请求 */
+    FTP_OBEX_SEND_DELET_FOLDERS,           /* 发送删除文件夹请求 */
+    FTP_OBEX_SEND_NEW_FOLDERS,             /* 发送创建新文件夹请求 */
+} FTP_STATUS;
+
+typedef enum {
+    COPY_ACTION,               /* 文件复制操作 */
+    MOVE_RENAME_ACTION,         /* 文件移动/重命名操作 */
+    SET_PERMISSION_ACTION,      /* 文件权限设置操作 */
+} FTP_Action_ID;
+
+typedef enum {
+    FTP_DATA_STATUS_START,	        //开始包
+    FTP_DATA_STATUS_CONTINUE,		//继续包(中间包)
+    FTP_DATA_STATUS_STOP,			//结束包
+    FTP_DATA_STATUS_ERR,			//错误包，
+} FTP_DATA_STATUS;
 
 typedef enum {
     BT_CALL_BATTERY_CHG = 0, //电池电量改变

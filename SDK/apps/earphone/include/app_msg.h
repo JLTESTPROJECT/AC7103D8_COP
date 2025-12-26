@@ -148,6 +148,7 @@ enum {
     APP_MSG_TWS_UNPAIRED,
     APP_MSG_TWS_PAIR_SUSS,
     APP_MSG_TWS_CONNECTED,
+    APP_MSG_TWS_DISCONNECTED,
     APP_MSG_TWS_WAIT_PAIR,                      // 等待配对
     APP_MSG_TWS_START_PAIR,                     // 手动发起配对
     APP_MSG_TWS_START_CONN,                     // 开始回连TWS
@@ -162,6 +163,10 @@ enum {
     //音频相关消息
     APP_MSG_VOL_UP,
     APP_MSG_VOL_DOWN,
+    APP_MSG_UAC0_VOL_DOWN,                      //声卡0音量减
+    APP_MSG_UAC0_VOL_UP,                        //声卡0音量加
+    APP_MSG_UAC1_VOL_DOWN,                      //声卡1音量减
+    APP_MSG_UAC1_VOL_UP,                        //声卡1音量加
     APP_MSG_MAX_VOL,
     APP_MSG_MIN_VOL,
     APP_MSG_MIC_OPEN,

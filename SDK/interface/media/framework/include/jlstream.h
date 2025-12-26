@@ -137,6 +137,7 @@ enum stream_event {
     STREAM_EVENT_GLOBAL_PAUSE,
     STREAM_EVENT_GET_NOISEGATE_CALLBACK,
     STREAM_EVENT_GET_OUTPUT_NODE_DELAY,
+    STREAM_EVENT_GET_A2DP_STATE,
 };
 
 enum stream_scene : u8 {
@@ -153,6 +154,7 @@ enum stream_scene : u8 {
     STREAM_SCENE_PC_SPK,
     STREAM_SCENE_PC_MIC,
     STREAM_SCENE_IIS,
+    STREAM_SCENE_MUTI_CH_IIS,
     STREAM_SCENE_MIC,			//mic 模式
     STREAM_SCENE_MIC_EFFECT,
     STREAM_SCENE_MIC_EFFECT2,
@@ -163,7 +165,11 @@ enum stream_scene : u8 {
     STREAM_SCENE_ADDA_LOOP,
     STREAM_SCENE_WIRELESS_MIC,  //16 wireless mic
     STREAM_SCENE_LOCAL_TWS,
+    STREAM_SCENE_MIDI,      //MIDI 琴解码
 
+    STREAM_SCENE_LOUDSPEAKER_IIS, //扩音器IIS
+    STREAM_SCENE_LOUDSPEAKER_MIC, //扩音器MIC
+    STREAM_SCENE_ENV_NOISE,
     STREAM_SCENE_USER_DEFINED, //自定义流程
 
     //最大32个场景，如果大于32个场景，需把tone、ring, key_tone场景号往后挪
@@ -364,6 +370,8 @@ struct stream_thread {
     u8 debug;
     u8 start;
     char name[16];
+    u32 run_time;
+    u32 begin_usec;
     OS_SEM sem;
     OS_MUTEX mutex;
     struct jlstream *stream;
@@ -526,8 +534,6 @@ struct jlstream {
     enum stream_scene scene;
 
     u16 output_time;
-    u16 run_time;
-    u32 begin_usec;
     u32 first_start_usec;
 
     u32 end_jiffies;

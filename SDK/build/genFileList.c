@@ -223,6 +223,7 @@ c_SRC_FILES += \
 	  audio/common/audio_volume_mixer.c \
 	  audio/common/audio_effect_verify.c \
 	  audio/common/pcm_data/sine_pcm.c \
+	  audio/common/tws_frame_sync.c \
 
 #if AUDIO_IIS_LRCLK_CAPTURE_EN
 c_SRC_FILES += \
@@ -1724,6 +1725,7 @@ c_SRC_FILES += \
 	  cpu/components/iic_api.c \
 	  cpu/components/ir_encoder.c \
 	  cpu/components/ir_decoder.c \
+	  cpu/components/led_spi.c \
 	  cpu/components/rdec_soft.c \
 
 #if TCFG_PWMLED_ENABLE

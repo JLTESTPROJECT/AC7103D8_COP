@@ -62,12 +62,61 @@ const u8 adc_vbat_ch_en = 1;
 const u8 adc_vtemp_ch_en = 1;
 const u32 lib_adc_clk_max = 500 * 1000;
 const u8 gpadc_battery_mode = WEIGHTING_MODE; //使用IOVDD供电时,禁止使用 MEAN_FILTERING_MODE 模式
-const u32 gpadc_ch_power = AD_CH_PMU_VBAT_4; //根据供电方式选择通道
-const u8 gpadc_ch_power_div = 4; //分压系数,需和gpadc_ch_power匹配
+
+#if (defined(TCFG_POWER_SUPPLY_MODE) && (TCFG_POWER_SUPPLY_MODE == 0))
+
+const u32 gpadc_ch_power = AD_CH_IOVDD;    //根据供电方式选择通道
+const u8 gpadc_ch_power_div = 1;                //未定义默认配置1
+const u8 gpadc_power_supply_mode = 0; //映射供电方式
+
+#elif (defined(TCFG_POWER_SUPPLY_MODE) && (TCFG_POWER_SUPPLY_MODE == 1))
+
+const u32 gpadc_ch_power = AD_CH_PMU_VPWR_4;    //根据供电方式选择通道
+const u8 gpadc_ch_power_div = 4;                //未定义默认配置4
+const u8 gpadc_power_supply_mode = 1; //映射供电方式
+
+#else
+
+#if (defined(TCFG_VBAT_CH) && (TCFG_VBAT_CH != AD_CH_PMU_VBAT_2) && (TCFG_VBAT_CH != AD_CH_PMU_VBAT_4))
+
+const u32 gpadc_ch_power = TCFG_VBAT_CH;    //根据供电方式选择通道
+
+#else
+
+#ifdef AD_CH_PMU_VBAT_2
+const u32 gpadc_ch_power = AD_CH_PMU_VBAT_2; //未定义默认VBAT通道
+#else
+const u32 gpadc_ch_power = AD_CH_PMU_VBAT_4; //未定义默认VBAT通道
+#endif
+
+#endif
+
+#if (defined(TCFG_BAT_EXT_DIV) && defined(TCFG_VBAT_CH) && (TCFG_VBAT_CH != AD_CH_PMU_VBAT_2) && (TCFG_VBAT_CH != AD_CH_PMU_VBAT_4))
+
+const u8 gpadc_ch_power_div = TCFG_BAT_EXT_DIV; //分压系数,需和gpadc_ch_power匹配 例如:200/(200+600)
+const u8 gpadc_power_supply_mode = 3; //映射供电方式
+
+#else
+
+#ifdef AD_CH_PMU_VBAT_2
+const u8 gpadc_ch_power_div = 2;                //未定义默认配置2
+#else
+const u8 gpadc_ch_power_div = 4;                //未定义默认配置4
+#endif
 const u8 gpadc_power_supply_mode = 2; //映射供电方式
+
+#endif
+
+#endif
+
 const u16 gpadc_battery_trim_vddiom_voltage = 2800; //电池trim 使用的vddio电压
 const u16 gpadc_battery_trim_voltage = 3700; //电池trim 使用的vbat电压
-const u16 gpadc_extern_voltage_trim = 0; //使用外部输入方式校准的电压
+
+#ifdef TCFG_BAT_EX_ADJUST_ENABLE
+const u16 gpadc_extern_voltage_trim = TCFG_BAT_EX_ADJUST_ENABLE ? 2500 : 0; //使用外部输入方式校准的电压
+#else
+const u16 gpadc_extern_voltage_trim = 0;
+#endif
 
 /* 是否开启把vm配置项暂存到ram的功能 */
 /* 具体使用方法和功能特性参考《项目帮助文档》的“11.4. 配置项管理 -VM配置项暂存RAM功能描述” */

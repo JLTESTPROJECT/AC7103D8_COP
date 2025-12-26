@@ -651,7 +651,7 @@ static int bt_connction_status_event_handler(struct bt_event *bt)
         log_info("++++++++ BT_STATUS_DISCON_A2DP_CH +++++++++  \n");
         break;
     case BT_STATUS_AVRCP_INCOME_OPID:
-        log_info("BT_STATUS_AVRCP_INCOME_OPID:%d\n", bt->value);
+        log_info("BT_STATUS_AVRCP_INCOME_OPID:0x%x\n", bt->value);
         if (bt->value == AVC_VOLUME_UP) {
             app_audio_volume_up(1);
         } else if (bt->value == AVC_VOLUME_DOWN) {
@@ -1235,7 +1235,30 @@ int bt_app_msg_handler(int *msg)
 #endif
         return 0;
     }
-
+#if JL_UNICAST_DUAL_UAC_ENABLE
+    switch (msg[0]) {
+    case APP_MSG_UAC0_VOL_DOWN:
+        log_info("APP_MSG_UAC0_VOL_DOWN\n");
+        app_var.uac0_vol = (app_var.uac0_vol >= 5) ? (app_var.uac0_vol - 5) : 0;
+        le_audio_set_dual_uac_vol(app_var.uac0_vol, app_var.uac1_vol);
+        return 0;
+    case APP_MSG_UAC0_VOL_UP:
+        log_info("APP_MSG_UAC0_VOL_UP\n");
+        app_var.uac0_vol = (app_var.uac0_vol <= 95) ? (app_var.uac0_vol + 5) : 100;
+        le_audio_set_dual_uac_vol(app_var.uac0_vol, app_var.uac1_vol);
+        return 0;
+    case APP_MSG_UAC1_VOL_DOWN:
+        log_info("APP_MSG_UAC1_VOL_DOWN\n");
+        app_var.uac1_vol = (app_var.uac1_vol >= 5) ? (app_var.uac1_vol - 5) : 0;
+        le_audio_set_dual_uac_vol(app_var.uac0_vol, app_var.uac1_vol);
+        return 0;
+    case APP_MSG_UAC1_VOL_UP:
+        log_info("APP_MSG_UAC1_VOL_UP\n");
+        app_var.uac1_vol = (app_var.uac1_vol <= 95) ? (app_var.uac1_vol + 5) : 100;
+        le_audio_set_dual_uac_vol(app_var.uac0_vol, app_var.uac1_vol);
+        return 0;
+    }
+#endif
     /* 下面是蓝牙相关消息,从机不用处理  */
 #if TCFG_USER_TWS_ENABLE
     if (tws_api_get_role_async() == TWS_ROLE_SLAVE) {
