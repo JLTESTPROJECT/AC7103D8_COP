@@ -507,6 +507,7 @@ void connected_perip_connect_recoder(u8 en, u16 acl_hdl)
                 if (p->cis_hdl_info[i].acl_hdl == acl_hdl) {
                     params.fmt.flush_timeout = p->cis_hdl_info[i].flush_timeout;
                     params.fmt.isoIntervalUs = p->cis_hdl_info[i].isoIntervalUs;
+                    params.conn = p->cis_hdl_info[i].cis_hdl;
                     _bn_p_to_c = p->cis_hdl_info[i].BN_P_To_C;
                 }
             }
