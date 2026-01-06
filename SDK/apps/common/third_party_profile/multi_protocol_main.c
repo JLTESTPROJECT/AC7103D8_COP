@@ -590,7 +590,9 @@ void bt_ble_adv_enable(u8 enable)
 {
     multi_protocol_bt_ble_enable(enable);
 }
+#endif
 
+#if TCFG_USER_BLE_ENABLE
 //编译问题加几个空的
 _WEAK_ void bt_ble_init(void)
 {

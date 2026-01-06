@@ -516,7 +516,7 @@ void bt_function_select_init()
     bt_music_info_handle_register(user_get_bt_music_info);
 #endif
 
-#if ((TCFG_BT_SUPPORT_HID==1) && TCFG_USER_EDR_ENABLE)
+#if ((TCFG_BT_SUPPORT_HID == 1) && TCFG_USER_EDR_ENABLE) && (!TCFG_BT_DUAL_CONN_ENABLE)
     edr_hid_config_init();
 #endif
 }

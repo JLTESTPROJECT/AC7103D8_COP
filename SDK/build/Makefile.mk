@@ -236,6 +236,7 @@ LFLAGS := \
 	cpu/br56/liba/crypto_toolbox_Osize.a \
 	cpu/br56/liba/lib_dns.a \
 	cpu/br56/liba/lib_dns_v3.a \
+	apps/common/third_party_profile/tuya_protocol/sdk/lib/libtuya_lib.a \
 	cpu/br56/liba/update.a \
 	cpu/br56/liba/cbuf.a \
 	cpu/br56/liba/lbuf.a \

@@ -76,7 +76,7 @@ typedef struct __custom_edr_info {
 
 
 
-extern struct sbox_state_info user_info;
+extern struct sbox_state_info sbox_user_info;
 extern struct user_time phone_time;
 extern struct custom_music_info local_music_info;
 

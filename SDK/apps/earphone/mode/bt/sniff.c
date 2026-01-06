@@ -53,6 +53,9 @@ static u8 sniff_enable = 1;
 static u8 sniff_enable = 1;
 #endif
 
+#ifndef TCFG_SNIFF_CHECK_TIME
+#define TCFG_SNIFF_CHECK_TIME 5 // 检测时间
+#endif
 #define SNIFF_CNT_TIME                  TCFG_SNIFF_CHECK_TIME  //空闲6S之后进入sniff模式
 #define SNIFF_MAX_INTERVALSLOT          800
 #define SNIFF_MIN_INTERVALSLOT          100

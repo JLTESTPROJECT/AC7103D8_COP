@@ -1005,7 +1005,7 @@ c_SRC_FILES += \
 #endif
 
 
-#if THIRD_PARTY_PROTOCOLS_SEL || TCFG_LE_AUDIO_APP_CONFIG
+#if TCFG_USER_BLE_ENABLE || THIRD_PARTY_PROTOCOLS_SEL || TCFG_LE_AUDIO_APP_CONFIG
 c_SRC_FILES += \
 	apps/common/third_party_profile/multi_protocol_main.c \
 	apps/common/third_party_profile/multi_protocol_common.c \

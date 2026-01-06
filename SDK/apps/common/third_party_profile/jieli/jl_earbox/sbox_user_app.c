@@ -32,7 +32,7 @@
 #endif
 
 struct user_time phone_time;
-struct sbox_state_info user_info;
+struct sbox_state_info sbox_user_info;
 struct custom_music_info local_music_info;
 
 
@@ -58,8 +58,10 @@ struct s_box_app_cb sbox_cb_func = {
     .sbox_control_anc = custom_control_anc_mode,
     .sbox_control_eq = custom_control_eq_mode_switch,
     .sbox_control_key = NULL,//custom_control_key_setting,
+#if (!TCFG_BT_DUAL_CONN_ENABLE)
     .sbox_control_tiktok = custom_control_tiltok,
     .sbox_control_photo = custom_control_photo,
+#endif
     // .sbox_control_playmode = custom_control_play_mode,
     .sbox_control_language = NULL,//custom_control_tone_language,
     .sbox_control_find_phone =  custom_control_find_ear_tone,
@@ -103,7 +105,7 @@ void custom_sync_all_info_to_box(void)
 #if CONFIG_ANC_ENABLE
     all_info[2] = anc_mode_get();
 #endif
-    all_info[3] = a2dp_player_runing() ? 1 : 2; //user_info.music_states;
+    all_info[3] = a2dp_player_runing() ? 1 : 2; //sbox_user_info.music_states;
     all_info[4] = app_audio_get_volume(APP_AUDIO_STATE_MUSIC);
     if ('L' == channel) {
         all_info[5] = 10 * (battery_value_to_phone_level() + 1); //get_vbat_percent();
@@ -195,7 +197,7 @@ __attribute__((weak))
 void custom_sync_music_state(void)
 {
     log_info("%s \n", __func__);
-    u8 music_state = user_info.music_states;
+    u8 music_state = sbox_user_info.music_states;
     sbox_ble_att_send_data(CUSTOM_BLE_MUSIC_STATE_CONTROL_CMD, &music_state, sizeof(music_state)); //将当前音乐状态回复给手表
 }
 
@@ -326,16 +328,16 @@ void custom_control_music_state(void *data)
     } else {
         bt_addr = bt_get_current_remote_addr();
     }
-    if (data == 0x01) { // 播放bt_cmd_prepare
+    if (*datas == 0x01) { // 播放bt_cmd_prepare
         bt_cmd_prepare_for_addr(bt_addr, USER_CTRL_AVCTP_OPID_PLAY, 0, NULL);
-    } else if (data == 0x02) { // 暂停
+    } else if (*datas == 0x02) { // 暂停
         bt_cmd_prepare_for_addr(bt_addr, USER_CTRL_AVCTP_OPID_PLAY, 0, NULL);
-    } else if (data == 0x03) { // 上一曲
+    } else if (*datas == 0x03) { // 上一曲
         bt_cmd_prepare_for_addr(bt_addr, USER_CTRL_AVCTP_OPID_PREV, 0, NULL);
-    } else if (data == 0x04) { // 下一曲
+    } else if (*datas == 0x04) { // 下一曲
         bt_cmd_prepare_for_addr(bt_addr, USER_CTRL_AVCTP_OPID_NEXT, 0, NULL);
     } else {
-        log_info("CUSTOM_BLE_MUSIC_STATE_CONTROL_CMD volue:%x valid!!!!\n", data);
+        log_info("CUSTOM_BLE_MUSIC_STATE_CONTROL_CMD volue:%x valid!!!!\n", *datas);
     }
 #else
     if (*datas == 0x01) { // 播放bt_cmd_prepare
@@ -361,6 +363,7 @@ void custom_control_key_setting(void *data)
     log_info("%s \n", __func__);
 }
 
+#if (!TCFG_BT_DUAL_CONN_ENABLE)
 //设置手机的抖音点赞
 __attribute__((weak))
 void custom_control_tiltok(void *datas)
@@ -381,6 +384,7 @@ void custom_control_photo(void *data)
     key_take_photo();
 #endif
 }
+#endif
 
 // //仓设置耳机进出低延时模式
 // __attribute__((weak))
@@ -486,14 +490,14 @@ void custom_control_phone_call(void *datas)
             if (get_tws_sibling_connect_state()) {
                 tws_api_sync_call_by_uuid(0xA2122623, SYNC_CMD_CALL_MUTE, 200);
             } else {
-                user_info.phone_call_mute = (!user_info.phone_call_mute);
+                sbox_user_info.phone_call_mute = (!sbox_user_info.phone_call_mute);
             }
             break;
         case 4:
             if (get_tws_sibling_connect_state()) {
                 tws_api_sync_call_by_uuid(0xA2122623, SYNC_CMD_CALL_MUTE, 200);
             } else {
-                user_info.phone_call_mute = (!user_info.phone_call_mute);
+                sbox_user_info.phone_call_mute = (!sbox_user_info.phone_call_mute);
             }
             break;
         default:
@@ -925,7 +929,7 @@ static void sbox_tws_app_info_sync(int cmd, int err)
         }
         break;
     case SYNC_CMD_CALL_MUTE:
-        user_info.phone_call_mute = (!user_info.phone_call_mute);
+        sbox_user_info.phone_call_mute = (!sbox_user_info.phone_call_mute);
         break;
     case SYNC_CMD_SBOX_POWER_OFF_TOGETHER:
         sys_enter_soft_poweroff(POWEROFF_NORMAL_TWS);
@@ -966,7 +970,7 @@ static int bt_call_status_event_handler(int *msg)
     case BT_STATUS_PHONE_HANGUP:
         sbox_cb_func.sbox_sync_call_state(SBOX_CALL_HANDUP);
         // custom_sync_call_state(SBOX_CALL_HANDUP);
-        user_info.phone_call_mute = 0;
+        sbox_user_info.phone_call_mute = 0;
         break;
     case BT_STATUS_PHONE_ACTIVE:
         sbox_cb_func.sbox_sync_call_state(SBOX_CALL_ACTIVE);
@@ -1025,26 +1029,26 @@ static int sbox_btstack_event_handler(int *_event)
         break;
     case BT_STATUS_AVRCP_INCOME_OPID:
         u8 connect_num = bt_get_total_connect_dev();
-        log_info("sbox_btstack_event_handler:%d connect_num%d value%d user_info.music_states%d\n", event->event, connect_num, event->value, user_info.music_states);
+        log_info("sbox_btstack_event_handler:%d connect_num%d value%d sbox_user_info.music_states%d\n", event->event, connect_num, event->value, sbox_user_info.music_states);
 #if TCFG_BT_DUAL_CONN_ENABLE
         if (connect_num == 1) {
             if (event->value == AVC_PLAY) {
-                user_info.music_states = 1;
-                custom_sync_music_state_pro(1);
+                sbox_user_info.music_states = 1;
+                custom_sync_music_state();
             } else if (event->value == AVC_PAUSE) {
-                user_info.music_states = 0;
-                custom_sync_music_state_pro(2);
+                sbox_user_info.music_states = 0;
+                custom_sync_music_state();
             }
         } else if (connect_num == 2) {
             if (memcmp(last_addr, tmpbuf, 6) == 0) {
                 if (event->value == AVC_PLAY) {
                     memcpy(last_addr, event->args, 6);
-                    user_info.music_states = 1;
-                    custom_sync_music_state_pro(1);
+                    sbox_user_info.music_states = 1;
+                    custom_sync_music_state();
                 } else if (event->value == AVC_PAUSE) {
-                    user_info.music_states = 0;
+                    sbox_user_info.music_states = 0;
                     memset(last_addr, 0, 6);
-                    custom_sync_music_state_pro(2);
+                    custom_sync_music_state();
                 }
             } else {
                 if (memcmp(last_addr, event->args, 6) == 0) {
@@ -1053,23 +1057,23 @@ static int sbox_btstack_event_handler(int *_event)
                     a2dp_addr_is_same = 0;
                 }
 
-                if ((event->value == AVC_PLAY) && user_info.music_states && (a2dp_addr_is_same == 0)) { //一拖二播歌抢断的情况
+                if ((event->value == AVC_PLAY) && sbox_user_info.music_states && (a2dp_addr_is_same == 0)) { //一拖二播歌抢断的情况
                     putchar('F');
                     memcpy(last_addr, event->args, 6);
-                } else if ((event->value == AVC_PLAY) && (user_info.music_states == 0)) {
+                } else if ((event->value == AVC_PLAY) && (sbox_user_info.music_states == 0)) {
                     putchar('G');
-                    user_info.music_states = 1;
+                    sbox_user_info.music_states = 1;
                     memcpy(last_addr, event->args, 6);
-                    custom_sync_music_state_pro(1);
-                } else if ((event->value == AVC_PAUSE) &&  user_info.music_states && (a2dp_addr_is_same == 0)) {
+                    custom_sync_music_state();
+                } else if ((event->value == AVC_PAUSE) &&  sbox_user_info.music_states && (a2dp_addr_is_same == 0)) {
                     putchar('H');
-                    // user_info.music_states=0;
-                    // custom_sync_music_state_pro(2);
+                    // sbox_user_info.music_states=0;
+                    // custom_sync_music_state();
                     // memset(last_addr,0,6);
-                } else if ((event->value == AVC_PAUSE) &&  user_info.music_states && (a2dp_addr_is_same == 1)) {
+                } else if ((event->value == AVC_PAUSE) &&  sbox_user_info.music_states && (a2dp_addr_is_same == 1)) {
                     putchar('J');
-                    user_info.music_states = 0;
-                    custom_sync_music_state_pro(2);
+                    sbox_user_info.music_states = 0;
+                    custom_sync_music_state();
                     memset(last_addr, 0, 6);
                 }
             }
@@ -1079,10 +1083,10 @@ static int sbox_btstack_event_handler(int *_event)
         // memcpy(last_addr,event->args,6);
 #else
         if (event->value == AVC_PLAY) {
-            user_info.music_states = 1;
+            sbox_user_info.music_states = 1;
             custom_sync_music_state();
         } else if (event->value == AVC_PAUSE) {
-            user_info.music_states = 2;
+            sbox_user_info.music_states = 2;
             custom_sync_music_state();
         }
 #endif

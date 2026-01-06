@@ -66,8 +66,18 @@ const struct btif_item btif_table[] = {
     {0, 						0 },   //reserved cfg
 };
 
-
-#if TCFG_BT_SNIFF_ENABLE
+#ifndef CONFIG_LRC_WIN_SIZE
+#define CONFIG_LRC_WIN_SIZE 400 // LRC窗口初值
+#endif
+#ifndef CONFIG_LRC_WIN_STEP
+#define CONFIG_LRC_WIN_STEP 400 // LRC窗口步进
+#endif
+#ifndef CONFIG_OSC_WIN_SIZE
+#define CONFIG_OSC_WIN_SIZE 400 // OSC窗口初值
+#endif
+#ifndef CONFIG_OSC_WIN_STEP
+#define CONFIG_OSC_WIN_STEP 400 // OSC窗口步进
+#endif
 const struct lp_ws_t lp_winsize = {
     .lrc_ws_inc = CONFIG_LRC_WIN_STEP,      //260
     .lrc_ws_init = CONFIG_LRC_WIN_SIZE,
@@ -75,7 +85,6 @@ const struct lp_ws_t lp_winsize = {
     .bt_osc_ws_init = CONFIG_OSC_WIN_SIZE,
     .osc_change_mode = 1,                       //低功耗时钟，0：仅使用LRC 1：自动切换 2：保留
 };
-#endif
 
 u16 bt_get_tws_device_indicate(u8 *tws_device_indicate)
 {
@@ -363,9 +372,7 @@ void cfg_file_parse(u8 idx)
     /*     lp_winsize.osc_change_mode = lrc_cfg.lrc_change_mode; */
     /* } */
     /* printf("%d %d %d ",lp_winsize.lrc_ws_inc,lp_winsize.lrc_ws_init,lp_winsize.osc_change_mode); */
-#if TCFG_BT_SNIFF_ENABLE
     lp_winsize_init(&lp_winsize);
-#endif
 }
 
 int bt_modify_name(u8 *new_name)

@@ -551,7 +551,7 @@ int app_auracast_bass_server_event_callback(uint8_t event, uint8_t *packet, uint
         put_buf(packet, size);
 
         ASSERT(cur_listening_source_info);
-        auracast_sink_set_broadcast_code(&packet[1]);
+        memcpy(cur_listening_source_info->broadcast_code, &packet[1], 16);
         ret = app_auracast_sink_big_sync_create(cur_listening_source_info);
         if (ret != 0) {
         }
@@ -684,6 +684,8 @@ static int __app_auracast_sink_big_sync_create(auracast_sink_source_info_t *para
         cur_listening_source_info = malloc(sizeof(auracast_sink_source_info_t));
     }
     memcpy(cur_listening_source_info, param, sizeof(auracast_sink_source_info_t));
+    log_info("auracast sync create, set code\n");
+    auracast_sink_set_broadcast_code(cur_listening_source_info->broadcast_code);
     int ret = auracast_sink_big_sync_create(cur_listening_source_info);
     if (0 == ret) {
         if (auracast_sink_sync_timeout_hdl == 0) {
@@ -703,7 +705,7 @@ static void __le_auracast_audio_recover()
 {
     if ((recover_listening_source_info != NULL) && !le_auracast_is_running()) {
         printf("__le_auracast_audio_recover1\n");
-        int ret = auracast_sink_big_sync_create(recover_listening_source_info);
+        int ret = app_auracast_sink_big_sync_create(recover_listening_source_info);
         if (0 == ret) {
             if (auracast_sink_sync_timeout_hdl == 0) {
                 auracast_sink_sync_timeout_hdl = sys_timeout_add(NULL, auracast_sink_sync_timeout_handler, 15000);
@@ -725,8 +727,16 @@ void le_auracast_audio_recover()
 {
     printf("le_auracast_audio_recover\n");
 #if TCFG_USER_TWS_ENABLE
-    if (tws_api_get_role() != TWS_ROLE_SLAVE) {
+    if (tws_api_get_tws_state() & TWS_STA_SIBLING_CONNECTED) {
         tws_api_send_data_to_sibling(NULL, 0, 0x23482C5E);
+    } else {
+        int argv[2];
+        argv[0] = (int)__le_auracast_audio_recover;
+        argv[1] = 0;
+        int ret = os_taskq_post_type("app_core", Q_CALLBACK, 2, argv);
+        if (ret) {
+            r_printf("le_auracast taskq post err %d!\n", __LINE__);
+        }
     }
 #else
     int argv[2];
@@ -862,8 +872,6 @@ static int le_auracast_app_hci_event_handler(int *_event)
             bt_le_audio_adv_enable(0);
             bt_le_audio_adv_enable(1);
         }
-#else
-        le_auracast_stop(0);
 #endif
         le_auracast_stop(0);
         break;

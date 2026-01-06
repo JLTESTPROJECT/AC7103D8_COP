@@ -42,6 +42,7 @@ typedef struct {
     uint8_t *adv_data;
     uint16_t adv_data_len;
     uint8_t bn;
+    uint8_t broadcast_code[16];
 } auracast_sink_source_info_t;
 
 typedef enum {

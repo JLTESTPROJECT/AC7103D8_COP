@@ -2,25 +2,25 @@ project earphone_sdk/
 29f3c74e8de04f7a31d1b2db6a69f984e5cb1bbe
 
 project earphone_sdk/apps/common/
-60565b04c16b3acccacee821874da9c6384570a6
+ab8a542b601958069b48f8774c6e178fd594bab7
 
 project earphone_sdk/apps/common/device/
 e6f4bbe0cdcb0d25298c7608d2ea6e2b058bb73f
 
 project earphone_sdk/apps/earphone/
-312f6b19f867987a453c6395786f13d16f934d68
+31812db3485723677ca7c4886c55f936b08b167e
 
 project earphone_sdk/audio/
 e22d7aa5715cd0bd3199ec734b2ec2c20c5bc97a
 
 project earphone_sdk/cpu/
-b7b75b4aa7188cfdc3003bd269dd437ca9abe373
+b83c0516d493598d1eff45058229747fe5773fc5
 
 project earphone_sdk/interface/btctrler/
 faf424e9da6f41fcb4d0536d8b7f9cfd48a50386
 
 project earphone_sdk/interface/btstack/
-37f07dbaf4087ef7139d9aed180087160a9202a4
+57e3cc4afa41a1ae7625a4cc62ca8badc2db449a
 
 project earphone_sdk/interface/driver/
 89a89676c85449daf63fba4a38e2c9e3c7a09e06
@@ -44,7 +44,7 @@ project earphone_sdk/lib/bt_protocol/
 74bdb022648aea86058300f5087eb8abc7fa8c40
 
 project earphone_sdk/lib/btctrler/
-244e90c8f08047ca5aaf02e3c2da1b59d54b836a
+4a13d6a51fc93447d526f2bb5dc7d1db2fcb27ff
 
 project earphone_sdk/lib/driver/
 f95c1d791871aa921185dc6ada0c3f667fe391a3
