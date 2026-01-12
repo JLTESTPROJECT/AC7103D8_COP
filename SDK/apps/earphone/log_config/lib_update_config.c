@@ -25,6 +25,9 @@ const int support_dual_bank_update_breakpoint = 0;
 // 是否支持tws双备份升级，从机收错包重发机制
 const int support_dual_bank_slave_recv_again = 1;
 
+// 双备份主动升级模式下不升级资源区(设置为1则不升级资源区)
+const int support_dual_bank_not_update_reserve = 0;
+
 #if OTA_TWS_SAME_TIME_NEW       //使用新的同步升级流程
 const int support_ota_tws_same_time_new =  1;
 #else
