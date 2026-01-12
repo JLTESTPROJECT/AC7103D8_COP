@@ -39,6 +39,30 @@ struct fre_offset_v2_t {
     u8 data[4];
 } _GNU_PACKED_;
 
+
+/* *****************************************************************************/
+/**
+ * @brief :        bt_fre_offset_trim_flag_get
+ *
+ * @return :       The flag of frequency offset trim value stored in the BTIF area.
+ * 				   Note:This api is compatible with one-time trim procedures.
+ */
+/* *****************************************************************************/
+u8 bt_fre_offset_trim_flag_get(void)
+{
+    u8 flag = 0;
+
+    struct fre_offset_v2_t fre_offset_item;
+    u8 item_len;
+
+    item_len = syscfg_read(CFG_BT_FRE_OFFSET, (u8 *)&fre_offset_item, sizeof(struct fre_offset_v2_t));
+    if ((item_len == sizeof(struct fre_offset_v2_t)) && (fre_offset_item.crc == CRC16((u8 *)&fre_offset_item.data[0], item_len - 2))) {
+        flag = 1;
+    }
+
+    return flag;
+}
+
 static u8 bt_fre_offset_ex_init(u8 mode, u8 *offset, u8 len, u8 *once_trim_flag)
 {
     u8 tab_num = sizeof(fre_offset_store_id_tab) / sizeof(fre_offset_store_id_tab[0]);
@@ -145,6 +169,7 @@ static u8 bt_fre_offset_init(s16 *fre_offset, u8 *once_trim_flag)
         if (item_len != syscfg_read(fre_offset_store_id_tab[i], (u8 *)&fre_offset_item, item_len)) {
             break;
         }
+        /* log_info("Freq offset item[%d]: %d\n", i, fre_offset_item.offset); */
     }
 
     if ((0 == i) || (fre_offset_item.crc != CRC16((u8 *)&fre_offset_item.offset, item_len - 2))) {
@@ -215,10 +240,17 @@ static u8 bt_fre_offset_write(s16 fre_offset, u8 *once_trim_flag)
 }
 
 static bt_fre_offset_compensation_api_t app_bt_fre_offset_api = {
-    .init =	NULL,//bt_fre_offset_init,
-    .write = NULL,//bt_fre_offset_write,
+#if defined(CONFIG_CPU_BR52)
+    .init =	NULL,
+    .write = NULL,
     .ex_init = bt_fre_offset_ex_init,
     .ex_write = bt_fre_offset_ex_write,
+#else
+    .init =	bt_fre_offset_init,
+    .write = bt_fre_offset_write,
+    .ex_init = NULL,
+    .ex_write = NULL,
+#endif
 };
 
 int bt_fre_offset_storage_init(void)
@@ -230,7 +262,7 @@ int bt_fre_offset_storage_init(void)
 }
 
 //late_initcall(bt_fre_offset_storage_init);
-#ifdef CONFIG_CPU_BR52
+#if defined(CONFIG_CPU_BR52) || defined(CONFIG_CPU_BR56) || defined(CONFIG_CPU_BR50)
 late_initcall(bt_fre_offset_storage_init);
 #endif
 
