@@ -152,6 +152,28 @@
 #define AUDIO_LLNS_DNS_BASIC_CODEC_AT_RAM			0	// llns_dns降噪算法库的代码段，不包括神经网络参数的段
 #define AUDIO_JLSTREAM_TEXT_AT_RAM          0   //数据流
 
+/*通话语音处理算法*/
+#define AUDIO_CVP_TEXT_AT_RAM		        1	//COMMON TEXT
+#define AUDIO_CVP_AEC_AT_RAM		        1	//AEC
+#define AUDIO_CVP_NLP_AT_RAM		        1	//NLP
+#define AUDIO_CVP_NS_AT_RAM			        1	//ANS/下行降噪
+#define AUDIO_CVP_COMMON_AT_RAM		        1	//COMMON
+#define AUDIO_CVP_DNS_AT_RAM		        1	//DNS
+#define AUDIO_CVP_AGC_AT_RAM		        1	//AGC
+#define AUDIO_CVP_DMS_AT_RAM		        1	//双MIC DNS
+#define AUDIO_CVP_PREP_AT_RAM		        1	//COMMON 预处理
+#define AUDIO_CVP_WN_AT_RAM			        1	//抗风噪
+#define AUDIO_CVP_THIRD_AT_RAM		        1	//3MIC
+
+/*编解码编译链接配置*/
+#define AUD_AAC_DEC_AT_RAM		            1   //AAC解码
+#define AUDIO_LDAC_AT_RAM			        1	//LDAC解码
+#define AUDIO_LHDC_AT_RAM			        0	//LHDCv3/v4解码 :78K左右,如果ram不够可以只放L2的段，40K左右
+#define AUDIO_LHDC_V5_AT_RAM			    0	//LHDCV5解码 : 18K左右
+#define AUDIO_MSBC_CODEC_AT_RAM		        0	//MSBC 编解码
+#define AUDIO_CVSD_CODEC_AT_RAM		        0	//CVSD 编解码
+#define AUDIO_JLA_CODEC_AT_RAM		        1	//JLA 编解码
+
 #endif
 
 #if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN)))

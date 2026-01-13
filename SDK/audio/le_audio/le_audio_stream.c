@@ -133,7 +133,8 @@ void *le_audio_stream_create(u16 conn, struct le_audio_stream_format *fmt)
            ctx->fmt.frame_dms, ctx->fmt.isoIntervalUs, ctx->fmt.sample_rate);
     spin_lock_init(&ctx->lock);
     ctx->conn = conn;
-    ASSERT(ctx->conn != NULL, "conn is NULL; le_audio sync will not work !!!\n");
+    ASSERT(ctx->conn != 0, "conn is NULL; le_audio sync will not work !!!\n");
+
     ctx->start = 1;
 
     return ctx;

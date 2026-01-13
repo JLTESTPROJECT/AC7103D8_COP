@@ -307,4 +307,12 @@ void setup_arch()
     app_main();
 }
 
+void exception_analyze_user_callback(int unsigned *sp)
+{
+    // debug something after exception
+    printf("exception_analyze_user_callback:\n");
+    extern void mem_unfree_dump();
+    mem_unfree_dump();
+}
+
 

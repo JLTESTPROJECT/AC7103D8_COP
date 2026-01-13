@@ -88,7 +88,13 @@ enum {
     LE_AUDIO_CONN_CHECK,
 };
 
-u8 cig_support_ce = 0; //临时关闭加密音频数据功能，等dongle支持再开启
+u8 cig_support_ce = 0; //cis音频加密功能，需要dongle同步开启，1开启、0关闭
+#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_UNICAST_SINK_EN)) && TCFG_USER_TWS_ENABLE)
+u8 tws_witch_cis_power_check()
+{
+    return 1;  //开启jl_unicast tws省功耗策略
+}
+#endif
 
 /**************************************************************************************************
   Macros
@@ -604,7 +610,7 @@ static int app_connected_conn_status_event_handler(int *msg)
         log_info("remote device addr:");
         put_buf((u8 *)&acl_info->pri_ch, sizeof(acl_info->pri_ch));
 #if TCFG_JL_UNICAST_BOUND_PAIR_EN
-        u8 le_com_addr_new[6];
+        u8 le_com_addr_new[6] = {0};
         ret = syscfg_read(CFG_USER_COMMON_ADDR, le_com_addr_new, 6);
         log_info("read binding common addr\n");
         put_buf(le_com_addr_new, 6);
@@ -612,14 +618,10 @@ static int app_connected_conn_status_event_handler(int *msg)
         if (memcmp(le_com_addr_new, "\0\0\0\0\0\0", 6) != 0) { //防止空地址触发读零异常
             if (memcmp(&acl_info->pri_ch, le_com_addr_new, 6) != 0) { //地址不匹配
                 log_info("Device mismatched, connection denied!!!\n");
-                ll_hci_disconnect(acl_handle_for_disconnect_cis, CONNECTION_TERMINATED_BY_LOCAL_HOST);
+                ll_hci_disconnect(acl_info->acl_hdl, CONNECTION_TERMINATED_BY_LOCAL_HOST);
+                app_connected_mutex_post(&mutex, __LINE__);
                 break;
             }
-            log_info("Bind information error!!!\n");
-            break;
-        } else {
-            log_info("Never bind information!!!\n");
-            break;
         }
 #endif
         acl_connected_nums++;
@@ -1683,9 +1685,8 @@ void le_audio_profile_init()
         le_audio_user_server_profile_init(hid_iso_profile_data);
 #endif
         g_le_audio_hdl.le_audio_profile_ok = 1;
-        char le_audio_name[LOCAL_NAME_LEN] = "le_audio_";     //le_audio蓝牙名
-        u8 tem_len = 0;//strlen(le_audio_name);
-        memcpy(&le_audio_name[tem_len], (u8 *)bt_get_local_name(), LOCAL_NAME_LEN - tem_len);
+        char le_audio_name[LOCAL_NAME_LEN] = {0};     //le_audio蓝牙名
+        memcpy(le_audio_name, (u8 *)bt_get_local_name(), LOCAL_NAME_LEN);
         le_audio_name_reset((u8 *)le_audio_name, strlen(le_audio_name));
         le_audio_init(1);
         app_connected_init();

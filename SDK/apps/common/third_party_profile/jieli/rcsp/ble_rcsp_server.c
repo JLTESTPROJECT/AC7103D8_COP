@@ -541,6 +541,13 @@ void rcsp_cbk_packet_handler(uint8_t packet_type, uint16_t channel, uint8_t *pac
                 }
                 hci_con_handle_t con_handle = little_endian_read_16(packet, 4);
                 printf("RCSP HCI_SUBEVENT_LE_CONNECTION_COMPLETE: %0x\n", con_handle);
+#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_UNICAST_SINK_EN)
+#if (!TCFG_LE_AUDIO_RCSP_USE_SAME_ACL)
+                // 私有unicast与 RCSP 共存，需要单独设置RCSP 的rxmaxbuf，否则长数据会有问题
+                ble_op_set_rxmaxbuf(con_handle, 255);
+#endif
+#endif
+
 #if !TCFG_THIRD_PARTY_PROTOCOLS_SIMPLIFIED
 #if TCFG_USER_TWS_ENABLE
                 if (app_var.goto_poweroff_flag) {

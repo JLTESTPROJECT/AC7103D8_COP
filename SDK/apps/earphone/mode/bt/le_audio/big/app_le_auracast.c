@@ -15,6 +15,7 @@
 #include "app_le_auracast.h"
 #include "a2dp_media_codec.h"
 #include "le/le_user.h"
+#include "user_cfg.h"
 #if TCFG_USER_TWS_ENABLE
 #include "classic/tws_api.h"
 #endif
@@ -834,7 +835,9 @@ static int le_auracast_app_msg_handler(int *msg)
     switch (msg[0]) {
     case APP_MSG_STATUS_INIT_OK:
         printf("app_auracast APP_MSG_STATUS_INIT_OK");
-
+        char le_audio_name[LOCAL_NAME_LEN] = {0};
+        memcpy(le_audio_name, (u8 *)bt_get_local_name(), LOCAL_NAME_LEN);
+        le_audio_name_reset((u8 *)le_audio_name, strlen(le_audio_name));
 #if !(TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_UNICAST_SINK_EN)
         le_audio_init(3);
         bt_le_audio_adv_enable(1);

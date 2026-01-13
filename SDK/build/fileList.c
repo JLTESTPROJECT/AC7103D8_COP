@@ -14,6 +14,11 @@ objs += \
       $(ROOT)/audio/framework/node_list.o \
 
 objs += \
+	  $(ROOT)/audio/framework/nodes/audio_debug_node.o
+
+
+
+objs += \
       $(ROOT)/audio/framework/nodes/virtual_udisk_node.o
 
 objs += \
@@ -946,7 +951,9 @@ objs += \
 
 objs += \
 	$(ROOT)/apps/common/third_party_profile/jieli/rcsp/server/functions/file_transfer/file_delete.o \
-	$(ROOT)/apps/common/third_party_profile/jieli/rcsp/server/functions/file_transfer/file_trans_back.o \
+	$(ROOT)/apps/common/third_party_profile/jieli/rcsp/server/functions/file_transfer/file_trans_back.o
+
+objs += \
 	$(ROOT)/apps/common/third_party_profile/jieli/rcsp/server/functions/file_transfer/file_transfer.o \
     $(ROOT)/apps/common/third_party_profile/jieli/rcsp/server/functions/file_transfer/file_transfer_sync.o
 

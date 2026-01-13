@@ -389,8 +389,8 @@ void smart_voice_mcu_mic_suspend(void)
 static int audio_main_adc_mic_open(struct voice_mic_data *voice)
 {
     int ret = 0;
-    if (voice->main_adc) {
-        printf("audio main adc mic already  open !!!");
+    if (voice->main_adc || adc_file_is_runing()) {
+        printf("audio main adc mic already  open:-%p -%d !!!", voice->main_adc, adc_file_is_runing());
         return 0;
     }
     voice->main_adc = zalloc(sizeof(struct main_adc_context));

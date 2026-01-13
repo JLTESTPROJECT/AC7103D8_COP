@@ -189,11 +189,12 @@ SECTIONS
 		/* *(.baseband_manger.text) */
 		/* *(.lmp_rxtx_v2.text) */
 		/* *(.baseband.text) */
-        *(.tws_lmp_sync.text)
-        *(.tws_conn_edr.text)
-        *(.tws_esco.text)
-
-        *(.jlstream.text.cache.L2)
+#if !(TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN | LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN))
+		*(.tws_lmp_sync.text)
+		*(.tws_conn_edr.text)
+		*(.tws_esco.text)
+		*(.jlstream.text.cache.L2)
+#endif
 		//*(.dac_node.text)
 		//*(.jlstream.text)
 		//*(.jlstream.text*)

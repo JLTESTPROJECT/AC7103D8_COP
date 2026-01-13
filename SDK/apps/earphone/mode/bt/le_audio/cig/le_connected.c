@@ -1010,6 +1010,17 @@ static void connected_iso_callback(const void *const buf, size_t length, void *p
                         le_audio_stream_rx_frame(hdl->rx_player.rx_stream, (void *)multi_cis_rx_buf, 2, list_buf->ts);
                         connected_reset_multi_cis_info(index, list_buf);
                     }
+
+                    // 刚创建音频流，只有一路cis的数据，且不断申请内存，防止内存泄漏，需要把早期数据丢掉并释放内存
+                    // u8 cis_early_data_num = 0;   // 早期申请内存的次数
+                    // list_for_each_entry(list_buf, &_cis_lr_buf_list_head, entry) {
+                    //     cis_early_data_num++;
+                    // }
+                    // if (cis_early_data_num > UNICAST_SINK_CIS_LR_BUF_MAX_NUMS) {
+                    //     /* printf("r4:%d, %d\n", (int)length, (int)param->ts); */
+                    //     connected_send_first_in_lr_err_buf(list_buf, hdl->rx_player.rx_stream);
+                    // }
+
                 } else {
                     connected_send_first_in_lr_err_buf(list_buf, hdl->rx_player.rx_stream);
                     /* putchar('r'); */

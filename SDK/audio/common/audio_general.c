@@ -15,6 +15,7 @@
 #include "audio_config_def.h"
 #include "effects/voiceChanger_api.h"
 #include "scene_update.h"
+#include "cvp_v3.h"
 
 /*音频配置在线调试配置*/
 const int config_audio_cfg_debug_online = TCFG_CFG_TOOL_ENABLE;
@@ -225,14 +226,18 @@ const int config_audio_cvp_ref_ch_recognize_enable = 1;
 const int config_audio_cvp_ref_ch_recognize_enable = 0;
 #endif
 #if (TCFG_AUDIO_GLOBAL_SAMPLE_RATE == 32000)
-#define LLNS_TABLE_SELECT   BIT(0)
+#define LLNS_TABLE_SELECT  	NN_TABLE_LLNS_SR32K
 #else
-#define LLNS_TABLE_SELECT   BIT(1)
+#define LLNS_TABLE_SELECT  	NN_TABLE_LLNS_SR48K
 #endif
 
-#define CVP_TABLE_SELECT    BIT(9)
+#if (TCFG_CVP_ALGO_TYPE & NN_TABLE_DEFAULT_GROUP)
+#define CVP_TABLE_SELECT    	NN_TABLE_CVP_DEFAULT
+#elif (TCFG_CVP_ALGO_TYPE & NN_TABLE_2MIC_CLIP_GROUP)
+#define CVP_TABLE_SELECT   		NN_TABLE_CVP_2MIC_CLIP
+#endif
 
-#ifdef TCFG_AUDIO_CVP_V3_MODE
+#if TCFG_AUDIO_CVP_V3_MODE
 const u32 NN_TABLE_SELECT = (CVP_TABLE_SELECT | LLNS_TABLE_SELECT);
 #else
 const u32 NN_TABLE_SELECT = (LLNS_TABLE_SELECT);
@@ -433,11 +438,18 @@ const  int noisegate_pro_run_mode        = TCFG_AUDIO_EFX_E955_RUN_MODE;
 const  int noisegate_pro_run_mode        = EFx_BW_16t16 | EFx_BW_32t32;
 #endif
 
-#ifdef TCFG_AUDIO_EFX_B7C4_RUN_MODE
-const  int noisegate_run_mode            = TCFG_AUDIO_EFX_B7C4_RUN_MODE;
-#else
-const  int noisegate_run_mode            = EFx_BW_16t16 | EFx_BW_32t32;
+const  int noisegate_run_mode            = 0
+#if defined(TCFG_AUDIO_EFX_B7C4_RUN_MODE)
+        | TCFG_AUDIO_EFX_B7C4_RUN_MODE
 #endif
+#if defined(TCFG_AUDIO_EFX_B0D5_RUN_MODE)//virtual bass
+        | ((TCFG_AUDIO_EFX_B0D5_RUN_MODE & (EFx_BW_16t32 |  EFx_BW_32t32)) ? EFx_BW_32t32 : 0)
+        | ((TCFG_AUDIO_EFX_B0D5_RUN_MODE &EFx_BW_16t16) ? EFx_BW_16t16 : 0)
+#endif
+#if !defined(TCFG_AUDIO_EFX_B7C4_RUN_MODE) && !defined(TCFG_AUDIO_EFX_B0D5_RUN_MODE)
+        | EFx_BW_16t16 | EFx_BW_32t32
+#endif
+        ;
 
 #ifdef TCFG_AUDIO_EFX_B0D5_RUN_MODE
 const  int virtual_bass_run_mode         = TCFG_AUDIO_EFX_B0D5_RUN_MODE;

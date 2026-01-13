@@ -14,6 +14,13 @@ c_SRC_FILES += \
       audio/framework/nodes/volume_node.c \
       audio/framework/node_list.c \
 
+#if TCFG_AUDIO_DEBUG_NODE_ENABLE
+c_SRC_FILES += \
+	  audio/framework/nodes/audio_debug_node.c
+
+#endif
+
+
 #if TCFG_VIRTUAL_UDISK_NODE
 c_SRC_FILES += \
       audio/framework/nodes/virtual_udisk_node.c
@@ -809,7 +816,7 @@ c_SRC_FILES += \
 #endif
 
 
-#if 0
+#if 1
 c_SRC_FILES += \
 	apps/common/fat_nor/cfg_private.c
 
@@ -1314,7 +1321,11 @@ c_SRC_FILES += \
 #if (TCFG_DEV_MANAGER_ENABLE && RCSP_FILE_OPT)
 c_SRC_FILES += \
 	apps/common/third_party_profile/jieli/rcsp/server/functions/file_transfer/file_delete.c \
-	apps/common/third_party_profile/jieli/rcsp/server/functions/file_transfer/file_trans_back.c \
+	apps/common/third_party_profile/jieli/rcsp/server/functions/file_transfer/file_trans_back.c
+#endif
+
+#if ((TCFG_DEV_MANAGER_ENABLE && RCSP_FILE_OPT) || RCSP_TONE_FILE_TRANSFER_ENABLE)
+c_SRC_FILES += \
 	apps/common/third_party_profile/jieli/rcsp/server/functions/file_transfer/file_transfer.c \
     apps/common/third_party_profile/jieli/rcsp/server/functions/file_transfer/file_transfer_sync.c
 #endif

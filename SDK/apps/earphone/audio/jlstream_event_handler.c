@@ -211,16 +211,16 @@ static int get_pipeline_uuid(const char *name)
 #endif
 #if LE_AUDIO_STREAM_ENABLE
     if (!strcmp(name, "le_audio")) {
-#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_UNICAST_SINK_EN)
-        clock_alloc("le_audio", clk_get_max_frequency());
-#endif
+//#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_UNICAST_SINK_EN)
+//        clock_alloc("le_audio", clk_get_max_frequency());
+//#endif
         return PIPELINE_UUID_LE_AUDIO;
     }
     if (!strcmp(name, "le_audio_call") || \
         !strcmp(name, "mic_le_audio_call")) {
-#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_UNICAST_SINK_EN)
-        clock_alloc("le_audio", clk_get_max_frequency());
-#endif
+//#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_UNICAST_SINK_EN)
+//        clock_alloc("le_audio", clk_get_max_frequency());
+//#endif
         return PIPELINE_UUID_ESCO;
     }
 #endif

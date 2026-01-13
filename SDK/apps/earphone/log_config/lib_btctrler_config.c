@@ -241,7 +241,7 @@ u8 auto_check_a2dp_play_control_qos(u16 cur_delay_timer,u16 delay_set_timer,u16 
 }
 #endif
 const int CONFIG_TWS_SUPER_TIMEOUT          = 4000;
-const int CONFIG_TWS_SAVE_POWER_ENABLE      = 0;     //tws省功耗配置，默认不开，客户需要再开
+const int CONFIG_TWS_SAVE_POWER_ENABLE      = 1;     //tws省功耗策略
 const int CONFIG_BTCTLER_QOS_ENABLE         = 1;
 const int CONFIG_A2DP_DATA_CACHE_LOW_AAC    = 100;
 const int CONFIG_A2DP_DATA_CACHE_HI_AAC     = 250;

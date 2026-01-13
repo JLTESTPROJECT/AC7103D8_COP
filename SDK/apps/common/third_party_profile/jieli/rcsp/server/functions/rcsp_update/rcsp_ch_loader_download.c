@@ -574,7 +574,13 @@ void cis_rcsp_recv_handle(u16 conn_handle, const void *const buf, size_t length,
             rcsp_clear_all_buffer();
         }
         g_cis_conn_handle = conn_handle;
-        bt_rcsp_recieve_callback(rcsp_server_ble_hdl, NULL, (u8 *)buf, length);
+        if (!JL_rcsp_get_auth_flag_with_bthdl(conn_handle, NULL)) {
+            if (!rcsp_protocol_head_check((u8 *)buf, (u16)length)) {
+                JL_rcsp_auth_recieve(conn_handle, NULL, (u8 *)buf, length);
+            }
+            return;
+        }
+        JL_protocol_data_recieve(NULL, (u8 *)buf, length, conn_handle, NULL);
     }
 }
 
@@ -582,12 +588,12 @@ int bt_rcsp_data_send_filter(u16 ble_con_hdl, u8 *remote_addr, u8 *buf, u16 len)
 {
     int ret = 0;
     if (g_cis_conn_handle) {
-        if (!JL_rcsp_get_auth_flag_with_bthdl(ble_con_hdl, NULL)) {
+        if (!JL_rcsp_get_auth_flag_with_bthdl(g_cis_conn_handle, NULL)) {
             if (!rcsp_protocol_head_check(buf, len)) {
-                connected_send_acl_data(ble_con_hdl, buf, len);
+                connected_send_acl_data(g_cis_conn_handle, buf, len);
             }
         } else {
-            connected_send_acl_data(ble_con_hdl, buf, len);
+            connected_send_acl_data(g_cis_conn_handle, buf, len);
         }
         ret = 1;
     }
