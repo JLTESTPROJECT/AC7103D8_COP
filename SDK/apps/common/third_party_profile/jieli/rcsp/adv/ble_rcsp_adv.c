@@ -179,7 +179,7 @@ int rcsp_make_set_adv_data(void)
     buf[offset++] = dev_type | adv_version;
 
     u8 edr_flag = __this->connect_flag;
-#if (0 == TCFG_USER_BT_CLASSIC_ENABLE)
+#if ((RCSP_CHANNEL_SEL == RCSP_USE_BLE) || (0 == TCFG_USER_BT_CLASSIC_ENABLE))
     edr_flag = 0x0F;
 #endif
     buf[offset++] = (bat_num << 4) | edr_flag;

@@ -17,9 +17,17 @@
 #include "rcsp_device_status.h"
 #include "JL_rcsp_api.h"
 #include "JL_rcsp_attr.h"
+#include "app_ble_spp_api.h"
 #if (TCFG_LE_AUDIO_RCSP_USE_SAME_ACL)
 #include "bt_common.h"
 #include "app_le_connected.h"
+#endif
+
+#if !TCFG_THIRD_PARTY_PROTOCOLS_SIMPLIFIED
+extern void *rcsp_server_ble_hdl;
+extern void *rcsp_server_ble_hdl1;
+extern void *rcsp_server_edr_att_hdl;
+extern void *rcsp_server_edr_att_hdl1;
 #endif
 
 #if (RCSP_MODE)
@@ -252,7 +260,11 @@ static u32 target_feature_ble_only(void *priv, u8 attr, u8 *buf, u16 buf_size, u
 #if (TCFG_LE_AUDIO_RCSP_USE_SAME_ACL)
     u8 taddr_buf[8];
     taddr_buf[0] = 0;
-    le_controller_get_mac(taddr_buf + 1);
+    //le_controller_get_mac(taddr_buf + 1);
+    u8 *ble_addr = app_ble_remote_mac_addr_get(rcsp_server_ble_hdl);
+    if (ble_addr) {
+        memcpy(taddr_buf + 1, ble_addr, 6);
+    }
     for (u8 i = 0; i < (6 / 2); i++) {
         taddr_buf[i + 1] ^= taddr_buf[7 - i - 1];
         taddr_buf[7 - i - 1] ^= taddr_buf[i + 1];
@@ -265,8 +277,16 @@ static u32 target_feature_ble_only(void *priv, u8 attr, u8 *buf, u16 buf_size, u
     }
 #else
     u8 taddr_buf[7];
+#if (RCSP_CHANNEL_SEL == RCSP_USE_BLE)
+    taddr_buf[0] = 1;
+#else
     taddr_buf[0] = 0;
-    le_controller_get_mac(taddr_buf + 1);
+#endif
+    //le_controller_get_mac(taddr_buf + 1);
+    u8 *ble_addr = app_ble_remote_mac_addr_get(rcsp_server_ble_hdl);
+    if (ble_addr) {
+        memcpy(taddr_buf + 1, ble_addr, 6);
+    }
     for (u8 i = 0; i < (6 / 2); i++) {
         taddr_buf[i + 1] ^= taddr_buf[7 - i - 1];
         taddr_buf[7 - i - 1] ^= taddr_buf[i + 1];

@@ -100,6 +100,8 @@ extern const float config_audio_eq_xfade_time;//0：一帧fade完成 非0：连�
  *******************************************************************
  */
 extern const int SRC_HW_VERSION_SEL;//0:srv_v2 1:src_v3
+extern const int CONST_SRC_COEF_46875_TO_16000_ENABLE;
+extern const int CONST_SRC_COEF_16000_TO_8000_ENABLE;
 
 /*
  *******************************************************************

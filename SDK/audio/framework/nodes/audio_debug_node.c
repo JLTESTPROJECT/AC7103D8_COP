@@ -194,7 +194,6 @@ static int audio_debug_node_bind(struct stream_node *node, u16 uuid)
 
 static void audio_debug_node_open_iport(struct stream_iport *iport)
 {
-    iport->handle_frame = audio_debug_node_handle_frame;
 }
 
 
@@ -274,11 +273,11 @@ static void audio_debug_node_release(struct stream_node *node)
 
 
 REGISTER_STREAM_NODE_ADAPTER(audio_debug_node_adapter) = {
-    .name       = "audio_debug",
     .uuid       = NODE_UUID_AUDIO_DEBUG,
     .bind       = audio_debug_node_bind,
     .ioctl      = audio_debug_node_ioctl,
     .release    = audio_debug_node_release,
+    .handle_frame = audio_debug_node_handle_frame,				//注册输出回调
     .hdl_size   = sizeof(struct audio_debug_node),
 };
 REGISTER_ONLINE_ADJUST_TARGET(audio_debug) = {

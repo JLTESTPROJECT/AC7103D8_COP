@@ -67,6 +67,12 @@
 #include "app_le_connected.h"
 #endif
 
+#if (RCSP_CHANNEL_SEL == RCSP_USE_GATT_OVER_EDR)
+#if (ATT_OVER_EDR_DEMO_EN == 0)
+#error "need enable ATT_OVER_EDR_DEMO_EN"
+#endif
+#endif
+
 #if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
 
 const u8 rcsp_link_key_data[16] = {0x06, 0x77, 0x5f, 0x87, 0x91, 0x8d, 0xd4, 0x23, 0x00, 0x5d, 0xf1, 0xd8, 0xcf, 0x0c, 0x14, 0x2b};
@@ -563,6 +569,8 @@ void rcsp_cbk_packet_handler(uint8_t packet_type, uint16_t channel, uint8_t *pac
                 bt_rcsp_set_conn_info(con_handle, NULL, true);
 #else
                 rcsp_ble_con_handle = little_endian_read_16(packet, 4);
+
+                ble_op_set_rxmaxbuf(con_handle, 255);
                 rcsp_protocol_bound(con_handle, NULL);
                 if (rcsp_get_auth_support()) {
                     JL_rcsp_reset_bthdl_auth(rcsp_ble_con_handle, NULL);
@@ -949,9 +957,11 @@ static void advertisements_setup_init()
     }
 #endif
 
+#if (RCSP_CHANNEL_SEL == RCSP_USE_GATT_OVER_EDR)
     if (adt_profile_support && rcsp_adt_support) {
         adv_type = APP_ADV_SCAN_IND;
     }
+#endif
 
 #if !TCFG_THIRD_PARTY_PROTOCOLS_SIMPLIFIED
     app_ble_set_adv_param(rcsp_server_ble_hdl, adv_interval, adv_type, adv_channel);
