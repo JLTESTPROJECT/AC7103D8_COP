@@ -141,8 +141,8 @@ extern void clr_device_in_page_list();
 #endif
 
 #ifdef CONFIG_CPU_BR56
-#define BT_TIMER  JL_TIMER2
-#define BT_IRQ_TIME_IDX  IRQ_TIME2_IDX
+#define BT_TIMER  JL_TIMER1
+#define BT_IRQ_TIME_IDX  IRQ_TIME1_IDX
 #else
 #define BT_TIMER  JL_TIMER3
 #define BT_IRQ_TIME_IDX  IRQ_TIME3_IDX
@@ -1360,7 +1360,7 @@ void bt_edge_isr()
 int btbb_irq_config(u8 btbb_sig, u8 irq_edge)
 {
 #ifdef CONFIG_CPU_BR56
-    SFR(JL_IOMC->ICH_IOMC1, 0, 5, btbb_sig);   //set lna_en to tmr2_cap
+    SFR(JL_IOMC->ICH_IOMC0, 25, 5, btbb_sig);   //定时器1配置为cap，需要看芯片手册
 #else
     SFR(JL_IOMC->ICH_IOMC1, 15, 5, btbb_sig);
 #endif
