@@ -151,6 +151,18 @@ extern const int config_out_dev_data_convert_enable;
  *						Audio Codec Configs
  *******************************************************************
  */
+//codec格式使能配置
+extern const int CONST_AUDIO_CODEC_G729_DEC_ENABLE;
+extern const int CONST_AUDIO_CODEC_WTGV2_DEC_ENABLE;
+extern const int CONST_AUDIO_CODEC_SINE_DEC_ENABLE;
+extern const int CONST_AUDIO_CODEC_MTY_DEC_ENABLE;
+extern const int CONST_AUDIO_CODEC_WAV_DEC_ENABLE;
+extern const int CONST_AUDIO_CODEC_F2A_DEC_ENABLE;
+extern const int CONST_AUDIO_CODEC_MSBC_DEC_ENABLE;
+extern const int CONST_AUDIO_CODEC_SBC_DEC_ENABLE;
+extern const int CONST_AUDIO_CODEC_AAC_DEC_ENABLE;
+extern const int CONST_AUDIO_CODEC_MP3_DEC_ENABLE;
+
 //通用配置
 extern const int CONFIG_DEC_SUPPORT_CHANNELS;
 extern const int CONFIG_DEC_SUPPORT_SAMPLERATE;

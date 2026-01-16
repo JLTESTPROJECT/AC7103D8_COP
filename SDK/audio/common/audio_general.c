@@ -248,6 +248,14 @@ const u32 NN_TABLE_SELECT = (LLNS_TABLE_SELECT);
  *						Audio Codec Config
  *******************************************************************
  */
+
+////////////////////编解码格式使能/////////////////
+const int CONST_AUDIO_CODEC_WTGV2_DEC_ENABLE 	= TCFG_DEC_WTS_ENABLE || TCFG_TONE_WTS_ENABLE;
+const int CONST_AUDIO_CODEC_MTY_DEC_ENABLE		= TCFG_DEC_MTY_ENABLE || TCFG_TONE_MTY_ENABLE;
+const int CONST_AUDIO_CODEC_WAV_DEC_ENABLE 		= TCFG_DEC_WAV_ENABLE || TCFG_TONE_WAV_ENABLE;
+const int CONST_AUDIO_CODEC_F2A_DEC_ENABLE 		= TCFG_DEC_F2A_ENABLE || TCFG_TONE_F2A_ENABLE;
+const int CONST_AUDIO_CODEC_MP3_DEC_ENABLE 		= TCFG_DEC_MP3_ENABLE || TCFG_TONE_MP3_ENABLE;
+
 ////////////////////ID3信息使能/////////////////
 const u8 config_flac_id3_enable = 0;
 const u8 config_ape_id3_enable  = 0;

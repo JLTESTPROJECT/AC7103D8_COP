@@ -1409,6 +1409,11 @@ void le_audio_adv_open_success(void *le_audio_ble_hdl, u8 *addr)
     memcpy(le_audio_adv_local_mac, addr, 6);
 }
 
+u8 *le_audio_adv_local_mac_get(void)
+{
+    return le_audio_adv_local_mac;
+}
+
 enum {
     UNICAST_INDXT = 1,
     UNICAST_FOR_JL_HEADSET_INDXT,

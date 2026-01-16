@@ -529,13 +529,9 @@ static void app_testbox_sub_cmd_handle(u8 *send_buf, u8 buf_len, u8 *buf, u8 len
 #else
         send_buf[3] = 0;
 #endif
-#if TCFG_USER_TWS_ENABLE
-        syscfg_read(CFG_TWS_LOCAL_ADDR, send_buf + 4, 6);
-#else
-        y_printf("bt_get_mac_addr()");
-        put_buf(bt_get_mac_addr(), 6);
-        memcpy(send_buf + 4, bt_get_mac_addr(), 6);
-#endif
+        y_printf("le_audio_adv_local_mac_get()");
+        put_buf(le_audio_adv_local_mac_get(), 6);
+        memcpy(send_buf + 4, le_audio_adv_local_mac_get(), 6);
 
         if (pair_info.dev_num >= 2) {
             testbox_event_to_user(&buf[1], buf[0], len - 1);
