@@ -25,6 +25,9 @@
 #include "bt_common.h"
 #include "boot.h"
 #include "asm/sfc_norflash_api.h"
+#include "db_updata_api.h"
+
+#if TCFG_UPDATE_ENABLE
 
 #if TCFG_MIC_EFFECT_ENABLE
 #include "mic_effect.h"
@@ -47,6 +50,8 @@
 #endif
 
 #include "custom_cfg.h"
+#include "ble_rcsp_server.h"
+#include "app_ble_spp_api.h"
 
 #define LOG_TAG "[APP-UPDATE]"
 #define LOG_INFO_ENABLE
@@ -97,6 +102,12 @@ static volatile u8 ota_status = 0;
 static succ_report_t succ_report;
 static bool g_write_vm_flag = true;
 
+#if USER_FILE_UPDATE_V2_EN
+extern const int support_user_file_update_v2_en;
+extern void user_file_flash_file_download_init(void);
+#endif
+
+
 int syscfg_write_update_check(u16 item_id, void *buf, u16 len)
 {
     return g_write_vm_flag;
@@ -137,7 +148,10 @@ void update_result_set(u16 result)
 {
     if (CONFIG_UPDATE_ENABLE) {
         UPDATA_PARM *p = UPDATA_FLAG_ADDR;
-
+        if (p->parm_type == UPDIFF_FLASH_UPDATA || p->parm_type == COMBAK_FLASH_UPDATA) {
+            log_info("update updiff/combak\n");
+            return;
+        }
         memset(p, 0x00, sizeof(UPDATA_PARM));
         p->parm_result = result;
         p->parm_crc = CRC16(((u8 *)p) + 2, sizeof(UPDATA_PARM) - 2);
@@ -222,6 +236,7 @@ int update_result_deal()
 
     u8 key_voice_cnt = 0;
     u16 result = 0;
+    u16 up_type = (g_updata_flag >> 16) & 0xffff;
     result = (g_updata_flag & 0xffff);
     log_info("<--------update_result_deal=0x%x %x--------->\n", result, g_updata_flag >> 16);
 #if CONFIG_DEBUG_ENABLE
@@ -289,6 +304,10 @@ int update_result_deal()
         }
     }
 
+    if (up_type == UPDIFF_FLASH_UPDATA || up_type == COMBAK_FLASH_UPDATA) {
+        db_update_break_last_update_param();
+    }
+
     return 1;
 }
 
@@ -315,7 +334,7 @@ static void update_before_jump_common_handle(UPDATA_TYPE up_type)
 {
 
 #if CPU_CORE_NUM > 1            //双核需要把CPU1关掉
-    printf("Before Suspend Current Cpu ID:%d Cpu In Irq?:%d\n", current_cpu_id(),  cpu_in_irq());
+    printf("Before Suspend Current Cpu ID:%d, Cpu In Irq?:%d, cpu_irq_disabled:%d\n", current_cpu_id(),  cpu_in_irq(), cpu_irq_disabled());
     if (current_cpu_id() == 1) {
         os_suspend_other_core();
     }
@@ -398,6 +417,14 @@ static void update_param_content_fill(int type, UPDATA_PARM *p, void (*priv_para
             ext_len = get_bt_trim_info_for_update(ext_data);
             printf("ext_len:%d\n", ext_len);
             update_param_ext_fill(p, EXT_LDO_TRIM_RES, ext_data, ext_len);
+
+            extern u32 get_btosc_info_for_update(void *info);
+            ext_len = get_btosc_info_for_update(ext_data);
+            if (ext_len > 0) {
+                log_info("btosc_len:%d\n", ext_len);
+                log_info_hexdump(ext_data, ext_len);
+                update_param_ext_fill(p, EXT_BT_WLA_INFO, ext_data, ext_len);
+            }
             free(ext_data);
         }
         update_param_ext_fill(p, EXT_BT_MAC_ADDR, (u8 *)bt_get_mac_addr(), 6);
@@ -418,8 +445,8 @@ static void update_param_content_fill(int type, UPDATA_PARM *p, void (*priv_para
 static void update_param_ram_set(u8 *buf, u16 len)
 {
     u8 *update_ram = UPDATA_FLAG_ADDR;
-    if (len > (u32)(&UPDATA_SIZE)) {
-        len = (u32)(&UPDATA_SIZE);
+    if (len > (u32)(&UPDATA_SIZE) - (UPDATA_FLAG_ADDR - BOOT_STATUS_ADDR)) {
+        len = (u32)(&UPDATA_SIZE) - (UPDATA_FLAG_ADDR - BOOT_STATUS_ADDR);
     }
     memcpy(update_ram, (u8 *)buf, len);
 }
@@ -590,6 +617,14 @@ static void update_init_common_handle(int type)
         sys_auto_shut_down_disable();
 #endif
 
+#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN)) && (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN))
+        u16 rcsp_ble_con_handle = rcsp_ble_con_handle_get();
+        if (rcsp_ble_con_handle) {
+            log_info("ble_op_set_rxmaxbuf, rcsp_ble_con_handle = 0x%x", rcsp_ble_con_handle);
+            ble_op_set_rxmaxbuf(rcsp_ble_con_handle, 255);
+        }
+#endif
+
 #if OTA_TWS_SAME_TIME_ENABLE
         if ((BT_UPDATA != type) && (TESTBOX_UART_UPDATA != type)) { // 测试盒升级不支持同步升级
             // 关闭page_scan
@@ -600,6 +635,11 @@ static void update_init_common_handle(int type)
             tws_api_auto_role_switch_disable();
             tws_sync_update_api_register(get_tws_update_api());
             tws_ota_init();
+        }
+#endif
+#if CONFIG_USER_FILE_UPDATE_V2_EN
+        if (support_user_file_update_v2_en) {
+            user_file_flash_file_download_init();
         }
 #endif
         if (BT_UPDATA == type) {
@@ -695,7 +735,9 @@ __INITCALL_BANK_CODE
 static int app_update_init(void)
 {
     update_module_init(update_common_state_cbk);
+#if TCFG_UPDATE_BLE_TEST_EN || TCFG_UPDATE_BT_LMP_EN
     testbox_update_init();
+#endif
     return 0;
 }
 
@@ -732,4 +774,9 @@ u32 update_get_machine_num(u8 *buf, u32 len)
     y_printf(">>>[test]: machine num : %s\n", buf);
     return name_len;
 }
-
+#else
+u16 update_result_get(void)
+{
+    return 0;
+}
+#endif

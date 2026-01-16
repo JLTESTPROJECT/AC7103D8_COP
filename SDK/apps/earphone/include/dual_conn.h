@@ -15,8 +15,18 @@ void write_scan_conn_enable(bool scan_enable, bool conn_enable);
 void dual_conn_state_handler();
 
 /**
+ * @brief 根据回连链表回连设备
+ */
+void dual_conn_page_device();
+
+/**
  * @brief 清除回连配对列表的设备信息
  */
 void clr_device_in_page_list();
+
+/**
+ * @brief 判断当前是否有在回连设备
+ */
+bool check_page_mode_active(void);
 
 #endif

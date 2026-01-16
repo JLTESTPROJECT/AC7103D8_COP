@@ -16,6 +16,7 @@
 #endif
 //#include "segger_rtt.h"
 
+#if TCFG_HX3918_ENABLE
 hx3918_wear_msg_code_t hx3918_wear_status = MSG_NO_WEAR;
 hx3918_wear_msg_code_t hx3918_wear_status_pre = MSG_NO_WEAR;
 extern const int32_t check_mode_unwear_thre;
@@ -567,4 +568,5 @@ uint8_t hx3918_check_touch_read(ppg_sensor_data_t *s_dat)
     return data_count;
 }
 
-#endif
+#endif // CHECK_TOUCH_LIB
+#endif // TCFG_HX3918_ENABLE

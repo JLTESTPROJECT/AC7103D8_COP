@@ -53,6 +53,9 @@ static u8 sniff_enable = 1;
 static u8 sniff_enable = 1;
 #endif
 
+#ifndef TCFG_SNIFF_CHECK_TIME
+#define TCFG_SNIFF_CHECK_TIME 5 // 检测时间
+#endif
 #define SNIFF_CNT_TIME                  TCFG_SNIFF_CHECK_TIME  //空闲6S之后进入sniff模式
 #define SNIFF_MAX_INTERVALSLOT          800
 #define SNIFF_MIN_INTERVALSLOT          100
@@ -74,7 +77,7 @@ u8 check_local_not_accept_sniff_by_remote()
         return TRUE;
     }
 #if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SINK_EN)
-    if (le_auracast_status_get() == BROADCAST_STATUS_SCAN_START) {
+    if (le_auracast_is_running()) {
         return TRUE;
     }
 #endif
@@ -97,7 +100,7 @@ void bt_sniff_ready_clean(void)
 
 void bt_check_enter_sniff()
 {
-    u8 addr[12];
+    u8 addr[18];
 #if TCFG_BT_SNIFF_ENABLE
 
 #if TCFG_AUDIO_ANC_ENABLE
@@ -109,8 +112,8 @@ void bt_check_enter_sniff()
 #if (RCSP_ADV_EN)
     u8 rcsp_max_con_dev = rcsp_max_support_con_dev_num();
     u8 rcsp_conn_num = bt_rcsp_device_conn_num();
-    if (get_ble_adv_modify() || ((rcsp_conn_num < rcsp_max_con_dev) && get_ble_adv_notify())) {
-        // rcsp需要通知信息到手机 || rcsp未连接且需要通过广播信息到手机
+    if (get_ble_adv_modify() || get_ble_adv_notify()) {
+        // rcsp广播内容更改需要通知信息到手机 || 手机APP连接后需要主动通知信息
         return;
     }
 #endif
@@ -128,7 +131,7 @@ void bt_check_enter_sniff()
     }
 
     int conn_cnt = bt_api_enter_sniff_status_check(SNIFF_CNT_TIME, addr);
-    ASSERT(conn_cnt <= 2);
+    ASSERT(conn_cnt <= TCFG_BT_SUPPORT_CONN_NUM);
     struct sniff_ctrl_config_t config = {0};
     for (int i = 0; i < conn_cnt; i++) {
         log_info("-----USER SEND SNIFF IN %d %d\n", i, conn_cnt);
@@ -203,6 +206,7 @@ static int sniff_btstack_event_handler(int *_event)
     switch (bt->event) {
     case BT_STATUS_SECOND_CONNECTED:
     case BT_STATUS_FIRST_CONNECTED:
+    case BT_STATUS_THIRD_CONNECTED:
         sys_auto_sniff_controle(1, bt->args);
         break;
     case BT_STATUS_SNIFF_STATE_UPDATE:

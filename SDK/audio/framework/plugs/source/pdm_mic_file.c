@@ -52,27 +52,29 @@ struct pdm_mic_file_hdl {
     PLNK_PARM *pdm_mic;
 };
 
-static void pdm_mic_output_handler(void *priv, void *data, u32 len)
+static void pdm_mic_output_handler(void *priv, void *data,  u32 len)
 {
     struct pdm_mic_file_hdl *hdl = (struct pdm_mic_file_hdl *)priv;
     struct stream_frame *frame;
-
     if (hdl->dump_cnt < 10) {
         hdl->dump_cnt++;
         return;
     }
     if (audio_common_mic_mute_en_get()) {	//mute pdm_mic
-        memset((u8 *)data, 0x0, len);
+        memset((u8 *)data, 0x0, len * hdl->pdm_mic->ch_num);
     }
 
     if (hdl->scene == STREAM_SCENE_ESCO) {	//cvp读dac 参考数据
         audio_cvp_phase_align();
     }
 
-    frame = source_plug_get_output_frame(hdl->source_node, len);
+    frame = source_plug_get_output_frame(hdl->source_node, len * hdl->pdm_mic->ch_num);
     if (frame) {
-        memcpy(frame->data, (u8 *)data, len);
+        memcpy(frame->data, (u8 *)data, len * hdl->pdm_mic->ch_num);
+        len *= hdl->pdm_mic->ch_num;
         frame->len = len;
+        frame->flags        = FRAME_FLAG_TIMESTAMP_ENABLE | FRAME_FLAG_PERIOD_SAMPLE | FRAME_FLAG_UPDATE_TIMESTAMP;
+        frame->timestamp    = audio_jiffies_usec() * TIMESTAMP_US_DENOMINATOR;
         source_plug_put_output_frame(hdl->source_node, frame);
     }
 }
@@ -100,6 +102,11 @@ static void pdm_mic_ioc_get_fmt(struct pdm_mic_file_hdl *hdl, struct stream_fmt 
         fmt->sample_rate    = 16000;
         fmt->channel_mode   = AUDIO_CH_MIX;
         break;
+    }
+    if (adc_hdl.bit_width == ADC_BIT_WIDTH_24) {
+        fmt->bit_wide = DATA_BIT_WIDE_24BIT;
+    } else {
+        fmt->bit_wide = DATA_BIT_WIDE_16BIT;
     }
     hdl->sample_rate = fmt->sample_rate;
 }
@@ -217,7 +224,7 @@ int pdm_mic_file_param_init(PLNK_PARM *pdm_mic)
     }
     if (plnk_ch_num > 1) {
         pdm_mic->ch_cfg[1].en = 1;
-        pdm_mic->ch_cfg[1].mode = DATA0_SCLK_FALLING_EDGE;
+        pdm_mic->ch_cfg[1].mode = DATA1_SCLK_FALLING_EDGE;
         pdm_mic->ch_cfg[1].mic_type = DIGITAL_MIC_DATA;
     }
 #endif

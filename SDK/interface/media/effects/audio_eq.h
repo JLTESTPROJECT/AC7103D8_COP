@@ -3,7 +3,7 @@
 #define _EQ_API_H_
 
 #include "typedef.h"
-#include "asm/hw_eq.h"
+#include "hw_eq.h"
 #include "system/timer.h"
 #include "system/init.h"
 #include "effects/effects_adj.h"
@@ -162,7 +162,8 @@ struct audio_eq {
 /*获取默认系数表EQ_MODE*/
 struct eq_default_seg_tab {
     float global_gain;
-    int seg_num;
+    s16 seg_num;
+    s16 is_bypass;//整个系数表更新时，控制bypass,做Xfade处理
     struct eq_seg_info *seg;
 };
 
@@ -204,7 +205,7 @@ struct eq_online { //在线调试临时存储的系数结构
 #define EQ_SPECIAL_CMD     0x9//bypass 总增益 段数
 #define EQ_SPECIAL_SEG_CMD 0xa//多滤波器同时更新
 
-#define EQ_TAB_CMD         0xb//整个系数表更新，包括global_gain，seg_num，seg
+#define EQ_TAB_CMD         0xb//整个系数表更新，包括global_gain，seg_num，seg, bypass标志
 
 /*调音结构、eq节点参数更新结构*/
 struct eq_adj {
@@ -228,6 +229,10 @@ struct eq_core_check {
     void *stream;
     int core;
 };
+
+
+int audio_eq_lib_init(void);
+
 /*
  *eq core自动选配,并添加到eq core链表
  * */

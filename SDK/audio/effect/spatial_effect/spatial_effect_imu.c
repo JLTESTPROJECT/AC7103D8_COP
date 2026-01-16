@@ -22,6 +22,7 @@
 #include "imu_sensor/mpu6887/mpu6887p.h"
 #include "imu_sensor/qmi8658/qmi8658c.h"
 #include "imu_sensor/icm_42670p/icm_42670p.h"
+#include "online_debug/audio_capture.h"
 
 
 #define MOTION_SENSOR_FIFO_ENABLE       1
@@ -684,6 +685,8 @@ int space_motion_data_read(void *sensor, void *data, int len)
 #elif (defined TCFG_SENSOR_DATA_EXPORT_ENABLE) && (TCFG_SENSOR_DATA_EXPORT_ENABLE == SENSOR_DATA_EXPORT_USE_SPP)
     extern int audio_data_export_run(u8 ch, u8 * data, int len);
     audio_data_export_run(0, data, data_len);
+#elif (defined TCFG_SENSOR_DATA_EXPORT_ENABLE) && (TCFG_SENSOR_DATA_EXPORT_ENABLE == SENSOR_DATA_EXPORT_USE_PC_SPP)
+    audio_capture_cbuf_write(0, data, data_len);
 #endif /*TCFG_SENSOR_DATA_EXPORT_ENABLE*/
 
     return data_len;
@@ -765,20 +768,6 @@ void space_motion_sensor_sleep(void *sensor, u8 en)
 #endif /*TCFG_IMUSENSOR_ENABLE*/
 }
 
-
-void imu_sensor_ad0_selete(u32 gpio, u8 out_en)
-{
-#if (TCFG_MPU6887P_AD0_SELETE_IO != NO_CONFIG_PORT) || \
-    (TCFG_QMI8658_AD0_SELETE_IO != NO_CONFIG_PORT)
-    gpio_set_mode(IO_PORT_SPILT(gpio), !!out_en);
-#endif
-}
-void imu_sensor_power_ctl(u32 gpio, u8 out_en)
-{
-#if (TCFG_IMU_SENSOR_PWR_PORT != NO_CONFIG_PORT)
-    gpio_set_mode(IO_PORT_SPILT(gpio), !!out_en);
-#endif
-}
 
 void imu_sensor_test(void)
 {

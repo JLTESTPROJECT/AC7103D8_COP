@@ -39,6 +39,10 @@
 #include "smart_voice/smart_voice.h"
 #endif
 
+#if TCFG_AUDIO_AVC_NODE_ENABLE
+#include "audio_avc.h"
+#endif
+
 
 #define LOG_TAG_CONST       AEC_USER
 #define LOG_TAG             "[AEC_USER]"
@@ -487,7 +491,7 @@ int acoustic_echo_cancel_init(struct audio_aec_init_param_t *init_param, s16 ena
         aec_param->ref_bit_width = DATA_BIT_WIDE_16BIT;
     }
 
-#if (TCFG_SMART_VOICE_ENABLE && TCFG_SMART_VOICE_USE_AEC)
+#if ((TCFG_SMART_VOICE_ENABLE && TCFG_SMART_VOICE_USE_AEC) || (TCFG_AUDIO_AVC_NODE_ENABLE && AVC_USE_AEC))
     printf("esco_player_runing() : %d", esco_player_runing());
     if (!esco_player_runing()) {
         /* aec_param->ref_sr = TCFG_AUDIO_GLOBAL_SAMPLE_RATE; */
@@ -564,7 +568,11 @@ int acoustic_echo_cancel_init(struct audio_aec_init_param_t *init_param, s16 ena
         ASSERT(0, "ref_channel need set 2 ch when CONST_SMS_TDE_STEREO_REF_ENABLE is 1");
     }
 #endif
+#if (TCFG_AUDIO_SMS_SEL == SMS_TDE)
+    int ret = sms_tde_init(aec_param);
+#else
     int ret = aec_init(aec_param);
+#endif
     ASSERT(ret == 0, "aec_open err %d!!", ret);
 #endif/*CVP_TOGGLE*/
     aec_hdl->start = 1;
@@ -623,7 +631,11 @@ void acoustic_echo_cancel_close(void)
         aec_hdl->start = 0;
 
 #if CVP_TOGGLE
-        aec_exit();
+        if (TCFG_AUDIO_SMS_SEL == SMS_TDE) {
+            sms_tde_exit();
+        } else {
+            aec_exit();
+        }
 #endif
 
 #if ((TCFG_SUPPORT_MIC_CAPLESS)&&(AUDIO_MIC_CAPLESS_VERSION < MIC_CAPLESS_VER3))
@@ -680,7 +692,11 @@ void acoustic_echo_cancel_inbuf(s16 *buf, u16 len)
             aec_hdl->inbuf_clear_cnt--;
             memset(buf, 0, len);
         }
+#if (TCFG_AUDIO_SMS_SEL == SMS_TDE)
+        int ret = sms_tde_fill_in_data(buf, len);
+#else
         int ret = aec_fill_in_data(buf, len);
+#endif
         if (ret == -1) {
         } else if (ret == -2) {
             log_error("aec inbuf full\n");
@@ -709,7 +725,11 @@ void acoustic_echo_cancel_refbuf(s16 *data0, s16 *data1, u16 len)
 {
     if (aec_hdl && aec_hdl->start) {
 #if CVP_TOGGLE
+#if (TCFG_AUDIO_SMS_SEL == SMS_TDE)
+        sms_tde_fill_ref_data(data0, data1, len);
+#else
         aec_fill_ref_data(data0, data1, len);
+#endif
 #endif/*CVP_TOGGLE*/
     }
 }

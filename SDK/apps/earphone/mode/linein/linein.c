@@ -9,6 +9,7 @@
 #include "linein_player.h"
 #include "audio_config.h"
 #include "app_default_msg_handler.h"
+#include "local_tws.h"
 
 #if TCFG_APP_LINEIN_EN
 
@@ -163,11 +164,20 @@ static int linein_mode_init()
     printf("linein mode\n");
     __this->linein_is_active = 1;
 
-    tone_player_stop();
-    int ret = play_tone_file_callback(get_tone_files()->linein_mode, NULL, linein_tone_play_end_callback);
+    int ret = -1;
+
+#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE
+    ret = local_tws_enter_mode(get_tone_files()->linein_mode, NULL);
+#endif //TCFG_LOCAL_TWS_ENABLE
+
+    //cppcheck-suppress knownConditionTrueFalse
     if (ret != 0) {
-        printf("linein tone play err!!!");
-        app_send_message(APP_MSG_LINEIN_START, 0);
+        tone_player_stop();
+        ret = play_tone_file_callback(get_tone_files()->linein_mode, NULL, linein_tone_play_end_callback);
+        if (ret != 0) {
+            printf("linein tone play err!!!");
+            app_send_message(APP_MSG_LINEIN_START, 0);
+        }
     }
 #if TCFG_PITCH_SPEED_NODE_ENABLE
     app_var.pitch_mode = PITCH_0;    //设置变调初始模式
@@ -178,6 +188,9 @@ static int linein_mode_init()
 
 static int linein_mode_try_exit()
 {
+#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE
+    local_tws_exit_mode();
+#endif
     linein_stop();
     __this->linein_is_active = 0;
     return 0;
@@ -217,7 +230,7 @@ static int linein_app_msg_handler(int *msg)
 
 struct app_mode *app_enter_linein_mode(int arg)
 {
-    int msg[16];
+    int msg[16] = {0};
     struct app_mode *next_mode;
 
     linein_mode_init();
@@ -269,5 +282,20 @@ REGISTER_APP_MODE(linein_mode) = {
     .index  = APP_MODE_LINEIN_INDEX,
     .ops    = &linein_mode_ops,
 };
+
+#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE
+
+void linein_local_start(void *priv)
+{
+    linein_start();
+}
+
+REGISTER_LOCAL_TWS_OPS(linein) = {
+    .name 	= APP_MODE_LINEIN,
+    .local_audio_open = linein_local_start,
+    .get_play_status = linein_get_status,
+};
+
+#endif //TCFG_LOCAL_TWS_ENABLE
 
 #endif

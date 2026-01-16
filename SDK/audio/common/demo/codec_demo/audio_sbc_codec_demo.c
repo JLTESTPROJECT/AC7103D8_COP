@@ -24,10 +24,9 @@
 #include "audio_base.h"
 #include "audio_adc.h"
 #include "audio_dac.h"
-#include "codec/sbc_enc.h"
 #include "codec/hwaccel.h"
 #include "codec/audio_decode_common_api.h"
-#include "codec/sbc_codec.h"
+#include "codec/sbc_enc_source.h"
 
 #if 0   //这里打开代码模块使能
 

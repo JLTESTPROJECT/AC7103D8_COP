@@ -2,28 +2,9 @@
 c_SRC_FILES := \
 	apps/common/app_mode_manager/app_mode_manager.c \
 	apps/common/bt_common/bt_fre_offset_storage.c \
-	apps/common/cJSON/cJSON.c \
 	apps/common/clock_manager/clock_manager.c \
-	apps/common/debug/debug.c \
-	apps/common/debug/debug_lite.c \
-	apps/common/debug/debug_uart_config.c \
 	apps/common/dev_manager/dev_manager.c \
-	apps/common/device/sensor/app_sensor.c \
-	apps/common/device/sensor/gSensor/bma580.c \
-	apps/common/device/sensor/gSensor/gSensor_manage.c \
-	apps/common/device/sensor/gSensor/stk832x.c \
-	apps/common/device/sensor/hr_sensor/hrSensor_manage.c \
-	apps/common/device/sensor/hr_sensor/hx3918/hx3918.c \
-	apps/common/device/sensor/hr_sensor/hx3918/hx3918_check_touch.c \
-	apps/common/device/sensor/hr_sensor/hx3918/hx3918_factory_test.c \
-	apps/common/device/sensor/hr_sensor/hx3918/hx3918_hrs_agc.c \
-	apps/common/device/sensor/hr_sensor/hx3918/hx3918_hrv_agc.c \
-	apps/common/device/sensor/hr_sensor/hx3918/hx3918_spo2_agc.c \
-	apps/common/device/storage_device/norflash/norflash_sfc.c \
-	apps/common/fat_nor/virfat_flash.c \
 	apps/common/temp_trim/dtemp_pll_trim.c \
-	apps/common/third_party_profile/common/3th_profile_api.c \
-	apps/common/third_party_profile/multi_protocol_main.c \
 	apps/earphone/app_main.c \
 	apps/earphone/audio/jlstream_event_handler.c \
 	apps/earphone/audio/scene_switch.c \
@@ -31,21 +12,11 @@ c_SRC_FILES := \
 	apps/earphone/audio/vol_sync.c \
 	apps/earphone/battery/battery_level.c \
 	apps/earphone/battery/charge.c \
-	apps/earphone/battery/charge_clibration.c \
 	apps/earphone/battery/charge_device_handle.c \
 	apps/earphone/battery/charge_store.c \
-	apps/earphone/ble/ble_adv.c \
-	apps/earphone/ble/bt_ble.c \
 	apps/earphone/board/br56/board_config.c \
-	apps/earphone/board/br56/undef_func.c \
 	apps/earphone/board/instruction_forbidden.c \
 	apps/earphone/board/sdk_board_config.c \
-	apps/earphone/demo/att_over_edr_demo.c \
-	apps/earphone/demo/debug_record_demo.c \
-	apps/earphone/demo/pbg_demo.c \
-	apps/earphone/demo/read_sn_demo.c \
-	apps/earphone/demo/trans_data_demo.c \
-	apps/earphone/device_config.c \
 	apps/earphone/log_config/app_config.c \
 	apps/earphone/log_config/lib_btctrler_config.c \
 	apps/earphone/log_config/lib_btstack_config.c \
@@ -55,42 +26,22 @@ c_SRC_FILES := \
 	apps/earphone/log_config/lib_system_config.c \
 	apps/earphone/log_config/lib_update_config.c \
 	apps/earphone/message/adapter/app_msg.c \
-	apps/earphone/message/adapter/audio_player.c \
-	apps/earphone/message/adapter/battery.c \
 	apps/earphone/message/adapter/btstack.c \
 	apps/earphone/message/adapter/driver.c \
-	apps/earphone/message/adapter/eartouch.c \
 	apps/earphone/message/adapter/key.c \
-	apps/earphone/message/adapter/tws.c \
-	apps/earphone/mode/bt/a2dp_play.c \
 	apps/earphone/mode/bt/bt_background.c \
-	apps/earphone/mode/bt/bt_call_kws_handler.c \
 	apps/earphone/mode/bt/bt_event_func.c \
 	apps/earphone/mode/bt/bt_key_func.c \
 	apps/earphone/mode/bt/bt_key_msg_table.c \
-	apps/earphone/mode/bt/bt_net_event.c \
 	apps/earphone/mode/bt/bt_slience_detect.c \
 	apps/earphone/mode/bt/bt_tws.c \
 	apps/earphone/mode/bt/dual_a2dp_play.c \
-	apps/earphone/mode/bt/dual_conn.c \
 	apps/earphone/mode/bt/dual_phone_call.c \
 	apps/earphone/mode/bt/earphone.c \
-	apps/earphone/mode/bt/eartch_event_deal.c \
-	apps/earphone/mode/bt/kws_voice_event_deal.c \
-	apps/earphone/mode/bt/le_audio/big/app_le_auracast.c \
-	apps/earphone/mode/bt/le_audio/big/le_broadcast.c \
-	apps/earphone/mode/bt/le_audio/big/le_broadcast_config.c \
-	apps/earphone/mode/bt/le_audio/cig/app_le_connected.c \
-	apps/earphone/mode/bt/le_audio/cig/le_connected.c \
-	apps/earphone/mode/bt/le_audio/cig/le_connected_config.c \
-	apps/earphone/mode/bt/le_audio/le_audio_common.c \
 	apps/earphone/mode/bt/low_latency.c \
-	apps/earphone/mode/bt/phone_call.c \
-	apps/earphone/mode/bt/poweroff.c \
 	apps/earphone/mode/bt/sniff.c \
 	apps/earphone/mode/bt/tone.c \
 	apps/earphone/mode/bt/tws_dual_conn.c \
-	apps/earphone/mode/bt/tws_dual_share.c \
 	apps/earphone/mode/bt/tws_phone_call.c \
 	apps/earphone/mode/bt/tws_poweroff.c \
 	apps/earphone/mode/common/app_default_msg_handler.c \
@@ -99,15 +50,7 @@ c_SRC_FILES := \
 	apps/earphone/mode/key_tone.c \
 	apps/earphone/mode/mic_effect/mic_effect.c \
 	apps/earphone/mode/power_on/power_on.c \
-	apps/earphone/test/rssi.c \
-	apps/earphone/test/tws_role_switch.c \
 	apps/earphone/third_part/app_protocol_deal.c \
-	apps/earphone/tools/app_ancbox.c \
-	apps/earphone/tools/app_anctool.c \
-	apps/earphone/tools/app_key_dut.c \
-	apps/earphone/tools/app_testbox.c \
-	apps/earphone/ui/led/led_config.c \
-	apps/earphone/ui/led/led_ui_msg_handler.c \
 	apps/earphone/user_cfg.c \
 
 
@@ -161,11 +104,14 @@ LFLAGS := \
 	cpu/br56/liba/btstack.a \
 	cpu/br56/liba/bt_hash_enc.a \
 	cpu/br56/liba/rcsp_stack.a \
+	cpu/br56/liba/lib_jl_earbox.a \
 	cpu/br56/liba/btctrler.a \
 	cpu/br56/liba/aec.a \
 	cpu/br56/liba/media.a \
 	cpu/br56/liba/libdma-protocol.a \
 	cpu/br56/liba/libdma-device-ota.a \
+	cpu/br56/liba/fmna_stack.a \
+	cpu/br56/liba/lib_fmy_auth_br56.a \
 	cpu/br56/liba/google_fps.a \
 	cpu/br56/liba/swift_pair.a \
 	cpu/br56/liba/ximalaya_lib.a \
@@ -178,6 +124,7 @@ LFLAGS := \
 	cpu/br56/liba/libDualMicSystem_pi32v2_OnChip.a \
 	cpu/br56/liba/libDualMicSystem_flexible_pi32v2_OnChip.a \
 	cpu/br56/liba/libDualMicSystem_Awn.a \
+	cpu/br56/liba/libDualMicSystem_Hybrid.a \
 	cpu/br56/liba/libAdaptiveEchoSuppress_pi32v2_OnChip.a \
 	cpu/br56/liba/libOpcore_maskrom_pi32v2_OnChip.a \
 	cpu/br56/liba/lib_advaudio_plc.a \
@@ -206,6 +153,8 @@ LFLAGS := \
 	cpu/br56/liba/opus_enc_lib.a \
 	cpu/br56/liba/lib_speex_codec.a \
 	cpu/br56/liba/libjlsp.a \
+	cpu/br56/liba/lib_nn_v3.a \
+	cpu/br56/liba/lib_nn_v3_params.a \
 	cpu/br56/liba/libjlsp_kws.a \
 	cpu/br56/liba/libjlsp_kws_far_keyword.a \
 	cpu/br56/liba/libjlsp_kws_india_english.a \
@@ -234,6 +183,7 @@ LFLAGS := \
 	cpu/br56/liba/howling.a \
 	cpu/br56/liba/lib_HarmonicExciter.a \
 	cpu/br56/liba/libllns.a \
+	cpu/br56/liba/lib_llns_dns.a \
 	cpu/br56/liba/lib_icsd_common_v2.a \
 	cpu/br56/liba/lib_icsd_anc_v2.a \
 	cpu/br56/liba/lib_icsd_rt_anc.a \
@@ -246,6 +196,10 @@ LFLAGS := \
 	cpu/br56/liba/lib_icsd_wat.a \
 	cpu/br56/liba/lib_icsd_vdt.a \
 	cpu/br56/liba/lib_icsd_ein.a \
+	cpu/br56/liba/lib_icsd_envnl.a \
+	cpu/br56/liba/lib_icsd_avc.a \
+	cpu/br56/liba/lib_icsd_howl.a \
+	cpu/br56/liba/lib_icsd_adjdcc.a \
 	cpu/br56/liba/lib_noisegate_pro.a \
 	cpu/br56/liba/le_audio_profile.a \
 	cpu/br56/liba/lib_limiter.a \
@@ -266,15 +220,22 @@ LFLAGS := \
 	cpu/br56/liba/lib_frequency_compressor.a \
 	cpu/br56/liba/lib_gain_mix.a \
 	cpu/br56/liba/liblhdc_x_edge.a \
+	cpu/br56/liba/libStereoToLCR_pi32v2_OnChip.a \
+	cpu/br56/liba/sbsbrir.a \
+	cpu/br56/liba/spatial_brir.a \
+	apps/common/device/sensor/gSensor/sensor_algorithm_jl_motion.a \
+	apps/common/device/sensor/hr_sensor/hx3918/CodeBlocks_3605_spo2_20241021_v2.2.a \
+	apps/common/device/sensor/hr_sensor/hx3918/CodeBlocks_3918_hrs_bp_20250324_v2.2.a \
+	apps/common/device/sensor/hr_sensor/hx3918/CodeBlocks_3918_hrv_20241026_v2.2.a \
+	apps/common/device/sensor/hr_sensor/hx3011/CodeBlocks_3011_hrs_spo2_20250606_v2.2.a \
 	cpu/br56/liba/libFFT_pi32v2_OnChip.a \
 	cpu/br56/liba/lib_wtg_dec.a \
 	cpu/br56/liba/bfilterfun_lib.a \
 	cpu/br56/liba/lib_opusdec_rom_dec.a \
+	cpu/br56/liba/lib_bt_aac_dec_rom_ext.a \
 	cpu/br56/liba/crypto_toolbox_Osize.a \
-	apps/common/device/sensor/hr_sensor/hx3918/CodeBlocks_3605_spo2_20241021_v2.2.a \
-	apps/common/device/sensor/hr_sensor/hx3918/CodeBlocks_3918_hrs_bp_20250324_v2.2.a \
-	apps/common/device/sensor/hr_sensor/hx3918/CodeBlocks_3918_hrv_20241026_v2.2.a \
 	cpu/br56/liba/lib_dns.a \
+	cpu/br56/liba/lib_dns_v3.a \
 	apps/common/third_party_profile/tuya_protocol/sdk/lib/libtuya_lib.a \
 	cpu/br56/liba/update.a \
 	cpu/br56/liba/cbuf.a \
@@ -285,9 +246,12 @@ LFLAGS := \
 	cpu/br56/liba/ascii.a \
 	cpu/br56/liba/cfg_tool.a \
 	cpu/br56/liba/vm.a \
+	cpu/br56/liba/ftl.a \
 	cpu/br56/liba/debug_record.a \
 	cpu/br56/liba/lzma_dec.a \
 	cpu/br56/liba/chargestore.a \
+	cpu/br56/liba/math_fast_func.a \
+	cpu/br56/liba/jldtp.a \
 	cpu/br56/liba/printf.a  \
 	cpu/br56/liba/cbuf.a  \
 	cpu/br56/liba/vm.a  \

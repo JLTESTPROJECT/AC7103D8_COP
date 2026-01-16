@@ -63,8 +63,14 @@
 #if ASSISTED_HEARING_CUSTOM_TRASNDATA
 #include "adv_hearing_aid_setting.h"
 #endif
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
+#if (TCFG_LE_AUDIO_RCSP_USE_SAME_ACL)
 #include "app_le_connected.h"
+#endif
+
+#if (RCSP_CHANNEL_SEL == RCSP_USE_GATT_OVER_EDR)
+#if (ATT_OVER_EDR_DEMO_EN == 0)
+#error "need enable ATT_OVER_EDR_DEMO_EN"
+#endif
 #endif
 
 #if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
@@ -162,6 +168,8 @@ static void (*app_recieve_callback)(void *priv, void *buf, u16 len) = NULL;
 static void (*ble_resume_send_wakeup)(void) = NULL;
 static u32 channel_priv;
 
+extern const u8 adt_profile_support;
+extern u8 rcsp_adt_support; //edr att是否接入rcsp
 
 //------------------------------------------------------
 //ANCS
@@ -231,7 +239,7 @@ static void send_request_connect_parameter(hci_con_handle_t connection_handle, u
 static void check_connetion_updata_deal(hci_con_handle_t connection_handle)
 {
     //cppcheck-suppress knownConditionTrueFalse
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
+#if (TCFG_LE_AUDIO_RCSP_USE_SAME_ACL)
     extern u8 le_audio_get_adv_conn_success();
     //le audio 连接之后不允许其他位置更新参数
     if (connection_update_enable && le_audio_get_adv_conn_success()) {
@@ -437,7 +445,7 @@ void rcsp_close_inquiry_scan(bool close_inquiry_scan)
     printf("%s, %s, %d\n", __FILE__, __FUNCTION__, __LINE__);
 #if TCFG_USER_TWS_ENABLE
     if ((tws_api_get_tws_state() & TWS_STA_SIBLING_CONNECTED)) {
-        if (tws_api_get_role() == TWS_ROLE_MASTER) {
+        if (tws_api_get_role() != TWS_ROLE_SLAVE) {
             // 根据已连接设备数量判断是否开关蓝牙广播
             rcsp_ble_adv_enable_with_con_dev();
         }
@@ -491,15 +499,23 @@ void rcsp_ble_adv_enable_with_con_dev()
     u8 conn_num = bt_rcsp_device_conn_num();
     printf("%s, %s, %d, max:%d, conn_num:%d\n", __FILE__, __FUNCTION__, __LINE__, max_con_dev, conn_num);
 #if TCFG_USER_TWS_ENABLE
-    if (TWS_ROLE_MASTER == tws_api_get_role()) {
+    if (TWS_ROLE_SLAVE != tws_api_get_role()) {
+#if TCFG_THIRD_PARTY_PROTOCOLS_SIMPLIFIED
         if (conn_num >= max_con_dev) {
+#else
+        if ((conn_num >= max_con_dev) && (bt_rcsp_edr_att_conn_num() == 0)) {
+#endif
             rcsp_bt_ble_adv_enable(0);
         } else {
             ble_module_enable(1);
         }
     }
 #else
+#if TCFG_THIRD_PARTY_PROTOCOLS_SIMPLIFIED
     if (conn_num >= max_con_dev) {
+#else
+    if ((conn_num >= max_con_dev) && (bt_rcsp_edr_att_conn_num() == 0)) {
+#endif
         rcsp_bt_ble_adv_enable(0);
     } else {
         ble_module_enable(1);
@@ -531,6 +547,13 @@ void rcsp_cbk_packet_handler(uint8_t packet_type, uint16_t channel, uint8_t *pac
                 }
                 hci_con_handle_t con_handle = little_endian_read_16(packet, 4);
                 printf("RCSP HCI_SUBEVENT_LE_CONNECTION_COMPLETE: %0x\n", con_handle);
+#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_UNICAST_SINK_EN)
+#if (!TCFG_LE_AUDIO_RCSP_USE_SAME_ACL)
+                // 私有unicast与 RCSP 共存，需要单独设置RCSP 的rxmaxbuf，否则长数据会有问题
+                ble_op_set_rxmaxbuf(con_handle, 255);
+#endif
+#endif
+
 #if !TCFG_THIRD_PARTY_PROTOCOLS_SIMPLIFIED
 #if TCFG_USER_TWS_ENABLE
                 if (app_var.goto_poweroff_flag) {
@@ -546,6 +569,8 @@ void rcsp_cbk_packet_handler(uint8_t packet_type, uint16_t channel, uint8_t *pac
                 bt_rcsp_set_conn_info(con_handle, NULL, true);
 #else
                 rcsp_ble_con_handle = little_endian_read_16(packet, 4);
+
+                ble_op_set_rxmaxbuf(con_handle, 255);
                 rcsp_protocol_bound(con_handle, NULL);
                 if (rcsp_get_auth_support()) {
                     JL_rcsp_reset_bthdl_auth(rcsp_ble_con_handle, NULL);
@@ -777,7 +802,7 @@ uint16_t rcsp_att_read_callback(hci_con_handle_t connection_handle, uint16_t att
     case ATT_CHARACTERISTIC_2a05_01_CLIENT_CONFIGURATION_HANDLE:
     case ATT_CHARACTERISTIC_ae02_01_CLIENT_CONFIGURATION_HANDLE:
         if (buffer) {
-            buffer[0] = att_get_ccc_config(att_handle);
+            buffer[0] = multi_att_get_ccc_config(connection_handle, att_handle);
             buffer[1] = 0;
         }
         att_value_len = 2;
@@ -818,14 +843,14 @@ int rcsp_att_write_callback(hci_con_handle_t connection_handle, uint16_t att_han
 
         rcsp_set_ble_work_state(BLE_ST_NOTIFY_IDICATE);
         printf("\n------write ccc:%04x, %02x\n", att_handle, buffer[0]);
-        att_set_ccc_config(att_handle, buffer[0]);
+        multi_att_set_ccc_config(connection_handle, att_handle, buffer[0]);
 
         JL_protocol_resume();
 
         break;
 
     case ATT_CHARACTERISTIC_2a05_01_CLIENT_CONFIGURATION_HANDLE:
-        att_set_ccc_config(att_handle, buffer[0]);
+        multi_att_set_ccc_config(connection_handle, att_handle, buffer[0]);
         break;
 
     case ATT_CHARACTERISTIC_ae01_01_VALUE_HANDLE:
@@ -842,6 +867,18 @@ int rcsp_att_write_callback(hci_con_handle_t connection_handle, uint16_t att_han
             bt_rcsp_recieve_callback(rcsp_server_ble_hdl1, NULL, buffer, buffer_size);
         }
 #endif
+        if (adt_profile_support && rcsp_adt_support) {
+            u16 adt_con_handle = app_ble_get_hdl_con_handle(rcsp_server_edr_att_hdl);
+            if (adt_con_handle == connection_handle) {
+                bt_rcsp_recieve_callback(rcsp_server_edr_att_hdl, NULL, buffer, buffer_size);
+            }
+#if TCFG_RCSP_DUAL_CONN_ENABLE
+            u16 adt_con_handle1 = app_ble_get_hdl_con_handle(rcsp_server_edr_att_hdl1);
+            if (adt_con_handle1 == connection_handle) {
+                bt_rcsp_recieve_callback(rcsp_server_edr_att_hdl1, NULL, buffer, buffer_size);
+            }
+#endif
+        }
 #else
         if (rcsp_ble_con_handle) {
 
@@ -914,12 +951,17 @@ static void advertisements_setup_init()
     int   ret = 0;
     u16 adv_interval = ADV_INTERVAL_MIN;//0x30;
 
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
+#if (TCFG_LE_AUDIO_RCSP_USE_SAME_ACL)
     if (is_cig_phone_conn()) {
         adv_type = APP_ADV_SCAN_IND;
     }
 #endif
 
+#if (RCSP_CHANNEL_SEL == RCSP_USE_GATT_OVER_EDR)
+    if (adt_profile_support && rcsp_adt_support) {
+        adv_type = APP_ADV_SCAN_IND;
+    }
+#endif
 
 #if !TCFG_THIRD_PARTY_PROTOCOLS_SIMPLIFIED
     app_ble_set_adv_param(rcsp_server_ble_hdl, adv_interval, adv_type, adv_channel);
@@ -1047,17 +1089,17 @@ static int set_adv_enable(void *priv, u32 en)
                 return APP_BLE_OPERATION_ERROR;
             }
 
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
+#if (TCFG_LE_AUDIO_RCSP_USE_SAME_ACL)
             if (!is_cig_phone_conn()) {
 #endif
                 // 防止ios只连上ble的情况下，android(spp)回连导致ble断开后重新开广播的情况
-                if (bt_rcsp_device_conn_num() > 0) {
+                if (bt_rcsp_spp_conn_num() > 0 || bt_rcsp_ble_conn_num() > 0) {
                     log_info("spp is connecting\n");
                     printf("%s, %s, %d\n", __FILE__, __FUNCTION__, __LINE__);
                     return APP_BLE_OPERATION_ERROR;
                 }
 
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
+#if (TCFG_LE_AUDIO_RCSP_USE_SAME_ACL)
             }
 #endif
 
@@ -1081,7 +1123,7 @@ static int set_adv_enable(void *priv, u32 en)
 #if !TCFG_THIRD_PARTY_PROTOCOLS_SIMPLIFIED
     if (en) {
         advertisements_setup_init();
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
+#if (TCFG_LE_AUDIO_RCSP_USE_SAME_ACL)
         if (is_cig_phone_conn()) {
             app_ble_adv_enable(rcsp_server_ble_hdl, en);
             return APP_BLE_NO_ERROR;
@@ -1159,13 +1201,19 @@ void rcsp_bt_ble_adv_enable(u8 enable)
     uint32_t rets_addr;
     __asm__ volatile("%0 = rets ;" : "=r"(rets_addr));
     printf("%s, rets=0x%x\n", __FUNCTION__, rets_addr);
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
+#if (TCFG_LE_AUDIO_RCSP_USE_SAME_ACL)
     if (enable) {
         if ((0 == is_cig_phone_conn()) && (0 == bt_get_total_connect_dev())) {
             printf("cig[%d] or edr[%d] is not connected\n", is_cig_phone_conn(), bt_get_total_connect_dev());
             return;
         }
     }
+#if TCFG_JL_UNICAST_EDR_MODE_SWITCH_ENABLE
+    if (jl_unicast_edr_mode_get() == JL_UNICAST_MODE_DEFAULT) {
+        enable = 0;
+        y_printf("JL_UNICAST_MODE_DEFAULT dont support ble\n");
+    }
+#endif
 #endif
     set_adv_enable(0, enable);
 }
@@ -1237,7 +1285,11 @@ void rcsp_bt_ble_init(void)
     app_ble_set_mac_addr(rcsp_server_ble_hdl1, tmp_ble_addr);
 #endif
 
+#if TCFG_USER_TWS_ENABLE
+    ble_module_enable(0);
+#else
     ble_module_enable(1);
+#endif
 
     ble_init_flag = 1;
 }
@@ -1249,11 +1301,7 @@ void rcsp_bt_ble_exit(void)
         return;
     }
 
-    /* ble_module_enable(0); */
-    bt_ble_rcsp_adv_disable_timer();
-    if (bt_rcsp_ble_conn_num() > 0) {
-        ble_disconnect(NULL);
-    }
+    ble_module_enable(0);
 #if RCSP_MODE
     rcsp_exit();
 #endif
@@ -1262,8 +1310,15 @@ void rcsp_bt_ble_exit(void)
 
 }
 
-
 void ble_app_disconnect(void)
+{
+    uint32_t rets_addr;
+    __asm__ volatile("%0 = rets ;" : "=r"(rets_addr));
+    printf("%s, rets=0x%x\n", __FUNCTION__, rets_addr);
+    ble_disconnect(NULL);
+}
+
+void rcsp_ble_app_disconnect(void)
 {
     uint32_t rets_addr;
     __asm__ volatile("%0 = rets ;" : "=r"(rets_addr));

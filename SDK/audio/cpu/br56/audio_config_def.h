@@ -21,7 +21,11 @@
 #define AUD_DAC_TRIM_FADE_ENABLE            1 //A/B版芯片建议开启，C版及以后芯片可关闭，节省代码空间
 #define TCFG_AUDIO_DAC_NOISEGATE_ENABLE     1
 #define AUDIO_DAC_MAX_SAMPLE_RATE           48000
+#ifdef CONFIG_EARPHONE_CASE_ENABLE
 #define TCFG_AUDIO_DAC_CLASSH_EN            1
+#else
+#define TCFG_AUDIO_DAC_CLASSH_EN            0
+#endif
 /*
  * Hi-Res Audio使能LHDC/LDAC要求：
  * <1>DAC最高采样率调整到96K
@@ -39,6 +43,9 @@
 #undef AUDIO_DAC_MAX_SAMPLE_RATE
 #define AUDIO_DAC_MAX_SAMPLE_RATE           TCFG_AUDIO_GLOBAL_SAMPLE_RATE
 #endif
+
+#define TCFG_AUDIO_IIS_CLOCK_CLOSE          0
+
 //**************************************
 // 		    场景参数更新使能
 //**************************************
@@ -47,9 +54,10 @@
 //**************************************
 // 			音频模块链接配置
 //**************************************
-#if 0
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
 /*音频模块代码全部不放RAM*/
 #define AFx_VBASS_AT_RAM				    0	//虚拟低音
+#define AFx_VBASS_PRO_AT_RAM			    0	//虚拟低音pro
 #define AFx_REVERB_AT_RAM				    0	//混响
 #define AFx_ECHO_AT_RAM				        0	//回声
 #define AFx_VOICECHANGER_AT_RAM			    0	//变声
@@ -74,6 +82,8 @@
 #define AFX_VIRTUAL_SURRUOUND_PRO_AT_RAM    0   //虚拟环绕声pro/2t4/2t5
 #define AFX_SW_EQ_AT_RAM                    0   //软件EQ
 #define AFx_SPATIAL_EFFECT_AT_RAM           0   //空间音效
+#define AFx_STEREO_TO_LCR_AT_RAM            0   //virtual surround headphone 2t4
+#define AUDIO_LLNS_DNS_CODEC_AT_RAM         0   //llns_dns
 
 /*通话语音处理算法*/
 #define AUDIO_CVP_TEXT_AT_RAM		        0	//COMMON TEXT
@@ -102,6 +112,7 @@
 
 /*音效处理链接配置*/
 #define AFx_VBASS_AT_RAM				    0	//虚拟低音
+#define AFx_VBASS_PRO_AT_RAM			    0	//虚拟低音pro
 #define AFx_REVERB_AT_RAM				    0	//混响
 #define AFx_ECHO_AT_RAM				        0	//回声
 #define AFx_VOICECHANGER_AT_RAM			    0	//变声
@@ -125,7 +136,21 @@
 #define AFX_MULTIBAND_DRC_AT_RAM            0   //多带drc
 #define AFX_VIRTUAL_SURRUOUND_PRO_AT_RAM    0   //虚拟环绕声pro/2t4/2t5
 #define AFX_SW_EQ_AT_RAM                    0   //软件EQ
+#if TCFG_VIR_UDISK_ENABLE
+#define AFx_SPATIAL_EFFECT_AT_RAM           0   //空间音效
+#define AFx_DAC_IO_IRQ_HANDLER_AT_RAM       0   //dac io中断代码放ram
+#else
 #define AFx_SPATIAL_EFFECT_AT_RAM           1   //空间音效
+#define AFx_DAC_IO_IRQ_HANDLER_AT_RAM       1   //dac io中断代码放ram
+#endif
+#define AFx_MIXER_TEXT_AT_RAM               0   //mixer
+#define AFx_DAC_TEXT_AT_RAM                 0   //dac
+#define AFx_CONVERT_TEXT_AT_RAM             0   //convert,bitwidth convert
+#define AFx_VOCAL_REMOVER_TEXT_AT_RAM       0   //人声消除
+#define AFx_SPECTRUM_ADV_TEXT_AT_RAM        0   //频谱计算
+#define AUDIO_LLNS_DNS_CODEC_AT_RAM			0	//llns_dns降噪算法库的代码段，包括神经网络参数的段
+#define AUDIO_LLNS_DNS_BASIC_CODEC_AT_RAM			0	// llns_dns降噪算法库的代码段，不包括神经网络参数的段
+#define AUDIO_JLSTREAM_TEXT_AT_RAM          0   //数据流
 
 /*通话语音处理算法*/
 #define AUDIO_CVP_TEXT_AT_RAM		        1	//COMMON TEXT
@@ -156,14 +181,30 @@
 #else
 #define AUDIO_LC3_CODEC_AT_RAM		        0	//LC3 编解码
 #endif
+#define AUDIO_JLA_V2_CODEC_AT_RAM	0	//JLA_V2 编解码
 
 /*语音识别算法编译链接配置*/
+#ifdef CONFIG_SOUNDBOX_CASE_ENABLE
+#define AUDIO_KWS_COMMON_AT_RAM             0   //kws公共部分 ，0:放flash，1:放ram
+#define AUDIO_KWS_YES_NO_AT_RAM             0   //yes/no识别 ， 0:放flash，1:放ram
+#define AUDIO_KWS_INDIA_ENGLISH_AT_RAM      0   //印度英语识别，0:放flash，1:放ram
+#if TCFG_VIR_UDISK_ENABLE
+#define AUDIO_KWS_CHINESE_AT_RAM            0   //近场中文识别，0:放flash，1:放ram，2:一部分放ram，一部分放flash
+#define AUDIO_KWS_CHINESE_FAR_AT_RAM        0   //远场中文识别，0:放flash，1:放ram
+#else
+#define AUDIO_KWS_CHINESE_AT_RAM            2   //近场中文识别，0:放flash，1:放ram，2:一部分放ram，一部分放flash
+#define AUDIO_KWS_CHINESE_FAR_AT_RAM        1   //远场中文识别，0:放flash，1:放ram
+#endif
+#endif
+
+/*语音识别算法编译链接配置*/
+#ifdef CONFIG_EARPHONE_CASE_ENABLE
 #define AUDIO_KWS_COMMON_AT_RAM             0   //kws公共部分 ，0:放flash，1:放ram
 #define AUDIO_KWS_YES_NO_AT_RAM             0   //yes/no识别 ， 0:放flash，1:放ram
 #define AUDIO_KWS_CHINESE_AT_RAM            2   //近场中文识别，0:放flash，1:放ram，2:一部分放ram，一部分放flash
 #define AUDIO_KWS_INDIA_ENGLISH_AT_RAM      0   //印度英语识别，0:放flash，1:放ram
 #define AUDIO_KWS_CHINESE_FAR_AT_RAM        1   //远场中文识别，0:放flash，1:放ram
-
+#endif
 //**************************************
 // 			模块使能控制
 //**************************************
@@ -175,6 +216,9 @@
 //**************************************
 #define AUDIO_VBASS_LINK_VOLUME     0 //虚拟低音与音量联动调节
 #define AUDIO_EQ_LINK_VOLUME        0 //EQ与音量联动调节
+#define AUDIO_AUTODUCK_LINK_VOLUME  0 //自动闪避与音量联动调节
+//人声消除串在每个模式的数据流中
+#define AUD_VOCAL_REMOVE_SUB_PATH_ENABLE      0
 
 //***************End********************
 
@@ -184,13 +228,29 @@
 //**************************************
 //ADC中断点数
 #define AUDIO_ADC_IRQ_POINTS 256
+#define AUDIO_ADC_IRQ_POINTS_MUSIC_MODE 256
 
 
 //**************************************
-// 			IIS模块配置
+// 			IIS/TDM模块配置
 //**************************************
-//IIS中断点数
+//IIS/TDM中断点数
+#if LEA_DUAL_STREAM_MERGE_TRANS_MODE
 #define AUDIO_IIS_IRQ_POINTS 128
+#else
+#define AUDIO_IIS_IRQ_POINTS 64
+#endif
+
+//**************************************
+// 			TDM模块配置,由可视化板级配置
+//**************************************
+#ifndef TDM_WORK_MODE
+#define TDM_WORK_MODE DSP0_SHORT
+#endif
+#ifndef TDM_CH_NUM
+#define TDM_CH_NUM  2
+#endif
+
 
 //**************************************
 // 			麦克风音效配置
@@ -219,7 +279,7 @@
 
 /*省电容mic模块使能*/
 #if ((TCFG_ADC0_ENABLE && (TCFG_ADC0_MODE == 2)) || \
-        (TCFG_ADC1_ENABLE && (TCFG_ADC1_MODE == 2)))
+     (TCFG_ADC1_ENABLE && (TCFG_ADC1_MODE == 2)))
 #define TCFG_SUPPORT_MIC_CAPLESS        1
 #else
 #define TCFG_SUPPORT_MIC_CAPLESS        0
@@ -255,7 +315,11 @@
 #define TCFG_MC_DTB_FIXED				0
 
 #define TCFG_ESCO_PLC					1  	//通话丢包修复(1T2已修改为节点)
+#ifdef CONFIG_EARPHONE_CASE_ENABLE
 #define TCFG_AEC_ENABLE					1	//通话回音消除使能
+#else
+#define TCFG_AEC_ENABLE					0	//通话回音消除使能
+#endif
 
 #define MAX_ANA_VOL               (3)	// 系统最大模拟音量,范围: 0 ~ 3
 //#define MAX_COM_VOL             (16)    // 数值应该大于等于16，具体数值应小于联合音量等级的数组大小 (combined_vol_list)
@@ -304,6 +368,11 @@
 #define VOL_TAB_CUSTOM_EN           1  //使能音量表功能
 
 #define TCFG_AUDIO_MIC_DUT_ENABLE	0   //麦克风测试和传递函数测试
+
+//支持 ADC DIGITAL 按最大通道数开启, 中断拿数需按使用的ADC_CH拆分
+#ifdef CONFIG_SOUNDBOX_CASE_ENABLE
+#define TCFG_AUDIO_ADC_ENABLE_ALL_DIGITAL_CH
+#endif
 
 #define ANC_EXT_V1			1	//仅支持入耳
 #define ANC_EXT_V2			2	//支持入耳、半入耳

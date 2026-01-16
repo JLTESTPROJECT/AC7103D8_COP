@@ -20,6 +20,9 @@
 #include "app_main.h"
 #include "app_default_msg_handler.h"
 #include "dev_manager.h"
+#include "audio_dac.h"
+#include "local_tws.h"
+#include "pc_spk_player.h"
 
 #if ((TCFG_CHARGESTORE_ENABLE || TCFG_TEST_BOX_ENABLE || TCFG_ANC_BOX_ENABLE) \
      && TCFG_CHARGESTORE_PORT == IO_PORT_DP)
@@ -46,7 +49,6 @@ struct pc_opr {
 static struct pc_opr pc_hdl = {0};
 #define __this 	(&pc_hdl)
 
-extern void dac_try_power_on_thread();
 
 
 /**
@@ -153,14 +155,22 @@ static int pc_mode_init()
 {
     printf("pc mode\n");
     __this->pc_is_active = 1;
-    tone_player_stop();
-    int ret = play_tone_file_callback(get_tone_files()->pc_mode, NULL, pc_tone_play_end_callback);
+    int ret = -1;
+#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE
+    ret = local_tws_enter_mode(get_tone_files()->pc_mode, NULL);
+#endif //TCFG_LOCAL_TWS_ENABLE
+
+    //cppcheck-suppress knownConditionTrueFalse
     if (ret != 0) {
-        log_error("pc tone play err!!!");
+        tone_player_stop();
+        ret = play_tone_file_callback(get_tone_files()->pc_mode, NULL, pc_tone_play_end_callback);
+        if (ret != 0) {
+            log_error("pc tone play err!!!");
 #if  TCFG_USB_SLAVE_AUDIO_SPK_ENABLE
-        dac_try_power_on_thread();//dac初始化耗时有120ms,此处提前将dac指定到独立任务内做初始化，优化PC通路启动的耗时，减少时间戳超时的情况
+            dac_try_power_on_thread();//dac初始化耗时有120ms,此处提前将dac指定到独立任务内做初始化，优化PC通路启动的耗时，减少时间戳超时的情况
 #endif
-        pc_task_start();
+            pc_task_start();
+        }
     }
     app_send_message(APP_MSG_ENTER_MODE, APP_MODE_PC);
 
@@ -306,6 +316,9 @@ static int pc_mode_try_enter(int arg)
  */
 int pc_mode_try_exit()
 {
+#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE
+    local_tws_exit_mode();
+#endif
     pc_task_stop();
     __this->pc_is_active = 0;
 
@@ -320,7 +333,7 @@ static int pc_mode_exit()
 
 struct app_mode *app_enter_pc_mode(int arg)
 {
-    int msg[16];
+    int msg[16] = {0};
     struct app_mode *next_mode;
 
     pc_mode_init();
@@ -370,5 +383,20 @@ REGISTER_APP_MODE(pc_mode) = {
     .index  = APP_MODE_PC_INDEX,
     .ops    = &pc_mode_ops,
 };
+
+#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE
+void pc_local_start(void *priv)
+{
+    pc_task_start();
+}
+
+REGISTER_LOCAL_TWS_OPS(pc) = {
+    .name 	= APP_MODE_PC,
+    .local_audio_open = pc_local_start,
+#if  TCFG_USB_SLAVE_AUDIO_SPK_ENABLE
+    .get_play_status =  pc_spk_player_runing,
+#endif
+};
+#endif
 
 #endif

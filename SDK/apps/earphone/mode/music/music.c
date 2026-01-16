@@ -28,9 +28,7 @@
 #if (TCFG_LRC_LYRICS_ENABLE)
 #include "ui/lcd/lyrics_api.h"
 #endif
-#if TCFG_LOCAL_TWS_ENABLE
 #include "local_tws.h"
-#endif
 #include "rcsp_device_status.h"
 #include "rcsp_music_func.h"
 #include "rcsp_config.h"
@@ -327,7 +325,7 @@ static void music_player_play_success(void *priv, int parm)
     struct file_player *file_player = get_music_file_player();
     music_file_set_pitch(file_player, music_hdl.pitch_mode);
 #endif
-    musci_vocal_remover_update_parm();
+    music_vocal_remover_update_parm();
     //播放WAV APE 格式歌曲，需设置SD卡常活动状态，提高读取速度
     music_set_sd_keep_active(logo);
 
@@ -574,9 +572,12 @@ static int app_music_init()
 #if (TCFG_MUSIC_DEVICE_TONE_EN)
     char *logo = dev_manager_get_logo(dev_manager_find_active(1));
 #endif
-#if TCFG_LOCAL_TWS_ENABLE
+#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE
 #if (TCFG_MUSIC_DEVICE_TONE_EN)
     const char *file_name = get_music_tone_name_by_logo(logo);
+    if (!file_name) {
+        file_name = get_tone_files()->music_mode;
+    }
     ret = local_tws_enter_mode(file_name, NULL);
 #else
     ret = local_tws_enter_mode(get_tone_files()->music_mode, NULL);
@@ -619,7 +620,7 @@ static int app_music_init()
 
 void app_music_exit()
 {
-#if TCFG_LOCAL_TWS_ENABLE
+#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE
     local_tws_exit_mode();
 #endif
     music_save_breakpoint(1);
@@ -772,7 +773,7 @@ int music_device_msg_handler(int *msg)
 
 struct app_mode *app_enter_music_mode(int arg)
 {
-    int msg[16];
+    int msg[16] = {0};
     struct app_mode *next_mode;
 
     app_music_init();
@@ -830,7 +831,8 @@ REGISTER_APP_MODE(music_mode) = {
     .ops 	= &music_mode_ops,
 };
 
-#if TCFG_LOCAL_TWS_ENABLE
+#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE
+
 void music_local_start(void *priv)
 {
     if (priv) {
@@ -840,10 +842,19 @@ void music_local_start(void *priv)
     }
 }
 
+static bool get_music_player_status(void)
+{
+    u8 play_status = music_file_get_player_status(get_music_file_player());
+    return (play_status == FILE_PLAYER_START) ? TRUE : FALSE;
+}
+
 REGISTER_LOCAL_TWS_OPS(music) = {
     .name 	= APP_MODE_MUSIC,
     .local_audio_open = music_local_start,
+    .get_play_status = get_music_player_status,
 };
+
+
 #endif
 
 

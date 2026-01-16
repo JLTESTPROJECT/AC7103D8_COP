@@ -34,19 +34,9 @@ Notes:以下为芯片规格定义，不可修改，仅供引用
 #define PCM_PHASE_BIT           8
 #endif
 
-#define DA_LEFT        0
-#define DA_RIGHT       1
-
 /************************************
  *              DAC模式
  *************************************/
-// TCFG_AUDIO_DAC_MODE
-#define DAC_MODE_SINGLE                    (0)
-#define DAC_MODE_DIFF                      (1)
-#define DAC_MODE_VCMO                      (2)
-
-#define DACR32_DEFAULT		8192
-
 #define DAC_OFFSET_FADE_OUT             0
 #define DAC_OFFSET_FADE_IN              1
 
@@ -68,23 +58,22 @@ Notes:以下为芯片规格定义，不可修改，仅供引用
 #define DAC_TRIM_CH_R                  1
 
 /************************************
-             dac性能模式
-************************************/
-// TCFG_DAC_PERFORMANCE_MODE
-#define	DAC_MODE_HIGH_PERFORMANCE          (0)
-#define	DAC_MODE_LOW_POWER		           (1)
-
-/************************************
              hpvdd档位
 ************************************/
 #define DAC_HPVDD_18V              (0)
 #define DAC_HPVDD_12V              (1)
 
+/************************************
+             DAC输出功率档位
+************************************/
+#define DAC_POWER_MODE_20mW			0
+#define DAC_POWER_MODE_30mW			1
+#define DAC_POWER_MODE_50mW			2
+#define DAC_POWER_MODE_80mW			3
+#define DAC_POWER_MODE_100mW		4
+#define DAC_POWER_MODE_2Vrms_THD	5
+#define DAC_POWER_MODE_2Vrms_SNR	6
 
-#define DAC_ANALOG_OPEN_PREPARE         (1) //DAC打开前，即准备打开
-#define DAC_ANALOG_OPEN_FINISH          (2)	//DAC打开后，即打开完成
-#define DAC_ANALOG_CLOSE_PREPARE        (3) //DAC关闭前，即准备关闭
-#define DAC_ANALOG_CLOSE_FINISH         (4) //DAC关闭后，即关闭完成
 //在应用层重定义 audio_dac_power_state 函数可以获取dac模拟开关的状态
 //void audio_dac_power_state(u8 state){}
 
@@ -116,6 +105,7 @@ struct dac_platform_data {
     u32 digital_gain_limit;
     u32 max_sample_rate;    	// 支持的最大采样率
     u32 classh_down_step;   // DAC classh 电压下降步进，1us/setp，配置范围[0.1s, 8s]，建议配置3s
+    float fixed_pns;        	// 固定pns,单位ms
 };
 
 struct trim_init_param_t {
@@ -193,7 +183,6 @@ struct audio_dac_hdl {
     u8 anc_dac_open;
     u8 protect_fadein;
     u8 vol_set_en;
-    u8 dec_channel_num;
     u16 d_volume[2];
     u16 start_ms;
     u16 delay_ms;
@@ -220,6 +209,8 @@ struct audio_dac_hdl {
     const struct dac_platform_data *pd;
 	struct audio_dac_noisegate ng;
     void (*fade_handler)(u8 left_gain, u8 right_gain);
+	u8 (*is_aec_ref_dac_ch)(void *dac_ch);
+	void (*irq_handler_cb)(void);
 };
 
 

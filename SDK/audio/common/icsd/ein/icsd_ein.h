@@ -9,7 +9,7 @@
 #include "icsd_common.h"
 #include "icsd_common_v2.h"
 
-#if 0
+#if EIN_PRINTF_EN
 #define _ein_printf printf
 #else
 #define _ein_printf icsd_printf_off
@@ -101,4 +101,7 @@ extern const float pz_in_trans[28];
 extern const float pz_out_trans[28];
 extern const float sz_in[14];
 extern const float sz_out[14];
+
+
+extern char lib_ein_version[];
 #endif

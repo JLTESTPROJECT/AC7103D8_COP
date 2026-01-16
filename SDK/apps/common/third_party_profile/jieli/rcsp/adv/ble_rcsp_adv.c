@@ -37,7 +37,6 @@
 #include "btcrypt.h"
 #include "custom_cfg.h"
 #include "rcsp_music_info_setting.h"
-#include "classic/tws_api.h"
 #include "ble_rcsp_server.h"
 #include "rcsp_manage.h"
 #include "rcsp_bt_manage.h"
@@ -50,16 +49,30 @@
 #include "btstack_rcsp_user.h"
 #include "update.h"
 
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
+#if	TCFG_USER_TWS_ENABLE
+#include "bt_tws.h"
+#include "classic/tws_api.h"
+#endif
+#if (TCFG_LE_AUDIO_RCSP_USE_SAME_ACL)
 #include "app_le_connected.h"
 #endif
 
 #if RCSP_MODE == RCSP_MODE_EARPHONE
-#include "bt_tws.h"
 #include "earphone.h"
+#elif RCSP_MODE == RCSP_MODE_SOUNDBOX
+#include "soundbox.h"
 #endif
 
 #include "asm/charge.h"
+
+// 设备类型
+#define RCSP_ADV_DEV_TYPE_SOUNDBOX              (0x00) //音箱类型
+#define RCSP_ADV_DEV_TYPE_CHARGESTORE           (0x10) //充电池类型
+#define RCSP_ADV_DEV_TYPE_TWS_EARPHONE          (0x20) //TWS耳机类型
+#define RCSP_ADV_DEV_TYPE_EARPHONE              (0x30) //普通耳机类型
+#define RCSP_ADV_DEV_TYPE_SOUNDCARD             (0x40) //声卡类型
+#define RCSP_ADV_DEV_TYPE_WATCH                 (0x50) //手表类型
+#define RCSP_ADV_DEV_TYPE_DONGLE                (0x60) //Dongle设备类型
 
 #if TCFG_USER_BLE_CTRL_BREDR_EN
 #define VER_FLAG_BLE_CTRL_BREDR					BIT(0) // 先连接ble再连接edr
@@ -81,6 +94,8 @@
 #if !TCFG_THIRD_PARTY_PROTOCOLS_SIMPLIFIED
 extern void *rcsp_server_ble_hdl;
 extern void *rcsp_server_ble_hdl1;
+extern void *rcsp_server_edr_att_hdl;
+extern void *rcsp_server_edr_att_hdl1;
 #endif
 
 static u8 adv_data_len;
@@ -128,8 +143,75 @@ int JL_AES_BASE_BT = (int)JL_AES;	// add for btcon_hash, by lingxuanfeng, 202205
 #endif
 int rcsp_make_set_adv_data(void)
 {
-    u8 i;
     u8 *buf = adv_data;
+#if (RCSP_ADV_VERSION == 6)
+    u8 offset = 0;
+
+    buf[offset++] = 0;  // length
+    buf[offset++] = 0xFF;  // type:Manufacturer Specific Data
+
+    buf[offset++] = 0xD6;	// JL ID
+    buf[offset++] = 0x05;
+
+    u16 vid = get_vid_pid_ver_from_cfg_file(GET_VID_FROM_EX_CFG);
+    buf[offset++] = vid & 0xFF;
+    buf[offset++] = vid >> 8;
+
+    u16 pid = get_vid_pid_ver_from_cfg_file(GET_PID_FROM_EX_CFG);
+    buf[offset++] = pid & 0xFF;
+    buf[offset++] = pid >> 8;
+
+    u8 bat_num = 1;
+    u8 adv_version = 6;
+#if (RCSP_MODE == RCSP_MODE_SOUNDBOX)
+    u8 dev_type = RCSP_ADV_DEV_TYPE_SOUNDBOX;
+#if (defined(RCSP_DISPLAY_AS_DONGLE) && RCSP_DISPLAY_AS_DONGLE)
+    dev_type = RCSP_ADV_DEV_TYPE_DONGLE;
+#endif
+#if	TCFG_USER_TWS_ENABLE
+    bat_num = 2;
+#endif
+
+#elif (RCSP_MODE == RCSP_MODE_EARPHONE)
+    u8 dev_type = RCSP_ADV_DEV_TYPE_TWS_EARPHONE;
+    bat_num = 3;
+#endif
+    buf[offset++] = dev_type | adv_version;
+
+    u8 edr_flag = __this->connect_flag;
+#if ((RCSP_CHANNEL_SEL == RCSP_USE_BLE) || (0 == TCFG_USER_BT_CLASSIC_ENABLE))
+    edr_flag = 0x0F;
+#endif
+    buf[offset++] = (bat_num << 4) | edr_flag;
+
+    swapX(bt_get_mac_addr(), &buf[offset], 6);
+    offset += 6;
+
+    buf[offset++] = __this->bat_percent_L ? (((!!__this->bat_charge_L) << 7) | (__this->bat_percent_L & 0x7F)) : 0;
+
+    if (bat_num > 1) {
+        buf[offset++] = __this->bat_percent_R ? (((!!__this->bat_charge_R) << 7) | (__this->bat_percent_R & 0x7F)) : 0;
+    }
+    if (bat_num > 2) {
+        buf[offset++] = __this->bat_percent_C ? (((!!__this->bat_charge_C) << 7) | (__this->bat_percent_C & 0x7F)) : 0;
+    }
+
+    // Seq
+    buf[offset++] = __this->seq_rand;
+
+    // CFG 1
+    u8 android_connect_way = RCSP_CHANNEL_SEL;
+    u8 ios_connect_way = (RCSP_CHANNEL_SEL == RCSP_USE_GATT_OVER_EDR) ? RCSP_USE_GATT_OVER_EDR : RCSP_USE_BLE;
+    buf[offset++] = (android_connect_way << 1) | (ios_connect_way << 4) | BIT(7);
+
+    // CFG 2
+    buf[offset++] = 0;
+
+    adv_data_len = offset;
+    buf[0] = adv_data_len - 1;
+
+#elif (RCSP_ADV_VERSION < 6)
+    u8 i;
     buf[0] = 0x1E;
     buf[1] = 0xFF;
 
@@ -146,9 +228,9 @@ int rcsp_make_set_adv_data(void)
 
 #if RCSP_MODE == RCSP_MODE_EARPHONE
 
-    buf[8] = 0x20;	//   2:TWS耳机类型   |  protocol verson
+    buf[8] = RCSP_ADV_DEV_TYPE_TWS_EARPHONE;	//   2:TWS耳机类型   |  protocol verson
 
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
+#if (TCFG_LE_AUDIO_RCSP_USE_SAME_ACL)
     buf[8] |= 4;
 #else
     if (RCSP_USE_SPP == get_defalut_bt_channel_sel()) {
@@ -164,15 +246,14 @@ int rcsp_make_set_adv_data(void)
 
 #if RCSP_MODE == RCSP_MODE_SOUNDBOX
 #if (SOUNDCARD_ENABLE)
-    buf[8] = 0x40;	//   4:声卡类型   |  protocol verson
+    buf[8] = RCSP_ADV_DEV_TYPE_SOUNDCARD;	//   4:声卡类型   |  protocol verson
 #else
-    buf[8] = 0x0;	//   0:音箱类型   |  protocol verson
+    buf[8] = RCSP_ADV_DEV_TYPE_SOUNDBOX;	//   0:音箱类型   |  protocol verson
 #endif
     if (RCSP_USE_SPP == get_defalut_bt_channel_sel()) {
         buf[8] |= 2;
     }
 #endif
-
 
 #if RCSP_MODE == RCSP_MODE_WATCH
     buf[8] = 0x50 | VER_FLAG_BLE_CTRL_BREDR | VER_FLAG_IOS_BLE_LINK_BREDR;	// 手表类型
@@ -199,7 +280,7 @@ int rcsp_make_set_adv_data(void)
         buf[20] = 1;
     }
 
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
+#if (TCFG_LE_AUDIO_RCSP_USE_SAME_ACL)
     buf[20] |= BIT(2);  // 是否支持Le Audio功能
     if (is_cig_phone_conn()) {
         buf[20] |= BIT(3);  // Le Audio是否已连接
@@ -213,17 +294,23 @@ int rcsp_make_set_adv_data(void)
     }
 #endif // RCSP_MODE == RCSP_MODE_WATCH
 
-    __this->modify_flag = 0;
     adv_data_len = 31;
-#if !TCFG_THIRD_PARTY_PROTOCOLS_SIMPLIFIED
-    app_ble_adv_data_set(rcsp_server_ble_hdl, buf, 31);
-    app_ble_adv_data_set(rcsp_server_ble_hdl1, buf, 31);
+
 #else
-    ble_op_set_adv_data(31, buf);
+#error "RCSP_ADV_VERSION unsupport"
+#endif
+    __this->modify_flag = 0;
+
+    /* ble_op_set_adv_data(31, buf); */
+#if !TCFG_THIRD_PARTY_PROTOCOLS_SIMPLIFIED
+    app_ble_adv_data_set(rcsp_server_ble_hdl, buf, adv_data_len);
+    app_ble_adv_data_set(rcsp_server_ble_hdl1, buf, adv_data_len);
+#else
+    ble_op_set_adv_data(adv_data_len, buf);
 #endif
 
     log_info("ADV data():");
-    log_info_hexdump(buf, 31);
+    log_info_hexdump(buf, adv_data_len);
     return 0;
 }
 
@@ -288,9 +375,14 @@ static int update_adv_data(u8 *buf)
 
 #if RCSP_MODE == RCSP_MODE_SOUNDBOX
 #if (SOUNDCARD_ENABLE)
-    buf[6] = 0x40;	//   4:声卡类型   |  protocol verson
+    buf[6] = RCSP_ADV_DEV_TYPE_SOUNDCARD;	//   4:声卡类型   |  protocol verson
 #else
-    buf[6] = 0x0;	//   0:音箱类型   |  protocol verson
+
+    buf[6] = RCSP_ADV_DEV_TYPE_SOUNDBOX;	//   0:音箱类型   |  protocol verson
+#if (defined(RCSP_DISPLAY_AS_DONGLE) && RCSP_DISPLAY_AS_DONGLE)
+    buf[6] = RCSP_ADV_DEV_TYPE_DONGLE;
+#endif
+
 #endif
     if (RCSP_USE_SPP == get_defalut_bt_channel_sel()) {
         buf[6] |= 2;
@@ -655,6 +747,8 @@ static void bt_ble_rcsp_adv_enable_do(void *priv)
         if (rcsp_conn_num >= max_con_dev) {
             __this->modify_flag = 0;
         }
+    }
+    if (__this->ble_adv_notify) {
         set_ble_adv_notify(0);
     }
 
@@ -695,15 +789,15 @@ u8 *ble_get_adv_data_ptr(u16 *len)
     if (len) {
         *len = adv_data_len;
     }
-#if RCSP_UPDATE_EN
-    adv_data[15] = 1;
-    adv_data[20] = 0;
-    u8 t_buf[16];
-    btcon_hash(&adv_data[2], 16, &adv_data[15], 4, t_buf);
-    for (u8 i = 0; i < 8; i++) {
-        adv_data[23 + i] = t_buf[2 * i + 1];
-    }
-#endif
+    /* #if RCSP_UPDATE_EN */
+    /* adv_data[15] = 1; */
+    /* adv_data[20] = 0; */
+    /* u8 t_buf[16]; */
+    /* btcon_hash(&adv_data[2], 16, &adv_data[15], 4, t_buf); */
+    /* for (u8 i = 0; i < 8; i++) { */
+    /* adv_data[23 + i] = t_buf[2 * i + 1]; */
+    /* } */
+    /* #endif */
     return adv_data;
 }
 
@@ -961,10 +1055,11 @@ void adv_role_switch_handle(u8 role)
 #if !TCFG_THIRD_PARTY_PROTOCOLS_SIMPLIFIED
     // 当充电入仓的时候，入仓的主机设备role是1但tws_api_get_role()是0；
     printf("adv_role_switch_handle rcsp role change:%d, %d, %d\n", role, tws_api_get_role(), bt_rcsp_device_conn_num());
+    printf("tws state %x, spp num %x, ble num %x, att num %x\n", tws_api_get_tws_state(), bt_rcsp_spp_conn_num(), bt_rcsp_ble_conn_num(), bt_rcsp_edr_att_conn_num());
     if (tws_api_get_tws_state()) {
         // 设备连接后，主从切换需要spp手机app来请求固件信息
         if ((role == TWS_ROLE_MASTER) && \
-            ((bt_rcsp_spp_conn_num() > 0) || (bt_rcsp_ble_conn_num() > 0))) {
+            ((bt_rcsp_spp_conn_num() > 0) || (bt_rcsp_ble_conn_num() > 0) || (bt_rcsp_edr_att_conn_num() > 0))) {
             u8 adv_cmd = 0x4;
             adv_info_device_request(&adv_cmd, sizeof(adv_cmd));             //让手机来请求固件信息
         }
@@ -981,6 +1076,14 @@ void adv_role_switch_handle(u8 role)
                 rcsp_bt_ble_adv_enable(0);
             }
         }
+        //有att连接中,从机切为主机，要开ble广播；主机切为从机，要关ble广播
+        if (bt_rcsp_edr_att_conn_num() > 0) {
+            if (role == TWS_ROLE_MASTER) {
+                rcsp_bt_ble_adv_enable(1);
+            } else {
+                rcsp_bt_ble_adv_enable(0);
+            }
+        }
     }
 
 #else // !TCFG_THIRD_PARTY_PROTOCOLS_SIMPLIFIED
@@ -990,24 +1093,10 @@ void adv_role_switch_handle(u8 role)
             // 新主机开广播
             ble_module_enable(1);
         }
-        if (rcsp_ble_con_handle_get() && (tws_api_get_role() == TWS_ROLE_SLAVE)) {
-            // 旧主机让手机回连同时断开ble
-            u8 adv_cmd = 0x3;
-            adv_info_device_request(&adv_cmd, sizeof(adv_cmd));
-            tws_disconn_ble(NULL);
-        }
-        if (bt_rcsp_spp_conn_num() && bt_rcsp_device_conn_num()) {
-            u8 adv_cmd = 0x4;
-            adv_info_device_request(&adv_cmd, sizeof(adv_cmd));             //主从切换spp让手机来请求固件信息
-        }
-    }
-
-
-
-    if (tws_api_get_tws_state()) {
-        if (!bt_rcsp_spp_conn_num() && (tws_api_get_role() != TWS_ROLE_SLAVE)) {
-            // 新主机开广播
-            ble_module_enable(1);
+        // 主从切换后, 新主机重新推送一次电量信息
+        if (role == TWS_ROLE_MASTER) {
+            set_ble_adv_notify(1);
+            bt_ble_rcsp_adv_enable();
         }
         if (rcsp_ble_con_handle_get() && (tws_api_get_role() == TWS_ROLE_SLAVE)) {
             // 旧主机让手机回连同时断开ble

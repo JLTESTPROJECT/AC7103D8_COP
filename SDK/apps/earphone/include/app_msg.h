@@ -44,6 +44,8 @@ enum {
     MSG_FROM_BIG,
     MSG_FROM_CIG,
     MSG_FROM_NET_BT,
+
+    MSG_FROM_LOCAL_TWS,
 };
 
 
@@ -148,6 +150,7 @@ enum {
     APP_MSG_TWS_UNPAIRED,
     APP_MSG_TWS_PAIR_SUSS,
     APP_MSG_TWS_CONNECTED,
+    APP_MSG_TWS_DISCONNECTED,
     APP_MSG_TWS_WAIT_PAIR,                      // 等待配对
     APP_MSG_TWS_START_PAIR,                     // 手动发起配对
     APP_MSG_TWS_START_CONN,                     // 开始回连TWS
@@ -162,6 +165,10 @@ enum {
     //音频相关消息
     APP_MSG_VOL_UP,
     APP_MSG_VOL_DOWN,
+    APP_MSG_UAC0_VOL_DOWN,                      //声卡0音量减
+    APP_MSG_UAC0_VOL_UP,                        //声卡0音量加
+    APP_MSG_UAC1_VOL_DOWN,                      //声卡1音量减
+    APP_MSG_UAC1_VOL_UP,                        //声卡1音量加
     APP_MSG_MAX_VOL,
     APP_MSG_MIN_VOL,
     APP_MSG_MIC_OPEN,
@@ -184,6 +191,7 @@ enum {
     APP_MSG_SMART_VOICE_EVENT,
     APP_MSG_VOL_CHANGED,
     APP_MSG_SWITCH_SOUND_EFFECT,
+    APP_MSG_SPK_EQ_TEST,
     APP_MSG_VOCAL_REMOVE,
     APP_MSG_EQ_CHANGED,
     APP_MSG_MUTE_CHANGED,
@@ -194,7 +202,7 @@ enum {
     APP_MSG_EARTCH_OUT_EAR,                     //耳机摘下
 
     APP_MSG_KEY_TONE,                           //播放按键音
-    APP_MSG_KEY_POWER_OFF,
+    APP_MSG_KEY_POWER_OFF,                      //按键关机
     APP_MSG_KEY_POWER_OFF_HOLD,
     APP_MSG_KEY_POWER_OFF_RELEASE,
     APP_MSG_KEY_POWER_OFF_INSTANTLY,
@@ -233,6 +241,21 @@ enum {
     APP_MSG_PITCH_UP,
     APP_MSG_PITCH_DOWN,
 
+    APP_MSG_REC_PP,
+    APP_MSG_ENC_START,
+    APP_MSG_REVERB_OPNE,
+    APP_MSG_MIC_VOL_UP,
+    APP_MSG_MIC_VOL_DOWN,
+    APP_MSG_MIC_BASS_UP,
+    APP_MSG_MIC_BASS_DOWN,
+    APP_MSG_MIC_TREBLE_UP,
+    APP_MSG_MIC_TREBLE_DOWN,
+
+    APP_MSG_PC_AUDIO_PLAY_OPEN,
+    APP_MSG_PC_AUDIO_PLAY_CLOSE,
+    APP_MSG_PC_AUDIO_MIC_OPEN,
+    APP_MSG_PC_AUDIO_MIC_CLOSE,
+
     //IR_NUM中间不允许插入msg
     APP_MSG_IR_NUM0,
     APP_MSG_IR_NUM1,
@@ -247,6 +270,11 @@ enum {
     //IR_NUM中间不允许插入msg
 
     APP_MSG_INPUT_FILE_NUM,
+    APP_MSG_DEL_ALL_REMOTE_DEV, //清除远程配对记录
+
+    APP_MSG_TWS_OPEN_LOCAL_DEC,
+    APP_MSG_TWS_CLOSE_LOCAL_DEC,
+
 };
 
 

@@ -44,9 +44,11 @@
 #include "rcsp_user_api.h"
 #include "pwm_led/led_ui_api.h"
 #include "dual_bank_updata_api.h"
-#if TCFG_AUDIO_WIDE_AREA_TAP_ENABLE
-#include "icsd_adt_app.h"
-#endif
+#include "effect/effects_dev.h"
+#include "audio_anc_includes.h"
+#include "mix_record_api.h"
+#include "lib_update_config.h"
+#include "app_mode_sink.h"
 
 #define LOG_TAG             "[APP]"
 #define LOG_ERROR_ENABLE
@@ -91,16 +93,23 @@ const struct task_info task_info_table[] = {
 #endif
 
     {"aec",					2,	   1,   768,   128 },
+#if (defined(EFFECT_DEV_MULTI_TASK_ENABLE) && EFFECT_DEV_MULTI_TASK_ENABLE)
+    {"eff_mtask",					6,	   1,   768,   0 },
+#endif
     /*
      *file dec任务不打断jlstream任务运行,故优先级低于jlstream
      */
     {"file_dec",            4,     0,  640,   0 },
     {"file_cache",          6,     0,  512 - 128,   0 },
+    {"write_file",		    5,	   0,  512,   0 },
     {"aec_dbg",				3,	   0,   512,   128 },
-    {"update",				1,	   0,   256,   0   },
+    {"update",				1,	   0,   512,   0   },
     {"tws_ota",				2,	   0,   256,   0   },
     {"tws_ota_msg",			2,	   0,   256,   128 },
-    {"dw_update",		 	1,	   0,   256,   128 },
+    {"dw_update",		 	1,	   0,   512,   128 },
+#if (CONFIG_USER_FILE_UPDATE_V2_EN)
+    {"ex_f_update",			1,	    1,  512,   0    },
+#endif
 #if TCFG_AUDIO_DATA_EXPORT_DEFINE
     {"aud_capture",         4,     0,   512,   256 },
     {"data_export",         5,     0,   512,   256 },
@@ -160,6 +169,8 @@ const struct task_info task_info_table[] = {
 #endif
 #if TCFG_AUDIO_SPATIAL_EFFECT_ENABLE
     {"imu_sensor",      2,     1,   512,   128 },
+#endif
+#if (TCFG_AUDIO_SPATIAL_EFFECT_ENABLE || TCFG_AUDIO_SOMATOSENSORY_ENABLE)
     {"imu_trim",            1,     0,   256,   128 },
 #endif
 //  {"periph_demo",       3,     0,   512,   0 },
@@ -172,17 +183,23 @@ const struct task_info task_info_table[] = {
 #if TCFG_AUDIO_ANC_ENABLE
     {"anc",                 3,     0,   512,   128 },
 #if TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN
-    {"icsd_anc",            5,     0,   512,   128 },
-    {"icsd_adt",            2,     0,   512,   128 },
-    {"icsd_src",            3,     0,   512,   256 },
+    {"icsd_anc_0",          5,     0,   256,   128 },
+    {"icsd_anc_1",          5,     1,   256,   128 },
+    {"icsd_adt_0",          2,     0,   256,   128 },
+    {"icsd_adt_1",          2,     1,   256,   128 },
+    {"icsd_src",            4,     0,   256,   256 },
     {"speak_to_chat",       2,     0,   512,   128 },
 #endif
 #if TCFG_AUDIO_ANC_REAL_TIME_ADAPTIVE_ENABLE
-    {"rt_anc",              3,     0,   512,   128 },
-    {"rt_de",              	1,     0,   512,   128 },
+    {"rt_anc_0",            3,     0,   512,   128 },
+    {"rt_anc_1",            3,     1,   512,   128 },
+    {"rt_de",              	1,     1,   512,   128 },
 #endif
 #if TCFG_AUDIO_ANC_ENABLE && (TCFG_AUDIO_ANC_EXT_VERSION == ANC_EXT_V2)
-    {"afq_common",         	1,     0,   512,   128 },
+    {"afq_common",         	1,     1,   512,   128 },
+#endif
+#if AUDIO_ANC_DATA_EXPORT_VIA_UART
+    {"anc_dev",         	1,     0,   512,   128 },
 #endif
 #endif
 
@@ -202,8 +219,16 @@ const struct task_info task_info_table[] = {
     {"dlog",                1,     0,  256,   128 },
 #endif
     {"aud_adc_demo",        1,     0,  512,   128 },
+    {"aud_dac_demo",        1,     0,  512,   128 },
+    {"vad_demo",        	1,     0,  512,   128 },
 #if (TCFG_HRSENSOR_ENABLE || TCFG_GSENSOR_ENABLE)
     {"app_sensor",         1,     0,  512,   128 },
+#endif
+#if (CONFIG_UPDATE_MUTIL_CPU_UART)
+    {"update_interactive_uart",   1,  0,   768,   512	},
+#endif
+#if TCFG_AUDIO_CVP_DEMO_ENABLE
+    {"cvp_demo",			3,	   1,   768,   128 },
 #endif
     {0, 0},
 };
@@ -356,28 +381,13 @@ void board_init()
 
 }
 
-__INITCALL_BANK_CODE
-static void app_version_check()
-{
-    extern char __VERSION_BEGIN[];
-    extern char __VERSION_END[];
-
-    puts("=================Version===============\n");
-    for (char *version = __VERSION_BEGIN; version < __VERSION_END;) {
-        version += 4;
-        printf("%s\n", version);
-        version += strlen(version) + 1;
-    }
-    puts("=======================================\n");
-}
 
 __INITCALL_BANK_CODE
 static struct app_mode *app_task_init()
 {
     app_var_init();
-    app_version_check();
 
-#ifndef CONFIG_CPU_BR56
+#if !(defined(CONFIG_CPU_BR56) || defined(CONFIG_CPU_BR50))
     sdfile_init();
     syscfg_tools_init();
 #endif
@@ -392,8 +402,6 @@ static struct app_mode *app_task_init()
 #if (defined(TCFG_DEBUG_DLOG_ENABLE) && TCFG_DEBUG_DLOG_ENABLE)
     dlog_init();
     dlog_enable(1);
-    extern void dlog_uart_auto_enable_init(void);
-    extern int dlog_uart_output_set(enum DLOG_OUTPUT_TYPE type);
     dlog_uart_output_set(DLOG_OUTPUT_2_FLASH | dlog_output_type_get());
     dlog_uart_auto_enable_init();
 #endif
@@ -411,7 +419,7 @@ static struct app_mode *app_task_init()
     if (CONFIG_UPDATE_ENABLE) {
         update = update_result_deal();
     }
-#if TCFG_MC_BIAS_AUTO_ADJUST
+#if (TCFG_MC_BIAS_AUTO_ADJUST && TCFG_AUDIO_ADC_ENABLE)
     mic_capless_trim_init(update);
 #endif
 
@@ -528,8 +536,8 @@ struct app_mode *app_mode_switch_handler(int *msg)
     /*一些情况不希望退出蓝牙模式*/
     if ((app_get_current_mode() != NULL) &&
         (app_get_current_mode()->name != mode_name) && (bt_app_exit_check() == 0)) {
-        printf("app_mode_switch: bt mode can't exit!, current mode:%d, goto mode:%d\n",
-               app_get_current_mode()->name, mode_name);
+        log_info("app_mode_switch: bt mode can't exit!, current mode:%d, goto mode:%d\n",
+                 app_get_current_mode()->name, mode_name);
         return NULL;
     }
 #endif
@@ -553,6 +561,12 @@ struct app_mode *app_mode_switch_handler(int *msg)
     default:
         return NULL;
     }
+#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE && TCFG_APP_LINEIN_EN && ((defined TCFG_LINEIN_DETECT_ENABLE) && (TCFG_LINEIN_DETECT_ENABLE == 0))
+    if ((msg[1] == APP_MSG_GOTO_NEXT_MODE) && (msg[2] == APP_KEY_MSG_FROM_TWS) && (next_mode->name == APP_MODE_LINEIN)) {
+        g_printf("local_tws goto_next_mode msg_from_tws dont goto linein\n");
+        return NULL;
+    }
+#endif
     g_mode_switch_arg = arg;
 
 #if TCFG_APP_BT_EN && TCFG_BT_BACKGROUND_ENABLE
@@ -586,6 +600,13 @@ struct app_mode *app_mode_switch_handler(int *msg)
         return NULL;
     }
 
+#if TCFG_MIX_RECORD_ENABLE
+    //切换模式前关闭混合录音
+    if (get_mix_recorder_status()) {
+        mix_recorder_stop();
+    }
+#endif // TCFG_MIX_RECORD_ENABLE
+
     err = app_goto_mode(next_mode->name, arg);
 
     if (err != 0) {
@@ -599,6 +620,41 @@ struct app_mode *app_mode_switch_handler(int *msg)
         return next_mode;
     }
 }
+
+#if 0
+//用于查找重复出现的字符
+static u8 putchar_num = 0;
+int (putchar)(int a)    //重定义putchar
+{
+    uint32_t rets_addr;
+    __asm__ volatile("%0 = rets ;" : "=r"(rets_addr));
+    if (a == 'a') {   //修改需要查找putchar的字符
+        putchar_num++;
+    }
+    if (putchar_num == 5) {    //打印连续出现5次的字符的rets
+        y_printf("char:%c rets:%x\n", a, rets_addr);
+        putchar_num =  0;
+    }
+#ifdef __LOG_ENABLE
+    if (log_output_lock() != 0) {
+        struct logbuf *lb = log_output_start(1);
+        if (lb) {
+            log_putchar(lb, a);
+            log_output_end(lb);
+        }
+    } else {
+        log_putbyte(a);
+        log_output_unlock();
+    }
+#else
+    if (a == '\r') {
+        return a;
+    }
+    putbyte(a);
+#endif
+    return a;
+}
+#endif
 
 #if 0
 void timer_no_response_callback(const char *task_name, void *func, u32 msec, void *timer, u32 curr_msec)
@@ -621,20 +677,16 @@ void timer_no_response_callback(const char *task_name, void *func, u32 msec, voi
 #if 0
 static void test_printf(void *_arg)
 {
-    //extern void mem_unfree_dump(void);
-    //mem_unfree_dump();    //打印各模块内存
-
-    extern void mem_stats(void);   //打印当前内存
     mem_stats();
 
     int role = tws_api_get_role();
-    printf(">tws role:%d\n", role);   //打印tws主从
+    log_info(">tws role:%d\n", role);   //打印tws主从
 
     //char channel = tws_api_get_local_channel();
-    //printf(">tws channel:%c\n", channel);    //打印tws通道
+    //log_info(">tws channel:%c\n", channel);    //打印tws通道
 
     int curr_clk = clk_get("sys");
-    printf(">curr_clk:%d\n", curr_clk);  //打印当前时钟
+    log_info(">curr_clk:%d\n", curr_clk);  //打印当前时钟
 }
 #endif
 
@@ -656,18 +708,19 @@ static void app_task_loop(void *p)
     u32 realme_breakpoint = 0;
     if (CONFIG_UPDATE_ENABLE) {
         update = update_result_deal();
-        extern int realme_check_upgrade_area(int update);
         realme_check_upgrade_area(update);
     }
 #endif
 #endif /* #if (VFS_ENABLE == 1) */
 
 #else
-    extern const int support_dual_bank_update_no_erase;
+    extern void flash_w_protected_check_en(u8 en);
     if (support_dual_bank_update_no_erase) {
         if (0 == dual_bank_update_bp_info_get()) {
             norflash_set_write_protect_remove();
+            flash_w_protected_check_en(0);
             dual_bank_check_flash_update_area(0);
+            flash_w_protected_check_en(1);
             norflash_set_write_protect_en();
         }
     }
@@ -685,7 +738,6 @@ static void app_task_loop(void *p)
             break;
         case APP_MODE_BT:
             mode = app_enter_bt_mode(g_mode_switch_arg);
-            printf("----mode: %d\n", mode->name);
             break;
 #if TCFG_APP_LINEIN_EN
         case APP_MODE_LINEIN:
@@ -700,6 +752,11 @@ static void app_task_loop(void *p)
 #if TCFG_APP_MUSIC_EN
         case APP_MODE_MUSIC:
             mode = app_enter_music_mode(g_mode_switch_arg);
+            break;
+#endif
+#if TCFG_LOCAL_TWS_ENABLE
+        case APP_MODE_SINK:
+            mode = app_enter_sink_mode(g_mode_switch_arg);
             break;
 #endif
         }

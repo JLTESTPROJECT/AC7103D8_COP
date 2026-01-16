@@ -101,6 +101,7 @@ struct group_param {
 #define EFF_FORM_CMD      (0x506)//表单节点获取当前值命令
 #define EFF_ONLINE_CMD    (0x507)//检查需要在线调试的节点
 #define EFF_DNSFB_COEFF_CMD    (0x509)//更新DNSFB_coeff eq命令
+#define EFF_SUPPORT_NODE_CMD   (0x510)//获取设备支持的节点
 
 #define EFF_NODE_MERGE_UPDATE          BIT(0)
 #define EFF_MANUAL_ADJ_NODE            BIT(1)

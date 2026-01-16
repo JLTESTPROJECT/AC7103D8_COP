@@ -4,7 +4,7 @@
 #include "tone_player.h"
 #include "app_tone.h"
 #include "app_default_msg_handler.h"
-
+#include "local_tws.h"
 
 #define LOG_TAG             "[APP_POWER_ON]"
 #define LOG_ERROR_ENABLE
@@ -88,7 +88,7 @@ static int poweron_mode_exit()
 
 struct app_mode *app_enter_poweron_mode(int arg)
 {
-    int msg[16];
+    int msg[16] = {0};
     struct app_mode *next_mode;
 
     poweron_mode_init();

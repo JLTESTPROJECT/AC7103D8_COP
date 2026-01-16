@@ -177,6 +177,7 @@ typedef enum _UPDATE_STATE_T {
     UPDATE_CH_INIT,
     UPDATE_CH_SUCESS_REPORT,
     UPDATE_CH_EXIT,
+    UPDATE_CH_SAME,
 } UPDATE_STATE_T;
 
 struct update_target {

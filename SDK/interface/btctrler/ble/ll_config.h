@@ -68,8 +68,27 @@
 #define LL_FEAT_CONN_SUBRATE_HOST_SUPPORT           (UINT64_C(1) << (38))   /*!< Connection subratingHost supported. */
 #define LL_FEAT_CHANNEL_CLASSIFICATION              (UINT64_C(1) << (39))   /*!< Channel classification supported. */
 
-#define LL_FEAT_VENDOR_BIG_SYNC_TRANSFER            (UINT64_C(1) << (62))   /*!< Vendor BIG sync transfer. */
-#define LL_FEAT_VENDOR_BIG_TRANSFER                 (UINT64_C(1) << (63))   /*!< Vendor BIG transfer. */
+
+// Core Spec 5.4
+#define LL_FEAT_ADVERTISING_CODING_SELECTION        (UINT64_C(1) << (40))
+#define LL_FEAT_ADVERTISING_CODING_SELECTION_HOST_SUPPORT  (UINT64_C(1) << (41))
+#define LL_FEAT_DECISION_BASED_ADVERTISING_FILTERING       (UINT64_C(1) << (42))
+#define LL_FEAT_PAWR_ADVERTISER                     (UINT64_C(1) << (43))   /*!< Periodic Advertising with Responses  Advertiser supported. */
+#define LL_FEAT_PAWR_SCANNER                        (UINT64_C(1) << (44))   /*!< Periodic Advertising with Responses  Scanner supported. */
+
+// Core Spec 6.0
+#define LL_FEAT_UNSEGMENTED_FRAMED_MODE             (UINT64_C(1) << (45))
+#define LL_FEAT_CHANNEL_SOUNDING                    (UINT64_C(1) << (46))
+#define LL_FEAT_CHANNEL_SOUNDING_HOST_SUPPORT       (UINT64_C(1) << (47))
+#define LL_FEAT_CHANNEL_SOUNDING_TONE_QUALITY_IND   (UINT64_C(1) << (48))
+#define LL_FEAT_LL_EXTENDED_FEATURE_SET             (UINT64_C(1) << (63))
+
+#define LL_FEAT_MONITORING_ADVERTISERS              (UINT64_C(1) << (0))
+#define LL_FEAT_FRAME_SPACE_UPDATE                  (UINT64_C(1) << (1))
+
+// 56 to 62 Reserved for future use (used for specification development purposes)
+#define LL_FEAT_VENDOR_BIG_SYNC_TRANSFER            (UINT64_C(1) << (56))   /*!< Vendor BIG sync transfer. */
+#define LL_FEAT_VENDOR_BIG_TRANSFER                 (UINT64_C(1) << (57))   /*!< Vendor BIG transfer. */
 
 #define LE_ENCRYPTION                       LL_FEAT_ENCRYPTION
 #define CONNECTION_PARAMETER_REQUEST        LL_FEAT_CONN_PARAM_REQ_PROC
@@ -113,13 +132,9 @@
 #define LE_FEATURES_PAST                (LL_FEAT_PAST_SENDER | \
                                             LL_FEAT_PAST_RECIPIENT)
 
-#define LE_FEATURES_CIS                 (LL_FEAT_CIS_MASTER_ROLE | \
-                                            LL_FEAT_CIS_SLAVE_ROLE | \
-                                            LL_FEAT_ISO_HOST_SUPPORT)
+#define LE_FEATURES_CIS                 (LL_FEAT_CIS_MASTER_ROLE | LL_FEAT_CIS_SLAVE_ROLE)
 
-#define LE_FEATURES_BIS                 (LL_FEAT_ISO_BROADCASTER | \
-                                            LL_FEAT_ISO_SYNC | \
-                                            LL_FEAT_ISO_HOST_SUPPORT)
+#define LE_FEATURES_BIS                 (LL_FEAT_ISO_BROADCASTER | LL_FEAT_ISO_SYNC)
 
 #define LE_FEATURES_ISO                 (LE_FEATURES_BIS|LE_FEATURES_CIS)
 
@@ -128,6 +143,9 @@
                                             LL_FEAT_PATH_LOSS_MONITOR)
 
 extern const uint64_t config_btctler_le_features;
+// extern const uint64_t config_btctler_le_features_page1_1;
+// extern const uint64_t config_btctler_le_features_page1_2;
+// extern const uint64_t config_btctler_le_features_page1_3;
 #define LE_FEATURES_IS_SUPPORT(x)           (config_btctler_le_features & (x))
 
 #define LE_FEATURES_IS_SUPPORT_OPTIMIZE(x)  if (LE_FEATURES_IS_SUPPORT(x) == 0x0)   return
@@ -168,7 +186,7 @@ extern const int config_btctler_le_afh_en;
  *  brief : 运行时优化（LTO）下，代码空间优化；
  */
 // extern const int config_btctler_le_param_check;
-#define LE_PARAM_IS_CHECK()                0//TRUE//(config_btctler_le_param_check)
+#define LE_PARAM_IS_CHECK()                TRUE//(config_btctler_le_param_check)
 /*
  *-------------------LE RAM CONTROL
  *
@@ -180,6 +198,7 @@ extern const int config_btctler_le_acl_total_nums;
 extern const int config_btctler_le_slave_conn_update_winden;
 extern const int config_btctler_le_iso_tx;
 extern const int config_btctler_le_iso_rx;
+extern const bool config_tws_le_role_sw;
 
 /*-----------------------------------------------------------*/
 
@@ -215,13 +234,58 @@ extern const int config_ble_adv_tx_pwr_level;
 extern const int config_rf_oob;
 extern const int config_bb_optimized_ctrl;
 
-//config_bb_optimized_ctrl 控制变量说明
-#define VENDOR_BB_ISO_DIRECT_PUSH BIT(21)
-#define VENDOR_BB_DUAL_BD_SWITCH  BIT(22)
+// config_bb_optimized_ctrl 控制变量说明
+#define LE_BB_OPT_FEAT_PKT_UNFILT		BIT(0)
+#define LE_BB_OPT_FEAT_EXT_UPLOAD_EN 	BIT(1)
+#define LE_BB_OPT_FEAT_CC_CODE_EN		BIT(2)
+#define LE_BB_OPT_FEAT_RESERVED0		BIT(3)
+#define LE_BB_OPT_FEAT_HARD_CMB_EN		BIT(4)
+#define LE_BB_OPT_FEAT_RX_LOG_EN		BIT(5) //only for big rx
+#define LE_BB_OPT_FEAT_RSSI_AFH_EN		BIT(6)
+#define LE_BB_OPT_FEAT_PWR_CTRL_EN		BIT(7)
+#define LE_BB_OPT_FEAT_RX_PRE_CLOSE		BIT(8)
+#define LE_BB_OPT_FEAT_TX_PWR_LOW_SEL	BIT(9) //only for br29
+#define LE_BB_OPT_FEAT_PER_AFH_EN		BIT(10)
+#define LE_BB_OPT_FEAT_RESERVED1		BIT(11)|BIT(12)
+#define LE_BB_OPT_FEAT_CIG_ENC_DIS		BIT(13)
+#define LE_BB_OPT_FEAT_CIG_SEVT_CLOSE	BIT(14)
+#define LE_BB_OPT_FEAT_CIG_PACK_MODE	BIT(16) //sequential or interleved
+#define LE_BB_OPT_FEAT_CODE_OPTIMIZED	BIT(17)
+#define LE_BB_OPT_FEAT_CIG_RSSI_GET_EN	BIT(18)
+#define LE_BB_OPT_FEAT_PKT_V3_EN		BIT(18)
+#define LE_BB_OPT_FEAT_PKT_V3_DYNAMIC   BIT(19) //only for rx
+#define LE_BB_OPT_FEAT_ISO_DIRECT_PUSH  BIT(21)
+#define LE_BB_OPT_FEAT_BCTRL_DISABLE    BIT(22)
+#define LE_BB_OPT_FEAT_PKT_V3_PLUS_EN   BIT(23)
+#define LE_BB_OPT_FEAT_RX_HMPR_EN   	BIT(24)
+#define LE_BB_OPT_FEAT_DUAL_BD_SWITCH   BIT(25)
+#define LE_BB_OPT_FEAT_SC_ULL           BIT(26)
+#define LE_BB_OPT_FEAT_BIG_CHMAP_EN     BIT(27)
+#define LE_BB_OPT_FEAT_DYNAMIC_RTN_EN   BIT(28)
+#define LE_BB_OPT_FEAT_MERGE_HW_EN      BIT(29)
+#define LE_BB_OPT_FEAT_WIFI_DETEC       BIT(30)
 
-#define LE_ADV_AFH_CTRL_EN()	(config_bb_optimized_ctrl & BIT(6))
-#define LE_ADV_PWR_CTRL_EN()	(config_bb_optimized_ctrl & BIT(7))
-#define LE_BIS_RX_PRE_CLOSE()	(config_bb_optimized_ctrl & BIT(8))
+#define LE_ADV_RSSI_AFH_EN()	        (config_bb_optimized_ctrl & BIT(6))
+#define LE_ADV_PER_AFH_EN()		        (config_bb_optimized_ctrl & BIT(10))
+#define LE_ADV_PWR_CTRL_EN()	        (config_bb_optimized_ctrl & BIT(7))
+#define LE_BIS_RX_PRE_CLOSE()	        (config_bb_optimized_ctrl & BIT(8))
+#define LE_VENDOR_API_EN()              (config_bb_optimized_ctrl & BIT(31))
+#define LE_SUPPORT_V3_PLUS_EN()			(config_bb_optimized_ctrl & BIT(23))
+#define LE_SUPPORT_RX_HMPR_EN()			(config_bb_optimized_ctrl & BIT(24))
+#define LE_IS_SUPPORT_SC_ULL()			(config_bb_optimized_ctrl & LE_BB_OPT_FEAT_SC_ULL)
+#define LE_IS_SUPPORT_BIG_CHMAP()		(config_bb_optimized_ctrl & LE_BB_OPT_FEAT_BIG_CHMAP_EN)
+#define LE_IS_SUPPORT_DYNAMIC_RTN_EN()	(config_bb_optimized_ctrl & LE_BB_OPT_FEAT_DYNAMIC_RTN_EN)
+#define LE_IS_SUPPORT_WIFI_DETEC()	    (config_bb_optimized_ctrl & LE_BB_OPT_FEAT_WIFI_DETEC)
+#define LE_SUPPORT_LE_PER_CHECK()				(config_bb_optimized_ctrl & BIT(13))
+
+struct le_adv_link_param_cfg {
+    u8 param1;
+    s8 param2[2];
+    s8 param3[2];
+    u8 param4[2];
+    u8 param5;
+};
+
 /*-----------------------------------------------------------*/
 
 /*

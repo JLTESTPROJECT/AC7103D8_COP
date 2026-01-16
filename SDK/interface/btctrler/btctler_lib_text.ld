@@ -1,3 +1,10 @@
+	    *(.ble_ll_const)
+	    *(.ble_ll_code)
+
+#if (defined CONFIG_CPU_BD45) || (defined CONFIG_CPU_BR56)
+		*(.le_bb_ram_code)
+		*(.le_ll_ram_code)
+#endif /* (defined CONFIG_CPU_BD45) || (defined CONFIG_CPU_BR56) */
 
 		. = ALIGN(4);
         tws_sync_call_begin = .;

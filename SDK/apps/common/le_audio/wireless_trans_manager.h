@@ -13,6 +13,9 @@ enum {
     WIRELESS_DEV_OP_STATUS_SYNC,
     WIRELESS_DEV_OP_ENTER_PAIR,
     WIRELESS_DEV_OP_EXIT_PAIR,
+    WIRELESS_DEV_OP_GET_PAIR_CODE,
+    WIRELESS_DEV_OP_SET_PAIR_CODE,
+    WIRELESS_DEV_OP_GET_RSSI,
 };
 
 typedef struct {
@@ -187,6 +190,43 @@ int wireless_trans_get_latch_time_us(const char *name, u16 *us_1_12th, u32 *clk_
 int wireless_trans_enter_pair(const char *name, u8 mode, void *priv, u32 pair_code);
 
 int wireless_trans_exit_pair(const char *name, void *priv);
+
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief 广播获取底层随机生成的pair code，只适用于bst传输
+ *
+ * @param name:dev name for find dev
+ * @param pair_code: ptr for get pair code
+ * @param privacy: pair code type, 0-common code, 1-pri_code
+ *
+ * @return 0:succ, other:err
+ */
+/* ----------------------------------------------------------------------------*/
+int wireless_trans_get_pair_code(const char *name, u8 *pair_code, u8 privacy);
+
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief 广播设置底层随机生成的pair code，只适用于bst传输
+ *
+ * @param name:dev name for find dev
+ * @param pair_code: ptr for get pair code
+ *
+ * @return 0:succ, other:err
+ */
+/* ----------------------------------------------------------------------------*/
+int wireless_trans_set_pair_code(const char *name, u8 *pair_code);
+
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief 获取当前连接设备的信号强度
+ *
+ * @param name:dev name for fine dev
+ * @param bis_hdl:链路句柄
+ *
+ * @return 0:err, other:信号强度
+ */
+/* ----------------------------------------------------------------------------*/
+int wireless_trans_get_rssi(const char *name, u16 bis_hdl);
 
 #endif //_WIRELESS_TRANS_MANAGER_H
 

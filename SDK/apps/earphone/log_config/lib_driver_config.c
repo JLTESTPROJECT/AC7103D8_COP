@@ -13,6 +13,7 @@
 *********************************************************************************************/
 #include "app_config.h"
 #include "system/includes.h"
+#include "gpadc.h"
 
 #if TCFG_SD0_SD1_USE_THE_SAME_HW
 const int sd0_sd1_use_the_same_hw = 1;
@@ -61,11 +62,61 @@ const u8 adc_vbat_ch_en = 1;
 const u8 adc_vtemp_ch_en = 1;
 const u32 lib_adc_clk_max = 500 * 1000;
 const u8 gpadc_battery_mode = WEIGHTING_MODE; //使用IOVDD供电时,禁止使用 MEAN_FILTERING_MODE 模式
-const u32 gpadc_ch_power = AD_CH_PMU_VBAT_4; //根据供电方式选择通道
-const u8 gpadc_ch_power_div = 4; //分压系数,需和gpadc_ch_power匹配
+
+#if (defined(TCFG_POWER_SUPPLY_MODE) && (TCFG_POWER_SUPPLY_MODE == 0))
+
+const u32 gpadc_ch_power = AD_CH_IOVDD;    //根据供电方式选择通道
+const u8 gpadc_ch_power_div = 1;                //未定义默认配置1
+const u8 gpadc_power_supply_mode = 0; //映射供电方式
+
+#elif (defined(TCFG_POWER_SUPPLY_MODE) && (TCFG_POWER_SUPPLY_MODE == 1))
+
+const u32 gpadc_ch_power = AD_CH_PMU_VPWR_4;    //根据供电方式选择通道
+const u8 gpadc_ch_power_div = 4;                //未定义默认配置4
+const u8 gpadc_power_supply_mode = 1; //映射供电方式
+
+#else
+
+#if (defined(TCFG_VBAT_CH) && (TCFG_VBAT_CH != AD_CH_PMU_VBAT_2) && (TCFG_VBAT_CH != AD_CH_PMU_VBAT_4))
+
+const u32 gpadc_ch_power = TCFG_VBAT_CH;    //根据供电方式选择通道
+
+#else
+
+#ifdef AD_CH_PMU_VBAT_2
+const u32 gpadc_ch_power = AD_CH_PMU_VBAT_2; //未定义默认VBAT通道
+#else
+const u32 gpadc_ch_power = AD_CH_PMU_VBAT_4; //未定义默认VBAT通道
+#endif
+
+#endif
+
+#if (defined(TCFG_BAT_EXT_DIV) && defined(TCFG_VBAT_CH) && (TCFG_VBAT_CH != AD_CH_PMU_VBAT_2) && (TCFG_VBAT_CH != AD_CH_PMU_VBAT_4))
+
+const u8 gpadc_ch_power_div = TCFG_BAT_EXT_DIV; //分压系数,需和gpadc_ch_power匹配 例如:200/(200+600)
+const u8 gpadc_power_supply_mode = 3; //映射供电方式
+
+#else
+
+#ifdef AD_CH_PMU_VBAT_2
+const u8 gpadc_ch_power_div = 2;                //未定义默认配置2
+#else
+const u8 gpadc_ch_power_div = 4;                //未定义默认配置4
+#endif
+const u8 gpadc_power_supply_mode = 2; //映射供电方式
+
+#endif
+
+#endif
+
 const u16 gpadc_battery_trim_vddiom_voltage = 2800; //电池trim 使用的vddio电压
 const u16 gpadc_battery_trim_voltage = 3700; //电池trim 使用的vbat电压
-const u16 gpadc_extern_voltage_trim = 0; //使用外部输入方式校准的电压
+
+#ifdef TCFG_BAT_EX_ADJUST_ENABLE
+const u16 gpadc_extern_voltage_trim = TCFG_BAT_EX_ADJUST_ENABLE ? 2500 : 0; //使用外部输入方式校准的电压
+#else
+const u16 gpadc_extern_voltage_trim = 0;
+#endif
 
 /* 是否开启把vm配置项暂存到ram的功能 */
 /* 具体使用方法和功能特性参考《项目帮助文档》的“11.4. 配置项管理 -VM配置项暂存RAM功能描述” */
@@ -75,6 +126,12 @@ const char vm_ram_storage_in_irq_enable = TRUE;
 
 /* 设置vm的ram内存缓存区总大小限制，0为不限制，非0为限制大小（单位/byte）。 */
 const int  vm_ram_storage_limit_data_total_size  = 16 * 1024;
+
+// 设置vm写是否进行组包:
+// 0 :不组包
+// -1:使用malloc的buf进行组包(vm_write时分配)
+// 具体数值:使用固定的buf进行组包(vm_init时分配)
+const int vm_packet_size = 256;
 
 const int config_rtc_enable = 0;
 
@@ -100,221 +157,4 @@ const u32 lib_config_enable_auth_check = 0b0000 | AUTH_multi_algorithm;
 #else
 const u32 lib_config_enable_auth_check = 0b0000;
 #endif
-/**
- * @brief Log (Verbose/Info/Debug/Warn/Error)
- */
-/*-----------------------------------------------------------*/
-const char log_tag_const_v_CLOCK  = CONFIG_DEBUG_LIB(FALSE) ;
-const char log_tag_const_i_CLOCK  = CONFIG_DEBUG_LIB(FALSE) ;
-const char log_tag_const_d_CLOCK  = CONFIG_DEBUG_LIB(TRUE);
-const char log_tag_const_w_CLOCK  = CONFIG_DEBUG_LIB(TRUE);
-const char log_tag_const_e_CLOCK  = CONFIG_DEBUG_LIB(TRUE);
-
-const char log_tag_const_v_LP_TIMER  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_i_LP_TIMER  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_d_LP_TIMER  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_w_LP_TIMER  = CONFIG_DEBUG_LIB(TRUE);
-const char log_tag_const_e_LP_TIMER  = CONFIG_DEBUG_LIB(TRUE);
-
-const char log_tag_const_v_LRC  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_i_LRC  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_d_LRC  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_w_LRC  = CONFIG_DEBUG_LIB(TRUE);
-const char log_tag_const_e_LRC  = CONFIG_DEBUG_LIB(TRUE);
-
-const char log_tag_const_v_RCH AT(.LOG_TAG_CONST) = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_i_RCH AT(.LOG_TAG_CONST) = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_d_RCH AT(.LOG_TAG_CONST) = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_w_RCH AT(.LOG_TAG_CONST) = CONFIG_DEBUG_LIB(TRUE);
-const char log_tag_const_e_RCH AT(.LOG_TAG_CONST) = CONFIG_DEBUG_LIB(TRUE);
-
-const char log_tag_const_v_P33_MISC  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_i_P33_MISC  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_d_P33_MISC  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_w_P33_MISC  = CONFIG_DEBUG_LIB(TRUE);
-const char log_tag_const_e_P33_MISC  = CONFIG_DEBUG_LIB(TRUE);
-
-const char log_tag_const_v_P33  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_i_P33  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_d_P33  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_w_P33  = CONFIG_DEBUG_LIB(TRUE);
-const char log_tag_const_e_P33  = CONFIG_DEBUG_LIB(TRUE);
-
-const char log_tag_const_v_PMU  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_i_PMU  = CONFIG_DEBUG_LIB(TRUE);
-const char log_tag_const_d_PMU  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_w_PMU  = CONFIG_DEBUG_LIB(TRUE);
-const char log_tag_const_e_PMU  = CONFIG_DEBUG_LIB(TRUE);
-
-const char log_tag_const_v_RTC  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_i_RTC  = CONFIG_DEBUG_LIB(TRUE);
-const char log_tag_const_d_RTC  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_w_RTC  = CONFIG_DEBUG_LIB(TRUE);
-const char log_tag_const_e_RTC  = CONFIG_DEBUG_LIB(TRUE);
-
-const char log_tag_const_v_WKUP  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_i_WKUP  = CONFIG_DEBUG_LIB(TRUE);
-const char log_tag_const_d_WKUP  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_w_WKUP  = CONFIG_DEBUG_LIB(TRUE);
-const char log_tag_const_e_WKUP  = CONFIG_DEBUG_LIB(TRUE);
-
-const char log_tag_const_v_SDFILE  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_i_SDFILE  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_d_SDFILE  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_w_SDFILE  = CONFIG_DEBUG_LIB(TRUE);
-const char log_tag_const_e_SDFILE  = CONFIG_DEBUG_LIB(TRUE);
-
-const char log_tag_const_v_CHARGE  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_i_CHARGE  = CONFIG_DEBUG_LIB(TRUE);
-const char log_tag_const_d_CHARGE  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_w_CHARGE  = CONFIG_DEBUG_LIB(TRUE);
-const char log_tag_const_e_CHARGE  = CONFIG_DEBUG_LIB(TRUE);
-const char log_tag_const_c_CHARGE  = CONFIG_DEBUG_LIB(FALSE);
-
-const char log_tag_const_v_DEBUG  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_i_DEBUG  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_d_DEBUG  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_w_DEBUG  = CONFIG_DEBUG_LIB(TRUE);
-const char log_tag_const_e_DEBUG  = CONFIG_DEBUG_LIB(TRUE);
-
-const char log_tag_const_v_PWM_LED  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_i_PWM_LED  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_d_PWM_LED  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_w_PWM_LED  = CONFIG_DEBUG_LIB(TRUE);
-const char log_tag_const_e_PWM_LED  = CONFIG_DEBUG_LIB(TRUE);
-
-const char log_tag_const_v_KEY  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_i_KEY  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_d_KEY  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_w_KEY  = CONFIG_DEBUG_LIB(TRUE);
-const char log_tag_const_e_KEY  = CONFIG_DEBUG_LIB(TRUE);
-
-const char log_tag_const_v_TMR  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_i_TMR  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_d_TMR  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_w_TMR  = CONFIG_DEBUG_LIB(TRUE);
-const char log_tag_const_e_TMR  = CONFIG_DEBUG_LIB(TRUE);
-
-const char log_tag_const_v_VM  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_i_VM  = CONFIG_DEBUG_LIB(TRUE);
-const char log_tag_const_d_VM  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_w_VM  = CONFIG_DEBUG_LIB(TRUE);
-const char log_tag_const_e_VM  = CONFIG_DEBUG_LIB(TRUE);
-
-const char log_tag_const_v_TRIM_VDD  = CONFIG_DEBUG_LIB(FALSE) ;
-const char log_tag_const_i_TRIM_VDD  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_d_TRIM_VDD  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_w_TRIM_VDD  = CONFIG_DEBUG_LIB(TRUE);
-const char log_tag_const_e_TRIM_VDD  = CONFIG_DEBUG_LIB(TRUE);
-
-//audio dac
-const char log_tag_const_v_SYS_DAC  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_i_SYS_DAC  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_d_SYS_DAC  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_w_SYS_DAC  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_e_SYS_DAC  = CONFIG_DEBUG_LIB(FALSE);
-
-
-const char log_tag_const_v_APP_EDET  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_i_APP_EDET  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_d_APP_EDET  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_w_APP_EDET  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_e_APP_EDET  = CONFIG_DEBUG_LIB(FALSE);
-
-
-const char log_tag_const_v_FM  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_i_FM  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_d_FM  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_w_FM  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_e_FM  = CONFIG_DEBUG_LIB(FALSE);
-
-const char log_tag_const_v_CORE  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_i_CORE  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_d_CORE  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_w_CORE  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_e_CORE  = CONFIG_DEBUG_LIB(FALSE);
-
-const char log_tag_const_v_CACHE  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_i_CACHE  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_d_CACHE  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_w_CACHE  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_e_CACHE  = CONFIG_DEBUG_LIB(FALSE);
-
-const char log_tag_const_v_LP_KEY  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_i_LP_KEY  = CONFIG_DEBUG_LIB(TRUE);
-const char log_tag_const_d_LP_KEY  = CONFIG_DEBUG_LIB(TRUE);
-const char log_tag_const_w_LP_KEY  = CONFIG_DEBUG_LIB(TRUE);
-const char log_tag_const_e_LP_KEY  = CONFIG_DEBUG_LIB(TRUE);
-
-const char log_tag_const_v_SD  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_i_SD  = CONFIG_DEBUG_LIB(TRUE);
-const char log_tag_const_d_SD  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_w_SD  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_e_SD  = CONFIG_DEBUG_LIB(TRUE);
-
-const char log_tag_const_v_EAR_DETECT  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_i_EAR_DETECT  = CONFIG_DEBUG_LIB(TRUE);
-const char log_tag_const_d_EAR_DETECT  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_w_EAR_DETECT  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_e_EAR_DETECT  = CONFIG_DEBUG_LIB(FALSE);
-
-const char log_tag_const_v_TDM  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_i_TDM  = CONFIG_DEBUG_LIB(TRUE);
-const char log_tag_const_d_TDM  = CONFIG_DEBUG_LIB(TRUE);
-const char log_tag_const_w_TDM  = CONFIG_DEBUG_LIB(TRUE);
-const char log_tag_const_e_TDM  = CONFIG_DEBUG_LIB(TRUE);
-
-const char log_tag_const_v_USB  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_i_USB  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_d_USB  = CONFIG_DEBUG_LIB(TRUE);
-const char log_tag_const_w_USB  = CONFIG_DEBUG_LIB(TRUE);
-const char log_tag_const_e_USB  = CONFIG_DEBUG_LIB(TRUE);
-
-const char log_tag_const_v_UART  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_i_UART  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_d_UART  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_w_UART  = CONFIG_DEBUG_LIB(TRUE);
-const char log_tag_const_e_UART  = CONFIG_DEBUG_LIB(TRUE);
-
-const char log_tag_const_v_IIC  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_i_IIC  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_d_IIC  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_w_IIC  = CONFIG_DEBUG_LIB(TRUE);
-const char log_tag_const_e_IIC  = CONFIG_DEBUG_LIB(TRUE);
-
-const char log_tag_const_v_SPI  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_i_SPI  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_d_SPI  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_w_SPI  = CONFIG_DEBUG_LIB(TRUE);
-const char log_tag_const_e_SPI  = CONFIG_DEBUG_LIB(TRUE);
-
-const char log_tag_const_v_EXTI  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_i_EXTI  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_d_EXTI  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_w_EXTI  = CONFIG_DEBUG_LIB(TRUE);
-const char log_tag_const_e_EXTI  = CONFIG_DEBUG_LIB(TRUE);
-
-const char log_tag_const_v_GPIO  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_i_GPIO  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_d_GPIO  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_w_GPIO  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_e_GPIO  = CONFIG_DEBUG_LIB(TRUE);
-
-const char log_tag_const_v_GPTIMER  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_i_GPTIMER  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_d_GPTIMER  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_w_GPTIMER  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_e_GPTIMER  = CONFIG_DEBUG_LIB(TRUE);
-
-const char log_tag_const_v_PERI  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_i_PERI  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_d_PERI  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_w_PERI  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_e_PERI  = CONFIG_DEBUG_LIB(TRUE);
-
-const char log_tag_const_v_GPADC  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_i_GPADC  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_d_GPADC  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_w_GPADC  = CONFIG_DEBUG_LIB(FALSE);
-const char log_tag_const_e_GPADC  = CONFIG_DEBUG_LIB(TRUE);
 

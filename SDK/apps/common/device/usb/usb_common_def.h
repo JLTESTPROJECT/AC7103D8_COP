@@ -114,6 +114,9 @@
 #ifndef TCFG_ADB_ENABLE
 #define TCFG_ADB_ENABLE                     0
 #endif
+#ifndef TCFG_HUB_HOST_ENABLE
+#define TCFG_HUB_HOST_ENABLE                0
+#endif
 
 #else
 #undef  TCFG_UDISK_ENABLE
@@ -126,6 +129,8 @@
 #define TCFG_AOA_ENABLE                     0
 #undef  TCFG_ADB_ENABLE
 #define TCFG_ADB_ENABLE                     0
+#undef  TCFG_HUB_HOST_ENABLE
+#define TCFG_HUB_HOST_ENABLE                0
 #endif
 
 #if TCFG_PC_ENABLE

@@ -24,10 +24,11 @@
 #include "rcsp_cfg.h"
 #include "app_music.h"
 #include "usb/device/usb_stack.h"
+#include "effects/audio_spk_eq.h"
+#include "mix_record_api.h"
+#include "system/event.h"
 
-#if TCFG_AUDIO_ANC_ENABLE
-#include "audio_anc.h"
-#endif
+#include "audio_anc_includes.h"
 
 #if RCSP_MODE && RCSP_ADV_KEY_SET_ENABLE
 #include "adv_anc_voice_key.h"
@@ -42,16 +43,8 @@
 #include "spatial_effects_process.h"
 #endif
 
-#if TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN
-#include "icsd_adt_app.h"
-#endif
-
 #if TCFG_APP_KEY_DUT_ENABLE
 #include "app_key_dut.h"
-#endif
-
-#if TCFG_AUDIO_FIT_DET_ENABLE
-#include "icsd_dot_app.h"
 #endif
 
 #if TCFG_VOICE_CHANGER_NODE_ENABLE
@@ -60,8 +53,6 @@ static u8 esco_eff_uncle;
 static u8 esco_eff_goddess;
 #endif
 
-extern void volume_up(u8 inc);
-extern void volume_down(u8 inc);
 
 static u32 input_number = 0;
 static u16 input_number_timer = 0;
@@ -141,6 +132,12 @@ void app_common_key_msg_handler(int *msg)
 #endif
         app_send_message(APP_MSG_VOL_CHANGED, app_audio_get_volume(APP_AUDIO_STATE_MUSIC));
         break;
+#if TCFG_SPEAKER_EQ_NODE_ENABLE
+    case APP_MSG_SPK_EQ_TEST:
+        spk_eq_test();
+        break;
+#endif
+
     case APP_MSG_SWITCH_SOUND_EFFECT:
         effect_scene_switch();
         break;
@@ -221,6 +218,18 @@ void app_common_key_msg_handler(int *msg)
         }
         app_send_message(APP_MSG_MUTE_CHANGED, sys_audio_mute_statu);
         break;
+    case APP_MSG_REC_PP:
+#if TCFG_MIX_RECORD_ENABLE
+        printf("\n APP_MSG_REC_PP \n");
+        if (get_mix_recorder_status()) {
+            mix_recorder_stop();
+        } else {
+            if (dev_manager_get_phy_logo(dev_manager_find_active(0))) {
+                mix_recorder_start();
+            }
+        }
+#endif
+        break;
     }
 }
 
@@ -236,7 +245,6 @@ int app_common_device_event_handler(int *msg)
         usb_msg = (const char *)msg[2];
         if (usb_msg[0] == 's') {
 #if TCFG_USB_SLAVE_ENABLE
-            extern int pc_device_event_handler(int *msg);
             ret = pc_device_event_handler(msg);
             if (ret == 1) {
                 if (true != app_in_mode(APP_MODE_PC)) {
@@ -260,7 +268,11 @@ int app_common_device_event_handler(int *msg)
         if (true == app_in_mode(APP_MODE_MUSIC)) {
             music_device_msg_handler(msg);
         }
+#endif
+#if TCFG_APP_MUSIC_EN || TCFG_MIX_RECORD_ENABLE
         ret = dev_status_event_filter(msg);///解码设备上下线， 设备挂载等处理
+#endif
+#if TCFG_APP_MUSIC_EN
         if (ret == true) {
             if (msg[1] == DEVICE_EVENT_IN) {
                 ///设备上线， 非解码模式切换到解码模式播放
@@ -270,6 +282,9 @@ int app_common_device_event_handler(int *msg)
             }
         }
 #endif
+#if TCFG_MIX_RECORD_ENABLE
+        mix_record_device_msg_handler(msg);
+#endif // TCFG_MIX_RECORD_ENABLE
         break;
     case DEVICE_EVENT_FROM_LINEIN:
 #if TCFG_APP_LINEIN_EN
@@ -304,7 +319,6 @@ int app_common_device_event_handler(int *msg)
         if (true != app_in_mode(APP_MODE_PC)) {
 
 #if (TCFG_CHARGE_ENABLE && (!TCFG_CHARGE_POWERON_ENABLE))
-            extern u8 get_charge_online_flag(void);
             if (get_charge_online_flag() && app != APP_MODE_PC) {
                 return hdl_ret;
             }
@@ -365,7 +379,7 @@ static void app_common_app_event_handler(int *msg)
         audio_icsd_wind_detect_demo();
         break;
 #endif
-#if (defined TCFG_AUDIO_VOLUME_ADAPTIVE_ENABLE) && TCFG_AUDIO_VOLUME_ADAPTIVE_ENABLE
+#if (defined TCFG_AUDIO_ANC_ENV_ADAPTIVE_VOLUME_ENABLE) && TCFG_AUDIO_ANC_ENV_ADAPTIVE_VOLUME_ENABLE
     case APP_MSG_ADAPTIVE_VOL_SWITCH:
         audio_icsd_adaptive_vol_demo();
         break;
@@ -411,6 +425,13 @@ static void app_common_app_event_handler(int *msg)
         audio_spatial_effects_mode_switch(mode);
         break;
 #endif
+
+#if TCFG_SPEAKER_EQ_NODE_ENABLE
+    case APP_MSG_SPK_EQ_TEST:
+        spk_eq_test();
+        break;
+#endif
+
     default:
         break;
     }

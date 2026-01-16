@@ -29,4 +29,11 @@ struct effects_func_api {
     int (*update)(void *ptr, void *param);
 };
 
+struct hard_eq_func {
+    void *(*open)(void *coeff, unsigned char nsection, unsigned int sample_rate, unsigned int ch_num, unsigned int in_mode, unsigned int out_mode);
+    void(*run)(void *hdl, void *indata, void *outdata, unsigned int indata_len);
+    void(*update)(void *hdl, void *coeff);
+    void(*close)(void *hdl);
+};
+
 #endif

@@ -38,12 +38,12 @@ typedef enum gptimerx : u8 {
     TIMERx, //传入此参数时,内部自动分配一个空闲TIMER
 } timer_dev;
 
-#define GPTIMER_EXTERN_USE  0b1110 //其他模块占用的timer, 不参与自动分配
-//timer1用于回连电流平衡功能
-//timer2用于sniff
+#define GPTIMER_EXTERN_USE  0b1100 //其他模块占用的timer, 不参与自动分配
+//timer2用于回连电流平衡功能
 
 //以下宏定义给系统 timer 驱动使用
 #define GPTIMER_PND_CLR         (0b1<<14)
+#define GPTIMER_PND         	(0b1<<15)
 
 #define GPTIMER_CLK_SRC_LSB     (0b0001<<10)
 #define GPTIMER_CLK_SRC_RC250K  (0b0010<<10)
@@ -86,6 +86,10 @@ typedef enum gptimerx : u8 {
 #define GPTIMER_SYS_INIT()      do{GPTIMER_SYS->CON = GPTIMER_PND_CLR|GPTIMER_CLK_SRC_STD12M|GPTIMER_CLK_DIV_4; \
                                 GPTIMER_SYS->PRD = 0; \
                                 GPTIMER_SYS->CNT = 0;}while(0) \
+
+#define GPTIMER_SYS_CFG(src, div) do{GPTIMER_SYS->CON = GPTIMER_PND_CLR|(src)|(div); \
+                                  GPTIMER_SYS->PRD = 0; \
+                                  GPTIMER_SYS->CNT = 0;}while(0) \
 
 #define GPTIMER_SYS_GET_CNT     GPTIMER_SYS->CNT
 #define GPTIMER_SYS_SET_CNT(x)  GPTIMER_SYS->CNT = (x)

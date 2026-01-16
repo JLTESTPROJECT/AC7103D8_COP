@@ -95,6 +95,7 @@ enum {
     NET_EVENT_CONNECTED,
     NET_EVENT_DISCONNECTED,
     NET_EVENT_SMP_CFG_TIMEOUT,
+    NET_NTP_GET_TIME_SUCC,
 };
 
 
@@ -126,6 +127,7 @@ struct device_event {
 struct net_event {
     u8 event;
     u8 value;
+    void *arg;
 };
 
 struct axis_event {

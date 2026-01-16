@@ -14,7 +14,7 @@
 
 
 const u8 ICSD_VDT_ALG_BT_INF = 0;
-const u8 ICSD_VDT_BT_DATA = 1;
+const u8 ICSD_VDT_BT_DATA = 0;
 //调试信息使能
 const u16 ADT_DEBUG_INF = 0;//ADT_INF_5 | ADT_INF_1 ;//| ADT_INF_12 ;//| ADT_INF_9; //state
 const u8 VDT_TRAIN_EN = 0;

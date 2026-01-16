@@ -12,6 +12,7 @@
 #include "gfps_platform_api.h"
 #include "btstack_rcsp_user.h"
 #include "ble_rcsp_server.h"
+#include "hid_iso.h"
 
 #if (THIRD_PARTY_PROTOCOLS_SEL & XIMALAYA_EN)
 #include "xmly_protocol.h"
@@ -21,13 +22,16 @@
 #include "dma_platform_api.h"
 #endif
 
-#if (THIRD_PARTY_PROTOCOLS_SEL & AURACAST_APP_EN)
-#include "auracast_app_protocol.h"
+#if THIRD_PARTY_PROTOCOLS_SEL & JL_SBOX_EN
+#include "jl_earbox/sbox_protocol.h"
 #endif
 
-#if ((THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN | GFPS_EN | MMA_EN | FMNA_EN |  TUYA_DEMO_EN | REALME_EN | SWIFT_PAIR_EN | DMA_EN | ONLINE_DEBUG_EN | CUSTOM_DEMO_EN | XIMALAYA_EN | AURACAST_APP_EN)) || \
-		(TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN | LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN)))
+#if (THIRD_PARTY_PROTOCOLS_SEL & ANCS_AMS_MODE_EN)
+extern void app_ble_ancs_ams_init();
+#endif
 
+#if ((THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN | GFPS_EN | MMA_EN | FMNA_EN | TUYA_DEMO_EN | REALME_EN | SWIFT_PAIR_EN | DMA_EN | ONLINE_DEBUG_EN | CUSTOM_DEMO_EN | XIMALAYA_EN | MULTI_CLIENT_EN | JL_SBOX_EN | HID_ISO_EN)) || \
+		(TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN | LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN | LE_AUDIO_JL_BIS_RX_EN | LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_BIS_TX_EN)))
 #define ATT_LOCAL_PAYLOAD_SIZE    (517)//(517)              //note: need >= 20
 #define ATT_SEND_CBUF_SIZE        (512*2)                   //note: need >= 20,缓存大小，可修改
 #define ATT_RAM_BUFSIZE           (ATT_CTRL_BLOCK_SIZE + ATT_LOCAL_PAYLOAD_SIZE + ATT_SEND_CBUF_SIZE)                   //note:
@@ -92,7 +96,7 @@ const uint8_t rcsp_profile_data[] = {
 };
 #endif
 
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN | LE_AUDIO_AURACAST_SINK_EN))
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN | LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
 extern u8 get_bt_le_audio_config();
 extern void le_audio_sm_setup_init(io_capability_t io_type, u8 auth_req, uint8_t min_key_size, u8 security_en);
 #endif
@@ -126,6 +130,7 @@ extern void *xm_app_ble_hdl;
 extern int  xm_all_init(void);
 extern int  xm_all_exit(void);
 extern void xm_ble_profile_init(void);
+extern int xm_bt_ble_disconnect(void *priv);
 extern void xm_bt_ble_init(void);
 extern void xm_bt_ble_exit(void);
 extern void xm_bt_ble_adv_enable(u8 enable);
@@ -176,6 +181,7 @@ extern int dueros_process();
 extern int dueros_send_process(void);
 extern void dma_tx_resume_register(void (*handler)(void));
 extern void dma_rx_resume_register(void (*handler)(void));
+extern void dma_ble_module_enable(u8 en);
 
 extern const u8 sdp_dueros_spp_service_data[];
 extern const u8 sdp_dueros_ota_service_data[];
@@ -201,6 +207,8 @@ SDP_RECORD_REGISTER(spp_sdp_record_item) = {
 
 extern void custom_demo_all_init(void);
 extern void custom_demo_all_exit(void);
+extern void custom_demo_ble_disconnect(void);
+extern int custom_demo_adv_enable(u8 enable);
 
 // uuid:00001101-0000-1000-8000-00805F9B34FB
 const u8 sdp_custom_demo_spp_service_data[96] = {
@@ -217,45 +225,9 @@ SDP_RECORD_REGISTER(custom_demo_sdp_record_item) = {
     .service_record_handle = 0x00010040,
 };
 #endif
-
-#if (THIRD_PARTY_PROTOCOLS_SEL & AURACAST_APP_EN)
-
-const u8 sdp_att_service_data[60] = {                           //
-    0x36, 0x00, 0x31, 0x09, 0x00, 0x00, 0x0A, 0x00, 0x01, 0x00, 0x21, 0x09, 0x00, 0x01, 0x35, 0x03,
-    0x19, 0x18, 0x01, 0x09, 0x00, 0x04, 0x35, 0x13, 0x35, 0x06, 0x19, 0x01, 0x00, 0x09, 0x00, 0x1F,
-    0x35, 0x09, 0x19, 0x00, 0x07, 0x09, 0x00, 0x01, 0x09, 0x00, 0x04, 0x09, 0x00, 0x05, 0x35, 0x03,
-    0x19, 0x10, 0x02, 0x00                    //                //
-};
-
-const u8 sdp_att_service_data1[60] = {
-    0x36, 0x00, 0x31, 0x09, 0x00, 0x00, 0x0A, 0x00, 0x01, 0x00, 0x22, 0x09, 0x00, 0x01, 0x35, 0x03,
-    0x19, 0xAE, 0x00, 0x09, 0x00, 0x04, 0x35, 0x13, 0x35, 0x06, 0x19, 0x01, 0x00, 0x09, 0x00, 0x1F,
-    0x35, 0x09, 0x19, 0x00, 0x07, 0x09, 0x00, 0x05, 0x09, 0x00, 0x0a, 0x09, 0x00, 0x05, 0x35, 0x03,
-    0x19, 0x10, 0x02, 0x00
-};
-
-const u8 sdp_att_service_data2[60] = {
-    0x36, 0x00, 0x31, 0x09, 0x00, 0x00, 0x0A, 0x00, 0x01, 0x00, 0x23, 0x09, 0x00, 0x01, 0x35, 0x03,
-    0x19, 0xBF, 0x00, 0x09, 0x00, 0x04, 0x35, 0x13, 0x35, 0x06, 0x19, 0x01, 0x00, 0x09, 0x00, 0x1F,
-    0x35, 0x09, 0x19, 0x00, 0x07, 0x09, 0x00, 0x0b, 0x09, 0x00, 0x10, 0x09, 0x00, 0x05, 0x35, 0x03,
-    0x19, 0x10, 0x02, 0x00
-};
-
-SDP_RECORD_REGISTER(spp_att_record_item) = {
-    .service_record = (u8 *)sdp_att_service_data,
-    .service_record_handle = 0x00010021,
-};
-
-SDP_RECORD_REGISTER(spp_att_record_item1) = {
-    .service_record = (u8 *)sdp_att_service_data1,
-    .service_record_handle = 0x00010022,
-};
-
-/* SDP_RECORD_REGISTER(spp_att_record_item2) = { */
-/* .service_record = (u8 *)sdp_att_service_data2, */
-/* .service_record_handle = 0x00010023, */
-/* } */;
-
+#if (THIRD_PARTY_PROTOCOLS_SEL & MULTI_CLIENT_EN)
+extern void ble_multi_client_init();
+extern void ble_multi_client_exit(void);
 #endif
 
 bool check_tws_master_role()
@@ -321,6 +293,7 @@ static void multi_protocol_loop_process(void *parm)
     }
 }
 
+extern void *hid_iso_ble_hdl;
 static void multi_protocol_profile_init(void)
 {
     printf("multi_protocol_profile_init 0x%x %d %d\n", THIRD_PARTY_PROTOCOLS_SEL, TCFG_BT_SUPPORT_SPP, TCFG_USER_BLE_ENABLE);
@@ -330,7 +303,9 @@ static void multi_protocol_profile_init(void)
 #if !TCFG_THIRD_PARTY_PROTOCOLS_SIMPLIFIED
 #if TCFG_BT_SUPPORT_SPP
     app_spp_init();
+#if TCFG_THIRD_PARTY_PROTOCOLS_SEL
     app_spp_state_update_callback_regitster(multi_protocol_state_update_callback);
+#endif
 #endif
 #endif
 
@@ -344,7 +319,7 @@ static void multi_protocol_profile_init(void)
 
 #if TCFG_BLE_BRIDGE_EDR_ENALBE
     app_ble_sm_init(IO_CAPABILITY_NO_INPUT_NO_OUTPUT, SM_AUTHREQ_SECURE_CONNECTION | SM_AUTHREQ_BONDING, 7, 0);
-#elif (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN | LE_AUDIO_AURACAST_SINK_EN))
+#elif (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN | LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
     app_ble_sm_init(IO_CAPABILITY_NO_INPUT_NO_OUTPUT, SM_AUTHREQ_BONDING | SM_AUTHREQ_SECURE_CONNECTION | SM_AUTHREQ_MITM_PROTECTION, 7, 0);
     le_audio_sm_setup_init(IO_CAPABILITY_NO_INPUT_NO_OUTPUT, SM_AUTHREQ_BONDING | SM_AUTHREQ_SECURE_CONNECTION | SM_AUTHREQ_MITM_PROTECTION, 7, 0);
 #else
@@ -360,6 +335,19 @@ static void multi_protocol_profile_init(void)
 #endif
 #endif
 
+#if (THIRD_PARTY_PROTOCOLS_SEL & (ANCS_AMS_MODE_EN | MULTI_CLIENT_EN))
+    if (config_le_gatt_client_num) {
+        //setup GATT client
+        gatt_client_init();
+    }
+#endif
+
+#if (THIRD_PARTY_PROTOCOLS_SEL & HID_ISO_EN)
+    hid_iso_init();
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
+    app_ble_no_profile_flag_set(hid_iso_ble_hdl, 1);
+#endif
+#endif
 
 #if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
 #if !TCFG_THIRD_PARTY_PROTOCOLS_SIMPLIFIED
@@ -369,7 +357,7 @@ static void multi_protocol_profile_init(void)
 #endif
     rcsp_ble_profile_init(rcsp_profile_data);
 
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
+#if (TCFG_LE_AUDIO_RCSP_USE_SAME_ACL)
     if (get_bt_le_audio_config()) { // RCSP 与 CIS 共用 ACL
         app_ble_no_profile_flag_set(rcsp_server_ble_hdl, 1);
     }
@@ -462,10 +450,15 @@ void multi_protocol_bt_init(void)
     ximalaya_protocol_init();
 #endif
 
-#if (THIRD_PARTY_PROTOCOLS_SEL & AURACAST_APP_EN)
-    extern void bredr_adt_init();
-    bredr_adt_init();
-    auracast_app_all_init();
+#if (THIRD_PARTY_PROTOCOLS_SEL & MULTI_CLIENT_EN)
+    ble_multi_client_init();
+#endif
+
+#if (THIRD_PARTY_PROTOCOLS_SEL & ANCS_AMS_MODE_EN)
+    app_ble_ancs_ams_init();
+#endif
+#if (THIRD_PARTY_PROTOCOLS_SEL & JL_SBOX_EN)
+    sbox_demo_all_init();
 #endif
 }
 
@@ -514,14 +507,17 @@ void multi_protocol_bt_exit(void)
 #if (THIRD_PARTY_PROTOCOLS_SEL & XIMALAYA_EN)
     ximalaya_protocol_exit();
 #endif
+#if (THIRD_PARTY_PROTOCOLS_SEL & MULTI_CLIENT_EN)
+    ble_multi_client_exit();
+#endif
 
 #if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
     void le_audio_uninit(u8 mode);
     le_audio_uninit(1);
 #endif
 
-#if (THIRD_PARTY_PROTOCOLS_SEL & AURACAST_APP_EN)
-    auracast_app_all_exit();
+#if (THIRD_PARTY_PROTOCOLS_SEL & JL_SBOX_EN)
+    sbox_demo_all_exit();
 #endif
 
 #if !TCFG_THIRD_PARTY_PROTOCOLS_SIMPLIFIED
@@ -534,7 +530,25 @@ void multi_protocol_bt_exit(void)
 #endif
 }
 
-void bt_ble_adv_enable(u8 enable)
+void multi_protocol_bt_ble_disconnect(void)
+{
+#if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
+    rcsp_ble_app_disconnect();
+#endif
+#if (THIRD_PARTY_PROTOCOLS_SEL & MMA_EN)
+    xm_bt_ble_disconnect(NULL);
+#endif
+#if (THIRD_PARTY_PROTOCOLS_SEL & FMNA_EN)
+    extern void fmy_test_disconnect(void);
+    fmy_test_disconnect();
+#endif
+#if (THIRD_PARTY_PROTOCOLS_SEL & CUSTOM_DEMO_EN)
+    extern void custom_demo_ble_disconnect(void);
+    custom_demo_ble_disconnect();
+#endif
+}
+
+void multi_protocol_bt_ble_enable(u8 enable)
 {
 #if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
     rcsp_bt_ble_adv_enable(enable);
@@ -542,10 +556,39 @@ void bt_ble_adv_enable(u8 enable)
 #if (THIRD_PARTY_PROTOCOLS_SEL & GFPS_EN)
     gfps_bt_ble_adv_enable(enable);
 #endif
+#if (THIRD_PARTY_PROTOCOLS_SEL & MMA_EN)
+    xm_bt_ble_adv_enable(enable);
+#endif
 #if (THIRD_PARTY_PROTOCOLS_SEL & TUYA_DEMO_EN)
     extern void tuya_bt_ble_adv_enable(u8 enable);
     tuya_bt_ble_adv_enable(enable);
 #endif
+#if (THIRD_PARTY_PROTOCOLS_SEL & REALME_EN)
+    realme_ble_adv_enable(enable);
+#endif
+#if (THIRD_PARTY_PROTOCOLS_SEL & FMNA_EN)
+    extern int fmy_enable(bool en);
+    fmy_enable(enable);
+#endif
+#if (THIRD_PARTY_PROTOCOLS_SEL & SWIFT_PAIR_EN)
+    swift_pair_exit_pair_mode();
+#endif
+#if (THIRD_PARTY_PROTOCOLS_SEL & DMA_EN)
+    dma_ble_module_enable(enable);
+#endif
+#if (THIRD_PARTY_PROTOCOLS_SEL & CUSTOM_DEMO_EN)
+    custom_demo_adv_enable(enable);
+#endif
+}
+
+int multi_protocol_bt_ble_connect_num(void)
+{
+    return 0;//app_ble_connected_num_get();
+}
+
+void bt_ble_adv_enable(u8 enable)
+{
+    multi_protocol_bt_ble_enable(enable);
 }
 #endif
 
@@ -558,3 +601,4 @@ _WEAK_ void bt_ble_exit(void)
 {
 }
 #endif
+

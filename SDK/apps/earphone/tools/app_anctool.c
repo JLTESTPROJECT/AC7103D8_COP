@@ -14,7 +14,7 @@
 #include "btstack/avctp_user.h"
 #include "classic/hci_lmp.h"
 #include "app_anctool.h"
-#include "audio_anc.h"
+#include "audio_anc_includes.h"
 #include "user_cfg.h"
 #include "app_action.h"
 #include "app_main.h"
@@ -22,38 +22,18 @@
 #if TCFG_USER_TWS_ENABLE
 #include "bt_tws.h"
 #endif/*TCFG_USER_TWS_ENABLE*/
-#include "audio_anc_debug_tool.h"
-#include "audio_anc_common.h"
-#include "audio_anc_common_plug.h"
-
-#if TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN
-#include "icsd_adt_app.h"
-#endif
-
-#if ANC_MULT_ORDER_ENABLE
-#include "audio_anc_mult_scene.h"
-#endif/*ANC_MULT_ORDER_ENABLE*/
-
-#if TCFG_AUDIO_ANC_EXT_TOOL_ENABLE
-#include "anc_ext_tool.h"
-#endif
-
-#if TCFG_AUDIO_ADAPTIVE_EQ_ENABLE
-#include "icsd_aeq_app.h"
-#endif
-
-#if TCFG_AUDIO_ANC_REAL_TIME_ADAPTIVE_ENABLE
-#include "rt_anc_app.h"
-#endif
 
 #define anctool_printf  log_i
 #define anctool_put_buf put_buf
 
-#if (ANC_CHIP_VERSION == ANC_VERSION_BR30) || (ANC_CHIP_VERSION == ANC_VERSION_BR30C)
-#define CONFIG_VERSION  "V2.1.0"
-#else
-#define CONFIG_VERSION  "V2.1.1"
-#endif
+//ANC SPP命令仅主机响应(用于 headset_tws 方案区分左右调试)
+#define ANC_SPP_RESPONSE_TO_TWS_MASTER_ONLY		0
+
+/*
+	ANC SDK版本号
+	功能新增/修改产生兼容性问题时，通知用户更新工具 or SDK
+*/
+#define CONFIG_VERSION  "V3.0.0"
 
 #if ((ANC_CHIP_VERSION == ANC_VERSION_BR30) || (ANC_CHIP_VERSION == ANC_VERSION_BR30C) || \
 	(ANC_CHIP_VERSION == ANC_VERSION_BR36)) || (!TCFG_AUDIO_ANC_BASE_DEBUG_ENABLE)
@@ -66,7 +46,6 @@
 #define ANC_EAR_ADAPTIVE_EN		0
 #endif/*ANC_EAR_ADAPTIVE_EN*/
 
-extern int anc_mode_change_tool(u8 dat);
 
 enum {
     FILE_ID_COEFF = 0,  //系数文件ID号
@@ -158,6 +137,12 @@ enum {
     CMD_MIC_CMP_GAIN_GET = 0X61,	//FF/FB 增益补偿读取
     CMD_MIC_CMP_GAIN_CLEAN = 0X62,	//FF/FB 增益补偿清0
     CMD_MIC_CMP_GAIN_SAVE = 0X63,	//FF/FB 增益补偿保存
+    CMD_MIC_CMP_GAIN_ALL_GET = 0X64, //FF/FB 增益补偿结构体获取
+    CMD_MIC_CMP_GAIN_ALL_SET = 0X65, //FF/FB 增益补偿结构体设置
+
+    CMD_MIC_SCHEME_GET = 0x66, //ANC MIC组合方案获取
+
+    CMD_SDK_VERSION_GET = 0x67,     //获取SDK 版本号
 
     CMD_ANC_EXT_TOOL = 0XB0,
     CMD_DEBUG_USER_CMD = 0XB1,		//用户自定义命令
@@ -182,6 +167,9 @@ struct _anctool_info {
     /* u8 fz_mute_pow; */
     u8 mic_pow_type;
     u8 anc_designer;
+#if TCFG_AUDIO_ANC_BASE_DEBUG_ENABLE
+    u16 w_file_timer;
+#endif
     u8 *file_hdl;
     u32 file_len;
     u32 file_id;
@@ -207,10 +195,17 @@ static void app_anctool_ack_get_version(void)
 {
     u8 *cmd;
     u32 datalen;
-    datalen = sizeof(CONFIG_VERSION) + 1;
+    //兼容串口小板的版本命令
+#if (ANC_CHIP_VERSION == ANC_VERSION_BR30) || (ANC_CHIP_VERSION == ANC_VERSION_BR30C)
+    const char ver[] = "V2.1.0";
+#else
+    const char ver[] = "V2.1.1";
+#endif
+
+    datalen = sizeof(ver) + 1;
     cmd = anctool_api_write_alloc(datalen);
     cmd[0] = CMD_GET_VERSION;
-    memcpy(&cmd[1], CONFIG_VERSION, datalen - 1);
+    memcpy(&cmd[1], ver, datalen - 1);
     anctool_api_write(cmd, datalen);
     anc_online_busy_set(1);
 }
@@ -606,6 +601,15 @@ static void anctool_ack_read_file_data(u32 offset, u32 data_len)
     anctool_api_write(cmd, data_len + 1);
 }
 
+#if TCFG_AUDIO_ANC_BASE_DEBUG_ENABLE
+void anctool_write_file_timeout(void *priv)
+{
+    anctool_printf("anctool_write_file:resume timeout\n");
+    audio_anc_debug_spp_suspend(0);
+    __this->w_file_timer = 0;
+}
+#endif
+
 static void anctool_ack_write_file_start(u32 id, u32 data_len)
 {
     __this->file_id = id;
@@ -800,6 +804,7 @@ static void app_anctool_passthrough_deal(u8 *data, u16 len)
     case CMD_MIC_CMP_GAIN_SET:
     case CMD_MIC_CMP_GAIN_CLEAN:
     case CMD_MIC_CMP_GAIN_SAVE:
+    case CMD_MIC_CMP_GAIN_ALL_SET:
         if (audio_anc_mic_gain_cmp_cmd_process(cmd, data + 1, len - 1)) {
             app_anctool_passthrough_send_ack(cmd, FALSE, ERR_NO);
         } else {
@@ -811,7 +816,27 @@ static void app_anctool_passthrough_deal(u8 *data, u16 len)
         float cmp_gain = audio_anc_mic_gain_cmp_get(data[1]);
         app_anctool_passthrough_send_buf(cmd, (u8 *)&cmp_gain, 4);
         break;
+    case CMD_MIC_CMP_GAIN_ALL_GET:
+        anctool_printf("CMD_MIC_CMP_GAIN_ALL_GET\n");
+        int mic_cmp_len = 0;
+        u8 *mic_cmp_p = audio_anc_mic_gain_cmp_cfg_get(&mic_cmp_len);
+        app_anctool_passthrough_send_buf(cmd, mic_cmp_p, mic_cmp_len);
+        break;
 #endif
+#if AUDIO_ANC_MIC_ARRAY_ENABLE
+    case CMD_MIC_SCHEME_GET:
+        u8 mic_cfg[3];
+        mic_cfg[0] = AUDIO_ANC_MIC_ARRAY_ENABLE;
+        mic_cfg[1] = AUDIO_ANC_MIC_ARRAY_FF_NUM; //ff mic个数
+        mic_cfg[2] = AUDIO_ANC_MIC_ARRAY_FB_NUM; //fb mic个数
+        anctool_printf("CMD_MIC_SCHEME_GET ff_num %d, fb_num %d\n", mic_cfg[1], mic_cfg[2]);
+        app_anctool_passthrough_send_buf(cmd, mic_cfg, 3);
+        break;
+#endif
+    /* case CMD_SDK_VERSION_GET: */
+    /* anctool_printf("CMD_SDK_VERSION_GET:%s\n", CONFIG_VERSION); */
+    /* app_anctool_passthrough_send_buf(cmd, (u8 *)(CONFIG_VERSION), sizeof(CONFIG_VERSION)); */
+    /* break; */
     default:
         app_anctool_passthrough_send_ack(cmd, FALSE, ERR_NO);
         break;
@@ -826,10 +851,27 @@ static void app_anctool_module_deal(u8 *data, u16 len)
     anctool_printf("recv packet:\n");
     anctool_put_buf(data, len);
     __this->connected_flag = 1;
-#if 0//TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN
-    /*关闭所有模块*/
-    if (audio_icsd_adt_is_running()) {
-        audio_icsd_adt_close_all();
+#if TCFG_USER_TWS_ENABLE && ANC_SPP_RESPONSE_TO_TWS_MASTER_ONLY
+    //从机拦截所有写参数的行为
+    if (tws_api_get_role() == TWS_ROLE_SLAVE) {
+        switch (cmd) {
+        case CMD_WRITE_FILE_START:
+        case CMD_WRITE_FILE_DATA:
+        case CMD_WRITE_FILE_END:
+        case CMD_SET_ID:
+        case CMD_TOOLS_SET_GAIN:
+            return;
+        case CMD_PASSTHROUGH:	//透传指令特殊处理
+            switch (data[2]) {
+            case CMD_MIC_CMP_GAIN_EN ... CMD_MIC_CMP_GAIN_ALL_SET:
+                return;
+            default:
+                break;
+            }
+            break;
+        default:
+            break;
+        }
     }
 #endif
     switch (cmd) {
@@ -917,8 +959,8 @@ static void app_anctool_module_deal(u8 *data, u16 len)
         app_anctool_ack_get_coeff_size();
         break;
     case CMD_READ_FILE_START:
-        anctool_printf("CMD_READ_FILE_START\n");
         memcpy((u8 *)&id, &data[1], 4);
+        anctool_printf("CMD_READ_FILE_START, ID=0x%x\n", id);
         anctool_ack_read_file_start(id);
         break;
     case CMD_READ_FILE_DATA:
@@ -931,6 +973,14 @@ static void app_anctool_module_deal(u8 *data, u16 len)
         anctool_printf("CMD_WRITE_FILE_START\n");
         memcpy((u8 *)&id, &data[1], 4);
         memcpy((u8 *)&data_len, &data[5], 4);
+#if TCFG_AUDIO_ANC_BASE_DEBUG_ENABLE
+        audio_anc_debug_spp_suspend(1);
+        if (__this->w_file_timer) {
+            sys_timer_modify(__this->w_file_timer, 5000);
+        } else {
+            __this->w_file_timer = sys_timeout_add(NULL, anctool_write_file_timeout, 5000);
+        }
+#endif
         anctool_ack_write_file_start(id, data_len);
         break;
     case CMD_WRITE_FILE_DATA:
@@ -941,6 +991,13 @@ static void app_anctool_module_deal(u8 *data, u16 len)
     case CMD_WRITE_FILE_END:
         anctool_printf("CMD_WRITE_FILE_END\n");
         anctool_ack_write_file_end();
+#if TCFG_AUDIO_ANC_BASE_DEBUG_ENABLE
+        audio_anc_debug_spp_suspend(0);
+        if (__this->w_file_timer) {
+            sys_timer_del(__this->w_file_timer);
+            __this->w_file_timer = 0;
+        }
+#endif
         break;
     case CMD_GET_CHIP_VERSION:
         app_anctool_ack_get_chip_version();
@@ -972,10 +1029,13 @@ static void app_anctool_module_deal(u8 *data, u16 len)
         anctool_callback(0, ANC_EXEC_FAIL);
 #endif
         break;
-#if TCFG_USER_TWS_ENABLE && (ANC_CH != (ANC_L_CH | ANC_R_CH)) && TCFG_AUDIO_ANC_BASE_DEBUG_ENABLE
+#if TCFG_USER_TWS_ENABLE && TCFG_AUDIO_ANC_BASE_DEBUG_ENABLE
     case CMD_EAR_ROLE_SWITCH:
         anctool_printf("CMD_EAR_ROLE_SWITCH\n");
         if (get_tws_sibling_connect_state()) {
+            char channel = bt_tws_get_local_channel();
+            printf("anctool_printf channel %c\n", channel);
+            audio_anc_debug_app_send_data(ANC_DEBUG_APP_OTHER_MSG, 0x0, (u8 *)&channel, 1);
             tws_api_role_switch();
             app_anctool_send_ack(CMD_EAR_ROLE_SWITCH, TRUE, ERR_NO);
         } else {
@@ -1026,12 +1086,12 @@ static void app_anctool_module_deal(u8 *data, u16 len)
 #if TCFG_AUDIO_ANC_BASE_DEBUG_ENABLE
     case CMD_DEBUG_TOOL_OPEN:
         anctool_printf("CMD_DEBUG_TOOL_OPEN\n");
-        audio_anc_debug_tool_open();
+        audio_anc_debug_spp_log_en(1);
         app_anctool_send_ack(CMD_DEBUG_TOOL_OPEN, TRUE, ERR_NO);
         break;
     case CMD_DEBUG_TOOL_CLOSE:
         anctool_printf("CMD_DEBUG_TOOL_CLOSE\n");
-        audio_anc_debug_tool_close();
+        audio_anc_debug_spp_log_en(0);
         app_anctool_send_ack(CMD_DEBUG_TOOL_CLOSE, TRUE, ERR_NO);
         break;
 #endif
@@ -1082,12 +1142,25 @@ void app_anctool_spp_connect(void)
     anctool_printf("%s, spp_connect!\n", __FUNCTION__);
     anctool_api_init(&app_anctool_data);
     __this->para = anc_api_get_train_param();
+#if TCFG_USER_TWS_ENABLE
+    tws_api_auto_role_switch_disable();
+#endif
+
+#if TCFG_AUDIO_ANC_BASE_DEBUG_ENABLE
+    audio_anc_debug_tool_open();
+#endif
+
 }
 
 void app_anctool_spp_disconnect(void)
 {
     anctool_printf("%s, spp_disconnect!\n", __FUNCTION__);
     audio_anc_production_exit();	//退出产测模式
+
+#if TCFG_AUDIO_ANC_BASE_DEBUG_ENABLE
+    audio_anc_debug_tool_close();
+#endif
+
 #if TCFG_AUDIO_ANC_EXT_TOOL_ENABLE
     anc_ext_tool_disconnect();
 #endif

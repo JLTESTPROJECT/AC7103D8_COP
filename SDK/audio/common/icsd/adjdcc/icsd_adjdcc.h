@@ -24,21 +24,36 @@
 #include "icsd_common.h"
 #include "icsd_common_v2.h"
 
-#if 0
+#if ADJDCC_PRINTF_EN
 #define _dcc_printf printf                  //打开自适应DCC算法库信息
 #else
 #define _dcc_printf icsd_printf_off
 #endif
+
 extern int (*dcc_printf)(const char *format, ...);
 
 struct icsd_adjdcc_libfmt {
     int lib_alloc_size;  //算法ram需求大小
 };
 
+typedef struct {
+    u8     release_cnt;         // default:40,  range:0-100
+    u8     steps;               // default:4,   range:0-8
+    u8     wind_lvl_thr;        // default:30,  range:0-255
+    u8     param1[13];          // default:0  range:0-255
+    float  iir_coef;            // default:0.9  range:0-1, percision:0.001
+    float  param_table[3 * 8];  // default:[看注]  range:[0-15, -30-40, -30-40]
+    float  thr_list_up[8];      // default:[100, 105, 110, 120, 130, 140, 150, 160]  range:0-300
+    float  thr_list_down[8];    // default:[80, 90, 95, 100, 110, 120, 130, 140]     range:0-300
+    float  param2[10];          // default:0  range:0-255
+} __adjdcc_config;
+
+
 struct icsd_adjdcc_infmt {
     void *alloc_ptr;     //外部申请的ram地址
+    __adjdcc_config *adjdcc_config;
     int lib_alloc_size;  //算法ram需求大小
-    u8 TOOL_FUNCTION;
+    int TOOL_FUNCTION;
 };
 
 typedef struct {
@@ -52,27 +67,7 @@ typedef struct {
     u8 de_task;
 } __icsd_adjdcc_output;
 
-typedef struct {
-    u8 idx;
-    u8 ff_dc_par;
-    u8 release_cnt;
-    u8 steps;
-    u8 wind_lvl_thr;
-
-    u16 refmic_max_thr;
-    u16 refmic_mp_thr;
-
-    float iir_coef;
-    float *thr_list_up;
-    float *thr_list_down;
-
-    float *err_overload_list;
-    float *param_table;
-
-} __adjdcc_config;
-
 struct adjdcc_function {
-    void (*adjdcc_config_init)(__adjdcc_config *_adjdcc_config);
     void (*ff_adjdcc_par_set)(u8 dc_par);
     void (*rtanc_adjdcc_flag_set)(u8 flag);
     u8(*adjdcc_trigger_update)(u8 env_level, float *table);
@@ -81,8 +76,10 @@ struct adjdcc_function {
 };
 extern struct adjdcc_function *ADJDCC_FUNC;
 
-void icsd_adjdcc_get_libfmt(struct icsd_adjdcc_libfmt *libfmt);
-void icsd_adjdcc_set_infmt(struct icsd_adjdcc_infmt *fmt);
+void icsd_adjdcc_get_libfmt(struct icsd_adjdcc_libfmt *libfmt, u8 type);
+void icsd_adjdcc_set_infmt(struct icsd_adjdcc_infmt *fmt, u8 type);
 void icsd_alg_adjdcc_run(__icsd_adjdcc_run_parm *run_parm, __icsd_adjdcc_output *output);
+
+__adjdcc_config *adjdcc_config_init();
 
 #endif

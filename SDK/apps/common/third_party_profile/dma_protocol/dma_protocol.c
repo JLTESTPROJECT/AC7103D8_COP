@@ -2,7 +2,6 @@
 #include "media/includes.h"
 #include "app_config.h"
 #include "app_msg.h"
-#include "earphone.h"
 #include "bt_tws.h"
 #include "app_main.h"
 #include "battery_manager.h"
@@ -93,6 +92,7 @@ const char *dma_product_key = "seXazCNK6CfAI0xlmEsScZ9Mo071I2oD";
 const char *dma_triad_id    = "002aCDEy0000002700002833";
 const char *dma_secret      = "b1cc860c49af8d0b";
 u8 dma_test_mac[] = {0xF4, 0x43, 0x88, 0x28, 0x18, 0x08};
+const char *dma_test_sn     = "1723846";
 
 /**************** DMA PRODUCT INFO TEST END ******************/
 
@@ -153,6 +153,16 @@ void bt_update_testbox_addr(u8 *addr)
 {
 
 }
+
+
+#if DMA_PRODUCT_INFO_TEST
+int get_vender_special_SN(char *serial_number)
+{
+    memcpy(serial_number, dma_test_sn, strlen(dma_test_sn));
+    return 7;
+}
+#endif
+
 
 bool dueros_dma_get_manufacturer_info(u8 *read_buf, u16 len)
 {
@@ -386,9 +396,11 @@ static int dma_protocol_bt_status_event_handler(struct bt_event *bt)
         break;
     case BT_STATUS_SECOND_CONNECTED:
     case BT_STATUS_FIRST_CONNECTED:
+    case BT_STATUS_THIRD_CONNECTED:
         break;
     case BT_STATUS_FIRST_DISCONNECT:
     case BT_STATUS_SECOND_DISCONNECT:
+    case BT_STATUS_THIRD_DISCONNECT:
         dma_update_tws_state_to_lib(DMA_NOTIFY_STATE_MOBILE_DISCONNECTED);
         dueros_dma_set_calling_asr_state(0);
         break;
@@ -706,7 +718,10 @@ static u8 app_protocal_get_bat_by_type(u8 type)
     u8 value = 0;
     extern u8 get_tws_sibling_bat_persent(void);
     u8 sibling_val = 0xff;
+#if TCFG_USER_TWS_ENABLE
+    extern u8 get_tws_sibling_bat_persent(void);
     sibling_val = get_tws_sibling_bat_persent();
+#endif
 #if TCFG_CHARGESTORE_ENABLE
     if (sibling_val == 0xff) {
         sibling_val = chargestore_get_sibling_power_level();

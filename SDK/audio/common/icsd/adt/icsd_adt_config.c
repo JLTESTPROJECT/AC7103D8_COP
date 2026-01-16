@@ -60,18 +60,30 @@ const u8 ICSD_ENVNL_EN		=  0;//环境声检测使能
 const u8 ICSD_RTAEQ_EN		=  0;//实时自适应EQ
 const u8 ICSD_EIN_EN  		=  0;//入耳检测
 const u8 ICSD_46KOUT_EN     =  0;//ANC 48K数据输出
+
+#if TCFG_AUDIO_DAC_CONNECT_MODE == DAC_OUTPUT_LR
+const u8 ICSD_ADT_EP_TYPE   =  ADT_HEADSET;
+#else
 const u8 ICSD_ADT_EP_TYPE   =  ADT_TWS;
+#endif
 
 const u8 VDT_DATA_CHECK     = 0;//串口查看免摘数据通路
 const u8 WIND_DATA_CHECK    = 0;//串口查看风噪数据通路
 const u8 BT_ADT_INF_EN	    = 0;//查看ADT启动信息
 const u8 BT_ADT_DP_STATE_EN = 0;//查看ADT数据通路状态
-const u8 mic_input_v2       = 1;//使用新MIC数据接口
+const u8 ADT_MIC_VERSION	= 3; //配置为3，跑adt_v3版本
 const u8 ICSD_WDT_V2        = 1;//风噪快速输出
 const u8 ICSD_HOWL_REF_EN   = 0;//使能后使用REF实现HOWL，该模式只支持同时打开风噪检测
 
-const u8 avc_run_interval   = 32;//实际运行间隔为  avc_run_interval * 11ms
+const u8 avc_run_interval   = 16;//实际运行间隔为  avc_run_interval * 11ms
 const u8 tidy_avc_run_interval = 16;//实际运行间隔为  tidy_avc_run_interval * 16ms
+const u8 icsd_ancdma_dac_debug = 0;
+const u8 adt_log_en = ICSD_ADT_LOG_EN;
+const u8 ICSD_AVC_DATAPATH  = 0;//0:ancdma_ref + dac 1:ref mic  2:talk mic
+
+const u16 ANC_DMA_POINTS    = 512; //ANC DMA长度，支持配置为：512 1024 2048
+const u8 icsd_dac_micread   = 0;
+const u8 rtanc_ancout_2ch_en = 0; //rtanc使用2通道ancout数据
 //==============================================//
 //    环境声参数配置
 //==============================================//

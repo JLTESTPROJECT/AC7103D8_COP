@@ -137,6 +137,7 @@ void p33_io_wakeup_edge(u32 gpio, P33_IO_WKUP_EDGE edge);
 void p33_io_wakeup_enable(u32 gpio, u32 enable);
 void p33_io_wakeup_set_callback(u32 gpio, void (*callback)(P33_IO_WKUP_EDGE edge));
 
+void p33_io_wakeup_gpio_config_soff(u32 *gpio_config);
 //
 //
 //                    pinr

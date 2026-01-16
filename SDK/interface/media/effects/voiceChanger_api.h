@@ -88,6 +88,39 @@ typedef struct _AUTOTUNE_PARM {
     af_DataType dataTypeobj;
 } AUTOTUNE_PARM;
 
+
+typedef struct _VIBRATO_PARM {
+    u32 sr;
+    u32 nch;
+    u32 amplitude;                   //pitch rate:  1000<=>1
+    u32 period;                   // 1000<=>1hz
+    u32 reserved0;
+    af_DataType dataTypeobj;
+
+} VIBRATO_PARM;
+
+
+enum {
+    ALG_HARMONY_PITCHSHIFT = 1,
+    ALG_HARMONY_SPECTRUM = 2,
+    ALG_HARMONY_F0_TD = 3,
+    ALG_HARMONY_NULL
+};
+
+
+typedef struct _HARMONY_PARM {
+    u32 sr;
+    u32 nch;
+    u32 effect_v;
+    int keyval;
+    u32 formantshift;
+    u32 mode;
+    u32 reserved0;
+    af_DataType dataTypeobj;
+
+} HARMONY_PARM;
+
+
 typedef struct _AUTOTUNE_FUNC_API_ {
     u32(*need_buf)(void *ptr, AUTOTUNE_PARM *vc_parm);
     int (*open)(void *ptr, u32 sr, AUTOTUNE_PARM *vc_parm);       //中途改变参数，可以调init
@@ -103,9 +136,22 @@ typedef struct _VOICECHANGER_FUNC_API_ {
     void (*init)(void *ptr, VOICECHANGER_PARM *vc_parm);        //中途改变参数，可以调init
 } VOICECHANGER_FUNC_API;
 
+
+typedef struct _VIBRATO_FUNC_API_ {
+    u32(*need_buf)(void *vc_parm);
+    u32(*tmp_buf_size)(void *vc_parm);
+    int (*init)(void *ptr, void *vc_parm, void *tmpbuf);
+    int (*set_tmpbuf)(void *ptr, void *tmpbuf);
+    int (*run)(void *ptr, void *indata, void *outdata, int PointsPerChannel);
+    int (*update)(void *ptr, void *vc_parm);
+} VIBRATO_FUNC_API;
+
 extern VOICECHANGER_FUNC_API *get_voiceChanger_func_api();
 extern VOICECHANGER_FUNC_API *get_voiceChanger_adv_func_api();
 extern AUTOTUNE_FUNC_API *get_autotune_func_api();
+
+extern VIBRATO_FUNC_API *get_vibrato_func_api();
+extern VIBRATO_FUNC_API *get_harmony_func_api();
 
 #endif // reverb_api_h__
 

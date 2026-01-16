@@ -7,7 +7,8 @@
 #include "event.h"
 #include "system/includes.h"
 
-#include "iic_api.h"
+#include "gSensor/p33_algo_motion.h"
+//#include "iic_api.h"
 
 #define ACCEL_OF_GRAVITY        10
 #define ACCEL_DATA_GAIN         10
@@ -84,4 +85,15 @@ enum {
 
 #define DEVICE_EVENT_GSENSOR	(('G' << 24) | ('S' << 16) | ('R' << 8) | '\0')
 */
+
+// 步数管理接口
+u32 g_sensor_get_total_steps(void);
+void g_sensor_set_total_steps(u32 steps);
+void g_sensor_add_steps(u32 steps);
+void g_sensor_clear_steps(void);
+
+// 算法输出数据管理接口
+void g_sensor_update_algo_out(algo_out out);
+algo_out g_sensor_get_algo_out(void);
+void g_sensor_clear_algo_out(void);
 #endif

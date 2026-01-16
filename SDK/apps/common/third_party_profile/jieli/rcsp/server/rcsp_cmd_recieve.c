@@ -32,8 +32,13 @@
 #include "rcsp_command.h"
 #include "adv_1t2_setting.h"
 #include "rcsp_rtc_func.h"
+#include "rcsp_translator.h"
 #include "pub_mutual_set_cmd_opt.h"
 #include "file_transfer_sync.h"
+
+#include "sensors/ear_sports_data_opt.h"
+#include "sensors/ear_sport_info_opt.h"
+#include "rcsp_auracast/rcsp_auracast.h"
 
 #if TCFG_USER_TWS_ENABLE
 #include "classic/tws_api.h"
@@ -354,12 +359,114 @@ static void find_device_handle(void *priv, u8 OpCode, u8 OpCode_SN, u8 *data, u1
 }
 #endif // RCSP_ADV_FIND_DEVICE_ENABLE
 
+#define RCSP_DEV_TYPE_WATCH             0  // 运动手表
+#define RCSP_DEV_TYPE_TWS_EARPHONE      1  // TWS耳机
+#define RCSP_DEV_TYPE_SOUNDBOX          2  // 音箱
+#define RCSP_DEV_TYPE_DONGLE            3  // Dongle 设备
+
 static void get_device_config_info(void *priv, u8 OpCode, u8 OpCode_SN, u8 *data, u16 len, u16 ble_con_handle, u8 *spp_remote_addr)
 {
-#if (TCFG_DEV_MANAGER_ENABLE || RCSP_TONE_FILE_TRANSFER_ENABLE) //传音大文件传输提示音方案
-    u8 device_info[] = {0x01, 0x00, 0x01};
-    JL_CMD_response_send(OpCode, JL_PRO_STATUS_SUCCESS, OpCode_SN, device_info, sizeof(device_info), ble_con_handle, spp_remote_addr);
+#if RCSP_MODE == RCSP_MODE_EARPHONE
+    struct RcspModel *rcspModel = (struct RcspModel *)priv;
+    u8 resp_buf[64] = {0};
+    u32 resp_len;
+    if (rcspModel == NULL) {
+        return ;
+    }
+    if (!rcspModel->find_dev_en) {
+        return;
+    }
+    //产品标识
+#if RCSP_MODE == RCSP_MODE_EARPHONE
+    resp_buf[0] = RCSP_DEV_TYPE_TWS_EARPHONE;
+#elif RCSP_MODE == RCSP_MODE_WATCH
+    resp_buf[0] = RCSP_DEV_TYPE_WATCH;
 #endif
+    //版本号
+    resp_buf[1] = 0x00;
+#if RCSP_ADV_TRANSLATOR
+    resp_buf[2] |= BIT(1);
+    if (!JL_rcsp_translator_whether_play_by_ai_rx()) {
+        resp_buf[2] |= BIT(2);
+    }
+#endif
+
+    resp_buf[2] |= BIT(4);  // support LTV
+    resp_len = 3;
+
+    // aurcast feature LTV
+    resp_buf[resp_len] = 2;        // length
+    resp_buf[resp_len + 1] = 0x01;     // type
+    // value
+    // Bit0: 是否支持Auracast功能
+    // Bit1: 是否支持私有Auracast 接收端功能
+    // Bit2: 是否支持 私有Aurafast 发射端功能
+#if RCSP_ADV_AURCAST_SINK
+    resp_buf[resp_len + 2] |= BIT(0) | BIT(1);   // value
+#endif
+#if RCSP_ADV_AURCAST_SOURCE
+    resp_buf[resp_len + 2] |= BIT(0) | BIT(2);   // value
+#endif
+    resp_len += 3;
+
+    // TWS功能LTV
+    resp_buf[resp_len] = 2;  //length
+    resp_buf[resp_len + 1] = 0x02;  //type
+#if RCSP_MODE == RCSP_MODE_EARPHONE
+    //BIT0: 是否支持TWS设备功能：设备名、弹窗快连、按键设置、灯效设置等
+    //BIT1: 是否支持修改设备名
+    resp_buf[resp_len + 2] |= BIT(0);
+    //resp_buf[resp_len + 2] |= BIT(1);
+#endif
+    resp_len += 3;
+
+    // 翻译功能LTV
+    resp_buf[resp_len] = 2;  //length
+    resp_buf[resp_len + 1] = 0x03;  //type
+#if RCSP_ADV_TRANSLATOR
+    //BIT0: 是否支持翻译功能
+    //BIT1: 是否使用A2DP播报
+    //BIT2: 是否支持通话翻译OPUS立体声编码
+    resp_buf[resp_len + 2] |= BIT(0);
+    if (!JL_rcsp_translator_whether_play_by_ai_rx()) {
+        resp_buf[resp_len + 2] |= BIT(1);
+    }
+    resp_buf[resp_len + 2] |= BIT(2);
+#endif
+    resp_len += 3;
+
+
+#elif RCSP_MODE == RCSP_MODE_SOUNDBOX
+
+    u8 resp_buf[5] = {0};
+    // 产品标识
+    resp_buf[0] = RCSP_DEV_TYPE_SOUNDBOX;
+#if (defined(RCSP_DISPLAY_AS_DONGLE) && RCSP_DISPLAY_AS_DONGLE)
+    resp_buf[0] = RCSP_DEV_TYPE_DONGLE;
+#endif
+    //版本号
+    resp_buf[1] = 0x00;
+
+    // aurcast feature LTV
+    resp_buf[2] = 2;        // length
+    resp_buf[3] = 0x01;     // type
+    // value
+    // Bit0: 是否支持Auracast功能
+    // Bit1: 是否支持私有Auracast 接收端功能
+    // Bit2: 是否支持 私有Aurafast 发射端功能
+    if (RCSP_ADV_AURCAST_SINK) {
+        resp_buf[4] |= BIT(0) | BIT(1);   // value
+    }
+    if (RCSP_ADV_AURCAST_SOURCE) {
+        resp_buf[4] |= BIT(0) | BIT(2);   // value
+    }
+
+#endif
+    JL_CMD_response_send(OpCode, JL_PRO_STATUS_SUCCESS, OpCode_SN, resp_buf, sizeof(resp_buf), ble_con_handle, spp_remote_addr);
+    /* #if (TCFG_DEV_MANAGER_ENABLE || RCSP_TONE_FILE_TRANSFER_ENABLE) 传音大文件传输提示音方案 */
+    /*     u8 device_info[] = {0x01, 0x00, 0x01}; */
+    /*     JL_CMD_response_send(OpCode, JL_PRO_STATUS_SUCCESS, OpCode_SN, device_info, sizeof(device_info), ble_con_handle, spp_remote_addr); */
+    /* #endif */
 }
 
 #define RES_MD5_FILE	FLASH_RES_PATH"md5.bin"
@@ -515,6 +622,33 @@ static void rcsp_request_exception_info(void *priv, u8 OpCode, u8 OpCode_SN, u8 
 }
 #endif /* #if (define CONFIG_DEBUG_RECORD_ENABLE && CONFIG_DEBUG_RECORD_ENABLE) */
 
+#if (RCSP_MODE && JL_RCSP_EAR_SENSORS_DATA_OPT)
+int JL_rcsp_ear_sensors_data_opt(void *priv, u8 OpCode, u8 OpCode_SN, u8 *data, u16 len)
+{
+#if HEALTH_ALL_DAY_CHECK_ENABLE
+    // 全天检测功能的开关
+    if (0 == JL_rcsp_ear_sports_info_funciton(priv, OpCode, OpCode_SN, data, len)) {
+        return 0;
+    }
+#endif
+    // 实时检测和运动信息的处理
+    if (0 == JL_rcsp_ear_sports_data_funciton(priv, OpCode, OpCode_SN, data, len)) {
+        return 0;
+    }
+    return -1;
+}
+#endif
+
+#if (RCSP_ADV_AURCAST_SINK || RCSP_ADV_AURCAST_SOURCE)
+static void rcsp_auracast_cmd_process(void *priv, u8 OpCode, u8 OpCode_SN, u8 *data, u16 len, u16 ble_con_handle, u8 *spp_remote_addr)
+{
+    int ret = auracast_app_packet_receive(OpCode, OpCode_SN, data, len, ble_con_handle, spp_remote_addr);
+    if (ret) {
+        JL_CMD_response_send(OpCode, JL_PRO_STATUS_FAIL, OpCode_SN, NULL, 0, ble_con_handle, spp_remote_addr);
+    }
+}
+#endif
+
 void rcsp_cmd_recieve(void *priv, u8 OpCode, u8 OpCode_SN, u8 *data, u16 len, u16 ble_con_handle, u8 *spp_remote_addr)
 {
     switch (OpCode) {
@@ -559,9 +693,6 @@ void rcsp_cmd_recieve(void *priv, u8 OpCode, u8 OpCode_SN, u8 *data, u16 len, u1
         find_device_handle(priv, OpCode, OpCode_SN, data, len, ble_con_handle, spp_remote_addr);
         break;
 #endif
-    case JL_OPCODE_GET_DEVICE_CONFIG_INFO:
-        get_device_config_info(priv, OpCode, OpCode_SN, data, len, ble_con_handle, spp_remote_addr);
-        break;
     case JL_OPCODE_GET_MD5:
         get_md5_handle(priv, OpCode, OpCode_SN, data, len, ble_con_handle, spp_remote_addr);
         break;
@@ -615,6 +746,8 @@ void rcsp_cmd_recieve(void *priv, u8 OpCode, u8 OpCode_SN, u8 *data, u16 len, u1
     case JL_OPCODE_FILE_BLUK_TRANSFER:
         rcsp_file_bluk_trans_prepare(priv, OpCode_SN, data, len);
         break;
+#if (RCSP_MODE && JL_RCSP_EXTRA_FLASH_OPT)
+#endif
 #endif
 #if (TCFG_DEV_MANAGER_ENABLE && JL_RCSP_SIMPLE_TRANSFER)
     case JL_OPCODE_SIMPLE_FILE_TRANS:
@@ -636,7 +769,20 @@ void rcsp_cmd_recieve(void *priv, u8 OpCode, u8 OpCode_SN, u8 *data, u16 len, u1
         rcsp_get_1t2_bt_device_name_list(priv, OpCode, OpCode_SN, data, len, ble_con_handle, spp_remote_addr);
         break;
 #endif
+    case JL_OPTCODE_DEVICE_CONFIG_GET:
+        get_device_config_info(priv, OpCode, OpCode_SN, data, len, ble_con_handle, spp_remote_addr);
+        break;
+#if (RCSP_ADV_AURCAST_SINK || RCSP_ADV_AURCAST_SOURCE)
+    case JL_OPTCODE_AURACAST_CMD:
+        rcsp_auracast_cmd_process(priv, OpCode, OpCode_SN, data, len, ble_con_handle, spp_remote_addr);
+        break;
+#endif
     default:
+#if JL_RCSP_EAR_SENSORS_DATA_OPT
+        if (0 == JL_rcsp_ear_sensors_data_opt(priv, OpCode, OpCode_SN, data, len)) {
+            break;
+        }
+#endif
 #if JL_RCSP_SENSORS_DATA_OPT
         if (0 == JL_rcsp_sensors_data_opt(priv, OpCode, OpCode_SN, data, len)) {
             break;
@@ -657,9 +803,15 @@ void rcsp_cmd_recieve(void *priv, u8 OpCode, u8 OpCode_SN, u8 *data, u16 len, u1
             break;
         }
 #endif
+#if RCSP_ADV_TRANSLATOR
+        if (0 == JL_rcsp_translator_functions(priv, OpCode, OpCode_SN, data, len, ble_con_handle, spp_remote_addr)) {
+            break;
+        }
+#endif
         JL_CMD_response_send(OpCode, JL_PRO_STATUS_UNKOWN_CMD, OpCode_SN, 0, 0, ble_con_handle, spp_remote_addr);
         break;
     }
 }
 
 #endif//RCSP_MODE
+

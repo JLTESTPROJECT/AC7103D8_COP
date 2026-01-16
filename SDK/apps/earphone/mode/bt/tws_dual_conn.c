@@ -19,7 +19,8 @@
 #include "app_testbox.h"
 #include "update.h"
 #include "btstack_rcsp_user.h"
-#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN)))
+#include "adapter/include/misc_interface.h"
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
 #include "app_le_connected.h"
 #endif
 /********edr蓝牙相关状态debug打印说明***********************
@@ -52,7 +53,7 @@ struct dual_conn_handle {
     u16 inquiry_scan_time;
     u16 page_scan_timer;
     u8 device_num_recorded;
-    u8 remote_addr[3][6];
+    u8 remote_addr[4][6];
     u8 page_head_inited;
     u8 page_scan_auto_disable;
     u8 inquiry_scan_disable;
@@ -100,18 +101,49 @@ void write_scan_conn_enable(bool scan_enable, bool conn_enable)
             return;
         }
     }
-    /* if ((get_bt_dual_config() == DUAL_CONN_CLOSE) && (bt_get_total_connect_dev())) { */
-    if (((get_bt_dual_config() == DUAL_CONN_CLOSE) || (get_bt_dual_config() == DUAL_CONN_SET_ONE)) && (bt_get_total_connect_dev())) { ////关闭1t2功能，或者关闭双联,已连接一台手机，屏蔽其它状态,
+
+    if (((get_bt_dual_config() == DUAL_CONN_CLOSE) || (get_bt_dual_config() == DUAL_CONN_SET_ONE)) && (bt_get_total_connect_dev())) { //关闭1t2功能，或者关闭双连，已连接一台手机，屏蔽其它状态
         g_printf("bt dual close\n");
         scan_enable = 0;
         conn_enable = 0;
     }
-#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN)))
-    if (is_cig_phone_conn() || is_cig_other_phone_conn() || ((get_bt_dual_config() == DUAL_CONN_SET_ONE) && bt_get_total_connect_dev())) {
-        g_printf("le_audio have connd scan conn disble=%d,%d,%d\n", is_cig_phone_conn(), is_cig_other_phone_conn(), bt_get_total_connect_dev());
+#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_UNICAST_SINK_EN)
+    if (is_cig_phone_conn() || is_cig_other_phone_conn()) {
+        g_printf("bt_get_total_connect_dev=%d\n", bt_get_total_connect_dev());
         scan_enable = 0;
         conn_enable = 0;
     }
+#elif (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_UNICAST_SINK_EN)
+    g_printf("bt_get_total_connect_dev=%d\n", bt_get_total_connect_dev());
+#if LE_AUDIO_JL_DONGLE_UNICAST_WITH_PHONE_CONN_CONFIG
+    if (bt_get_total_connect_dev() == 0) {
+        if (tws_api_get_role() != TWS_ROLE_SLAVE) {
+            scan_enable = 1;
+            conn_enable = 1;
+
+        }
+
+    } else if (is_cig_phone_conn() && bt_get_total_connect_dev()) {
+        scan_enable = 0;
+        conn_enable = 0;
+
+    }
+#else
+    if (is_cig_phone_conn() || is_cig_other_phone_conn()) {
+        scan_enable = 0;
+        conn_enable = 0;
+    }
+#endif
+#if TCFG_JL_UNICAST_EDR_MODE_SWITCH_ENABLE
+    if (jl_unicast_edr_mode_get() == JL_UNICAST_MODE_DEFAULT) {
+        scan_enable = 0;
+        conn_enable = 0;
+        y_printf("JL_UNICAST_MODE_DEFAULT disbale scan conn\n");
+    } else if (jl_unicast_edr_mode_get() == JL_UNICAST_MODE_EDR) {
+        le_audio_adv_api_enable(0);
+        y_printf("JL_UNICAST_MODE_EDR disbale le_audio_adv\n");
+    }
+#endif
 #endif
 #if TCFG_TWS_AUDIO_SHARE_ENABLE
     int share_state = get_share_phone_conn_state();
@@ -158,6 +190,13 @@ void write_scan_conn_enable(bool scan_enable, bool conn_enable)
         scan_enable = 0;
         conn_enable = 0;
     }
+#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE
+    // local_tws模式，关可发现可连接，防止带宽不够
+    if (!app_in_mode(APP_MODE_BT)) {
+        scan_enable = 0;
+        conn_enable = 0;
+    }
+#endif
     r_printf("write_scan_conn_enable=%d,%d\n", scan_enable, conn_enable);
 
     lmp_hci_write_scan_enable((conn_enable << 1) | scan_enable);
@@ -381,11 +420,21 @@ static void tws_auto_pair_timeout(void *p)
     dual_conn_page_device();
 }
 
+u16 tws_auto_pair_timeout_rand(void)
+{
+    u16 time_out_rand;
+    pseudo_random_genrate((void *)&time_out_rand, 2);
+
+    time_out_rand = time_out_rand & 0x7FF;
+    printf("tws_auto_pair_timeout_rand = %d\n", time_out_rand);
+    return time_out_rand;  /*0-2047*/
+}
+
 static void tws_pair_new_tws(void *p)
 {
     tws_api_cancle_create_connection();
     tws_api_auto_pair(0);
-    g_dual_conn.timer = sys_timeout_add(NULL, tws_auto_pair_timeout, 3000);
+    g_dual_conn.timer = sys_timeout_add(NULL, tws_auto_pair_timeout, 1000 + tws_auto_pair_timeout_rand());
 }
 
 static void tws_wait_conn_timeout(void *p)
@@ -400,6 +449,13 @@ void tws_dual_conn_state_handler()
     int state               = tws_api_get_tws_state();
     int connect_device      = bt_get_total_connect_dev();
     int have_page_device    = page_list_empty() ? false : true;
+
+#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE
+    u8 edr_background_active = 1;
+    if (bt_background_active()) {
+        edr_background_active = 0;
+    }
+#endif
 
 #if (TCFG_BT_BACKGROUND_ENABLE == 0)
     if (g_bt_hdl.wait_exit) { //非后台正在退出就不处理消息了，防止退出之后资源释放了，流程又打开可发现可连接导致异常
@@ -422,7 +478,13 @@ void tws_dual_conn_state_handler()
             return;
         }
         if (connect_device == 0) {
-            write_scan_conn_enable(1, 1);
+#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE
+            if (!edr_background_active) {
+            } else
+#endif
+            {
+                write_scan_conn_enable(1, 1);
+            }
         } else if (connect_device == 1) {
             if (g_dual_conn.device_num_recorded > 1) {
 #if TIMEOUT_CONN_DEVICE_OPEN_PAGE
@@ -455,6 +517,16 @@ void tws_dual_conn_state_handler()
 #endif
 
             }
+        } else if (connect_device == 2) {
+#if TCFG_BT_DUAL_1T3_CONN_ENABLE
+            if (esco_player_runing() && have_page_device) {
+                write_scan_conn_enable(0, 0);
+            } else {
+                write_scan_conn_enable(0, 1);
+
+            }
+#endif
+
         }
         if (have_page_device) {
 #if TCFG_TWS_AUDIO_SHARE_ENABLE
@@ -471,6 +543,10 @@ void tws_dual_conn_state_handler()
             if (g_dual_conn.device_num_recorded == 1) {
                 dual_conn_try_open_inquiry_page_scan();
             } else if (connect_device == 2) {
+#if (TCFG_PREEMPT_CONNECTION_ENABLE || TCFG_BT_DUAL_1T3_CONN_ENABLE)
+                write_scan_conn_enable(0, 1);
+#endif
+            } else if (connect_device == 3) {
 #if TCFG_PREEMPT_CONNECTION_ENABLE
                 write_scan_conn_enable(0, 1);
 #endif
@@ -480,7 +556,13 @@ void tws_dual_conn_state_handler()
     } else if (state & TWS_STA_TWS_PAIRED) {
         if (connect_device == 0) {
             tws_api_create_connection(0);
-            write_scan_conn_enable(1, 1);
+#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE
+            if (!edr_background_active) {
+            } else
+#endif
+            {
+                write_scan_conn_enable(1, 1);
+            }
 #if CONFIG_TWS_AUTO_PAIR_WITHOUT_UNPAIR
             g_dual_conn.timer = sys_timeout_add(NULL, tws_pair_new_tws,
                                                 TCFG_TWS_CONN_TIMEOUT * 1000);
@@ -498,7 +580,7 @@ void tws_dual_conn_state_handler()
             }
         } else {
             tws_api_wait_connection(0);
-#if TCFG_PREEMPT_CONNECTION_ENABLE
+#if (TCFG_PREEMPT_CONNECTION_ENABLE || TCFG_BT_DUAL_1T3_CONN_ENABLE)
             write_scan_conn_enable(0, 1);
 #endif
         }
@@ -560,7 +642,13 @@ void tws_dual_conn_state_handler()
         }
 #else
         if (connect_device == 0) {
-            write_scan_conn_enable(1, 1);
+#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLET
+            if (!edr_background_active) {
+            } else
+#endif
+            {
+                write_scan_conn_enable(1, 1);
+            }
         } else if (connect_device == 1) {
             if (g_dual_conn.device_num_recorded > 1 || g_dual_conn.need_keep_scan) {
                 write_scan_conn_enable(0, 1);
@@ -631,6 +719,12 @@ void dual_conn_page_device()
         return;
     }
 
+#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE
+    if (bt_background_active()) {
+        return;
+    }
+#endif
+
     list_for_each_entry_safe(info, n, &g_dual_conn.page_head, entry) {
         if (info->timer) {
             return;
@@ -660,7 +754,7 @@ void dual_conn_page_device()
 }
 
 
-static void dual_conn_page_devices_init()
+void dual_conn_page_devices_init()
 {
     u8 mac_addr[6];
 
@@ -681,7 +775,7 @@ static void dual_conn_page_devices_init()
         }
     }
 #endif
-    for (int i = num - 1; i >= 0 && i + 2 >= num ; i--) {
+    for (int i = num - 1; i >= 0 && i + TCFG_BT_SUPPORT_CONN_NUM >= num ; i--) {
         btstack_get_remote_addr(mac_addr, i);
 #if TCFG_TWS_AUDIO_SHARE_ENABLE
         if (check_is_share_addr_for_vm(mac_addr)) {
@@ -695,6 +789,8 @@ static void dual_conn_page_devices_init()
 #else
         add_device_2_page_list(mac_addr, TCFG_BT_POWERON_PAGE_TIME * 1000, PAGE_DEV_PHONE);
 #endif
+        g_printf("add_device_2_page_list=%d", num);
+        put_buf(mac_addr, 6);
     }
 
 #if TCFG_TWS_AUDIO_SHARE_ENABLE
@@ -703,7 +799,7 @@ static void dual_conn_page_devices_init()
     g_dual_conn.device_num_recorded = num;
 
     if (num == 1) {
-        memcpy(g_dual_conn.remote_addr[2], mac_addr, 6);
+        memcpy(g_dual_conn.remote_addr[3], mac_addr, 6);
     }
 #if TCFG_DUAL_CONN_INQUIRY_SCAN_TIME
     g_dual_conn.inquiry_scan_disable = 0;
@@ -728,7 +824,17 @@ static int dual_conn_btstack_event_handler(int *_event)
     printf("dual_conn_btstack_event_handler:%d\n", event->event);
     switch (event->event) {
     case BT_STATUS_INIT_OK:
+        puts("dual_conn BT_STATUS_INIT_OK");
+#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_UNICAST_SINK_EN) && TCFG_JL_UNICAST_EDR_MODE_SWITCH_ENABLE
+        if (jl_unicast_edr_mode_get() == JL_UNICAST_MODE_DEFAULT) {
+            printf("cis mode, edr not page\n");
+            break;
+        } else {
+            dual_conn_page_devices_init();
+        }
+#else
         dual_conn_page_devices_init();
+#endif
         return 0;
     case BT_STATUS_FIRST_CONNECTED:
         bt_set_need_keep_scan(0);
@@ -745,7 +851,7 @@ static int dual_conn_btstack_event_handler(int *_event)
         if (tws_api_get_role() == TWS_ROLE_MASTER) {
             if (!page_list_empty()) {
                 if (g_dual_conn.device_num_recorded == 1) {
-                    if (memcmp(event->args, g_dual_conn.remote_addr[2], 6)) {
+                    if (memcmp(event->args, g_dual_conn.remote_addr[3], 6)) {
                         g_dual_conn.device_num_recorded++;
                     }
                 }
@@ -768,7 +874,7 @@ static int dual_conn_btstack_event_handler(int *_event)
 #endif
         if (g_dual_conn.device_num_recorded == 0) {
             g_dual_conn.device_num_recorded++;
-            memcpy(g_dual_conn.remote_addr[2], event->args, 6);
+            memcpy(g_dual_conn.remote_addr[3], event->args, 6);
 
 #if TCFG_TWS_CONN_DISABLE
             write_scan_conn_enable(0, 1);
@@ -784,7 +890,7 @@ static int dual_conn_btstack_event_handler(int *_event)
 #if TCFG_TWS_CONN_DISABLE
             write_scan_conn_enable(0, 1);
 #else
-            if (memcmp(event->args, g_dual_conn.remote_addr[2], 6) == 0) {
+            if (memcmp(event->args, g_dual_conn.remote_addr[3], 6) == 0) {
                 if (state & TWS_STA_SIBLING_CONNECTED) {
                     dual_conn_try_open_inquiry_scan();
                 }
@@ -802,6 +908,9 @@ static int dual_conn_btstack_event_handler(int *_event)
         }
         break;
     case BT_STATUS_SECOND_CONNECTED:
+    case BT_STATUS_THIRD_CONNECTED:
+        int connect_device      = bt_get_total_connect_dev();
+        r_printf("BT_STATUS_SECOND_THIRD_CONNECTED=%d\n", connect_device);
         bt_set_need_keep_scan(0);
         if (g_dual_conn.device_num_recorded == 1) {
             g_dual_conn.device_num_recorded++;
@@ -810,9 +919,33 @@ static int dual_conn_btstack_event_handler(int *_event)
             sys_timeout_del(g_dual_conn.timer);
             g_dual_conn.timer = 0;
         }
+
+#if TCFG_BT_DUAL_1T3_CONN_ENABLE
+        del_device_from_page_list(event->args);
+        if (connect_device == 3) {
+            clr_device_in_page_list();
+            memcpy(g_dual_conn.remote_addr[2], event->args, 6);
+
+        } else {
+            if (tws_api_get_role() == TWS_ROLE_MASTER) {
+                if (!page_list_empty()) {
+                    if (g_dual_conn.device_num_recorded == 2) {
+                        if (memcmp(event->args, g_dual_conn.remote_addr[3], 6)) {
+                            g_dual_conn.device_num_recorded++;
+                        }
+                    }
+                    g_dual_conn.timer = sys_timeout_add(NULL, page_next_device, 500);
+                    return 0;
+                }
+            }
+            memcpy(g_dual_conn.remote_addr[1], event->args, 6);
+
+        }
+#else
         clr_device_in_page_list();
-        page_mode_active = 0;
         memcpy(g_dual_conn.remote_addr[1], event->args, 6);
+#endif
+        page_mode_active = 0;
         if ((state & TWS_STA_TWS_PAIRED) && (state & TWS_STA_SIBLING_DISCONNECTED)) {
             tws_api_wait_connection(0);
         } else {
@@ -826,6 +959,12 @@ static int dual_conn_btstack_event_handler(int *_event)
 #else
         write_scan_conn_enable(0, 0);
 #endif
+
+#if TCFG_BT_DUAL_1T3_CONN_ENABLE
+        if (connect_device == 2) {
+            write_scan_conn_enable(0, 1);
+        }
+#endif
         if (get_bt_dual_config() == DUAL_CONN_SET_ONE) { //判断关闭双连，第二台手机连接，断开第一台手机
             u8 *other_conn_addr = btstack_get_other_dev_addr(event->args);
             if (other_conn_addr) {
@@ -835,6 +974,7 @@ static int dual_conn_btstack_event_handler(int *_event)
 
         }
         break;
+
     }
 
     return 0;
@@ -857,6 +997,12 @@ static int dual_conn_hci_event_handler(int *_event)
     if (tws_api_get_role() == TWS_ROLE_SLAVE) {
         return 0;
     }
+#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE     //后台不支持edr连接，不处理直接返回
+    if (g_bt_hdl.wait_exit) {
+        return 0;
+    }
+#endif
+
     int is_remote_test = bt_get_remote_test_flag();
 
     printf("dual_conn_hci_event_handler:0x%x 0x%x\n", event->event, event->value);
@@ -1025,13 +1171,16 @@ static int dual_conn_tws_event_handler(int *_event)
 
     switch (event->event) {
     case TWS_EVENT_CONNECTED:
+#if CONFIG_TWS_PAIR_MODE == CONFIG_TWS_PAIR_BY_CHIP_CONN
+        tws_stop_pair_by_chip_conn();
+#endif
         if (app_var.goto_poweroff_flag) {
             break;
         }
 
         if (role == TWS_ROLE_MASTER) {
             tws_api_auto_role_switch_disable();
-#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN)))
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
             u32 slave_info =  event->args[3] | (event->args[4] << 8) | (event->args[5] << 16) | (event->args[6] << 24) ;
             printf("====slave_info:%x\n", slave_info);
             if (slave_info & TWS_STA_LE_AUDIO_CONNECTED) {
@@ -1052,6 +1201,7 @@ static int dual_conn_tws_event_handler(int *_event)
         }
         break;
     case TWS_EVENT_CONNECTION_DETACH:
+        tws_set_search_sbiling_state(0);
         if (g_dual_conn.timer) {
             sys_timeout_del(g_dual_conn.timer);
             g_dual_conn.timer = 0;
@@ -1143,7 +1293,7 @@ static void page_device_msg_handler()
     list_for_each_entry(info, &g_dual_conn.page_head, entry) {
         device_num++;
     }
-    if (device_num >= 2) {
+    if (device_num >= TCFG_BT_SUPPORT_CONN_NUM) {
         return;
     }
 
@@ -1156,9 +1306,12 @@ static void page_device_msg_handler()
         if (memcmp(mac_addr, g_dual_conn.remote_addr[1], 6) == 0) {
             continue;
         }
+        if (memcmp(mac_addr, g_dual_conn.remote_addr[2], 6) == 0) {
+            continue;
+        }
         int ret = add_device_2_page_list(mac_addr, TCFG_BT_POWERON_PAGE_TIME * 1000, PAGE_DEV_PHONE);
         if (ret == 0) {
-            if (++device_num >= 2) {
+            if (++device_num >= TCFG_BT_SUPPORT_CONN_NUM) {
                 break;
             }
         }
@@ -1179,7 +1332,7 @@ int tws_host_get_local_role()
     if (!page_list_empty()) {
         state |= TWS_STA_HAVE_PAGE_INFO;
     }
-#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN)))
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN))
     if (is_cig_phone_conn()) {
         state |= TWS_STA_LE_AUDIO_CONNECTED;
     }
@@ -1278,8 +1431,10 @@ static void msg_tws_wait_pair_timeout(void *p)
 
 static void msg_tws_start_pair_timeout(void *p)
 {
+    tws_set_search_sbiling_state(0);
     g_dual_conn.timer = 0;
     tws_api_wait_pair_by_code(0, bt_get_local_name(), 0);
+    tws_set_search_sbiling_state(0);
     app_send_message(APP_MSG_TWS_START_PAIR_TIMEOUT, 0);
 }
 
@@ -1312,6 +1467,8 @@ static int dual_conn_app_event_handler(int *msg)
         tws_api_auto_pair(0);
         g_dual_conn.timer = sys_timeout_add(NULL, tws_pair_timeout,
                                             TCFG_TWS_PAIR_TIMEOUT  * 1000);
+#elif CONFIG_TWS_PAIR_MODE == CONFIG_TWS_PAIR_BY_CHIP_CONN
+        tws_start_pair_by_chip_conn();
 #else
         /* 未配对, 等待发起配对 */
         if (!list_empty(&g_dual_conn.page_head)) {
@@ -1337,7 +1494,9 @@ static int dual_conn_app_event_handler(int *msg)
                                             TCFG_TWS_PAIR_TIMEOUT * 1000);
         break;
     case APP_MSG_TWS_START_PAIR:
+        tws_set_search_sbiling_state(1);
         tws_api_search_sibling_by_code();
+        tws_set_search_sbiling_state(1);
         if (g_dual_conn.timer) {
             sys_timeout_del(g_dual_conn.timer);
         }

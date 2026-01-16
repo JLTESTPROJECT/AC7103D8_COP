@@ -78,6 +78,5 @@ enum {
 };
 
 
-// extern int app_earphone_key_event_handler(struct sys_event *);
 
 #endif

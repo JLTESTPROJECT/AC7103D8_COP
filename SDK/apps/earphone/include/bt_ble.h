@@ -32,17 +32,17 @@ enum {
     ADV_ST_END,
 };
 
-extern void bt_ble_icon_set(u8 *info, u8 len);
-extern u8 bt_ble_get_adv_enable(void);
-extern void bt_ble_icon_open(u8 type);
-extern void bt_ble_icon_close(u8 dismiss_flag);
-extern void bt_ble_icon_set_comm_address(u8 *addr);
-extern void bt_ble_icon_reset(void);
-extern void bt_ble_set_control_en(u8 en);
-extern void bt_ble_icon_slave_en(u8 en);
-extern u8 bt_ble_icon_get_adv_state(void);
-extern void bt_ble_icon_role_switch(u8 role);
-extern void bt_ble_icon_state_sniff(u8 state);
+void bt_ble_icon_set(u8 *info, u8 len);
+u8 bt_ble_get_adv_enable(void);
+void bt_ble_icon_open(u8 type);
+void bt_ble_icon_close(u8 dismiss_flag);
+void bt_ble_icon_set_comm_address(u8 *addr);
+void bt_ble_icon_reset(void);
+void bt_ble_set_control_en(u8 en);
+void bt_ble_icon_slave_en(u8 en);
+u8 bt_ble_icon_get_adv_state(void);
+void bt_ble_icon_role_switch(u8 role);
+void bt_ble_icon_state_sniff(u8 state);
 void bt_make_ble_address(u8 *ble_address, u8 *edr_address);
 
 #endif

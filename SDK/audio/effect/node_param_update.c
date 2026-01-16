@@ -8,6 +8,7 @@
 #include "node_uuid.h"
 #include "effects/effects_adj.h"
 #include "node_param_update.h"
+#include "effects/audio_llns_dns.h"
 
 
 /* 各模块参数更新接口 */
@@ -110,7 +111,7 @@ int autotune_update_parm(u8 mode_index, char *node_name, u8 cfg_index)
     }
     return jlstream_set_node_param(NODE_UUID_AUTOTUNE, node_name, &cfg, sizeof(cfg));
 }
-int chorus_udpate_update_parm(u8 mode_index, char *node_name, u8 cfg_index)
+int chorus_udpate_param(u8 mode_index, char *node_name, u8 cfg_index)
 {
     chorus_param_tool_set cfg = {0};
     int ret = jlstream_read_form_data(mode_index, node_name, cfg_index, &cfg);
@@ -193,7 +194,7 @@ int noisegate_update_parm(u8 mode_index, char *node_name, u8 cfg_index)
     return jlstream_set_node_param(NODE_UUID_NOISEGATE, node_name, &cfg, sizeof(cfg));
 }
 
-int plate_reverb_update_parm(u8 mode_index, char *node_name, u8 cfg_index)
+int plate_reverb_update_parm_base(u8 mode_index, char *node_name, u8 cfg_index, u8 by_pass)
 {
     plate_reverb_param_tool_set cfg = {0};
     int ret = jlstream_read_form_data(mode_index, node_name, cfg_index, &cfg);
@@ -201,8 +202,18 @@ int plate_reverb_update_parm(u8 mode_index, char *node_name, u8 cfg_index)
         printf("read parm err, %s, %s\n", __func__, node_name);
         return -1;
     }
+    if (by_pass != 0xff) {
+        cfg.is_bypass = by_pass; //重写by_pass状态
+    }
+
     return jlstream_set_node_param(NODE_UUID_PLATE_REVERB, node_name, &cfg, sizeof(cfg));
 }
+
+int plate_reverb_update_parm(u8 mode_index, char *node_name, u8 cfg_index)
+{
+    return plate_reverb_update_parm_base(mode_index, node_name, cfg_index, 0xff);
+}
+
 int reverb_update_parm(u8 mode_index, char *node_name, u8 cfg_index)
 {
     reverb_param_tool_set cfg = {0};
@@ -344,7 +355,7 @@ int eq_update_parm(u8 mode_index, char *node_name, u8 cfg_index)
  * 切换系数表时的po声表现优于调用eq_update_parm更新
  * 需要使能const变量：config_audio_eq_xfade_enable = 1
  */
-int eq_update_tab(u8 mode_index, char *node_name, u8 cfg_index)
+int eq_update_tab_base(u8 mode_index, char *node_name, u8 cfg_index, u8 by_pass)
 {
     struct cfg_info info  = {0};
     int ret = jlstream_read_form_node_info_base(mode_index, node_name, cfg_index, &info);
@@ -359,6 +370,10 @@ int eq_update_tab(u8 mode_index, char *node_name, u8 cfg_index)
         //运行时，直接设置更新
         struct eq_adj eff = {0};
         eff.type = EQ_TAB_CMD;
+        eff.param.tab.is_bypass = tab->is_bypass;
+        if (by_pass != 0xff) {
+            eff.param.tab.is_bypass = by_pass; //重写by_pass状态
+        }
         eff.param.tab.global_gain = tab->global_gain;
         eff.param.tab.seg_num = tab->seg_num;
         eff.param.tab.seg = tab->seg; //系数表指针赋值
@@ -368,6 +383,12 @@ int eq_update_tab(u8 mode_index, char *node_name, u8 cfg_index)
     }
     return ret;
 }
+
+int eq_update_tab(u8 mode_index, char *node_name, u8 cfg_index)
+{
+    return eq_update_tab_base(mode_index, node_name, cfg_index, 0xff);
+}
+
 /* 软件EQ参数更新接口 */
 /*  return: 0 返回成功，非0 ：返回失败 */
 int sw_eq_update_parm(u8 mode_index, char *node_name, u8 cfg_index)
@@ -740,6 +761,27 @@ int virtual_bass_pro_update_parm(u8 mode_index, char *node_name, u8 cfg_index)
     return jlstream_set_node_param(NODE_UUID_VIRTUAL_BASS_PRO, node_name, &cfg, sizeof(cfg));
 }
 
+
+int llns_dns_update_parm_base(u8 mode_index, char *node_name, u8 cfg_index, u8 by_pass)
+{
+    llns_dns_param_tool_set cfg = {0};
+    int ret = jlstream_read_form_data(mode_index, node_name, cfg_index, &cfg);
+    if (!ret) {
+        printf("read parm err, %s, %s\n", __func__, node_name);
+        return -1;
+    }
+    if (by_pass != 0xff) {
+        cfg.is_bypass = by_pass;	//重写by_pass状态
+    }
+
+    return jlstream_set_node_param(NODE_UUID_LLNS_DNS, node_name, &cfg, sizeof(cfg));
+}
+
+
+int llns_dns_update_parm(u8 mode_index, char *node_name, u8 cfg_index)
+{
+    return llns_dns_update_parm_base(mode_index, node_name, cfg_index, 0xff);
+}
 
 /*
  *通用音效模块更新

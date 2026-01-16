@@ -35,9 +35,27 @@ ci_transport_config_uart_t config = {
 
 #if (TCFG_ONLINE_ENABLE || TCFG_CFG_TOOL_ENABLE)
 #if (TCFG_COMM_TYPE == TCFG_UART_COMM)
+
+#if TCFG_UPDATE_UART_IO_EN
+void config_online_init_check(void *p)
+{
+    bool get_uart_update_sta(void);
+    if (!get_uart_update_sta()) {
+        config_layer_init(ci_transport_uart_instance(), &config);
+    }
+}
+#endif
+
 int config_online_init()
 {
     log_info("-------online Config Start-------");
+#if TCFG_UPDATE_UART_IO_EN
+#if (TCFG_ONLINE_TX_PORT == TCFG_UART_UPDTAE_TX_PIN) || \
+    (TCFG_ONLINE_TX_PORT == TCFG_UART_UPDTAE_RX_PIN)
+    sys_timeout_add(NULL, config_online_init_check, 8000);
+    return 0;
+#endif
+#endif
     config_layer_init(ci_transport_uart_instance(), &config);
     return 0;
 }

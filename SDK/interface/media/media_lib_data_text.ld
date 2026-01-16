@@ -76,6 +76,16 @@
 #endif
 #endif /*CONFIG_CODE_MOVABLE_ENABLE*/ 
 
+#if AUDIO_LLNS_DNS_CODEC_AT_RAM
+    *(.llns_dns.const)
+    *(.llns_dns.code)
+    *(.conv_params)
+    *(.seq_params)
+    *(.seq2_params)
+#elif !AUDIO_LLNS_DNS_CODEC_AT_RAM && AUDIO_LLNS_DNS_BASIC_CODEC_AT_RAM
+    *(.llns_dns.code)
+#endif
+
 #if (AFx_SPATIAL_EFFECT_AT_RAM)
     . = ALIGN(4);
     *(.pSOUND360TD_cal_sparse_code)
@@ -172,7 +182,7 @@
     *(.lhdc_dec.text.cache.L2.run)
     *(.lhdcv4_dec.text)
     *(.lhdcv4_dec.const)
-	*(.lhdcv4_dec_text.cashe.L2.run)
+	*(.lhdcv4_dec_text.cache.L2.run)
     . = ALIGN(4);
 #endif
 
@@ -182,54 +192,92 @@
     *(.lhdc_v5_dec.text.cache.L2.run)
     *(.lhdcv5_dec.text)
     *(.lhdcv5_dec.const)
-	*(.lhdcv5_dec_text.cashe.L2.run)
+	*(.lhdcv5_dec_text.cache.L2.run)
     . = ALIGN(4);
 #endif
 
-#if AUDIO_LC3_CODEC_AT_RAM
-	    *(.lc3_dec.text.const)
-	    *(.lc3_dec.text)
-	    *(.lc3_enc.text.const)
-	    *(.lc3_enc.text)
-	    *(.lc3_codec_c_const)
-	    *(.lc3_codec_c_code)
-	    *(.lc3_codec_c_sparse_code)
-	    *(.lc3_codec_d_code)
-	    *(.lc3_codec_e_code)
-	    . = ALIGN(4);
+#if (AUDIO_LC3_CODEC_AT_RAM) && (defined CONFIG_CPU_BR56)
+    *(.lc3_enc.text.cache.L2.run)
+    *(.lc3_dec.text.cache.L2.run)
+#elif AUDIO_LC3_CODEC_AT_RAM
+    *(.lc3_enc.text.cache.L2.run)
+    *(.lc3_dec.text.cache.L2.run)
+    *(.lc3_codec_c_const)
+    *(.lc3_codec_c_code)
+    *(.lc3_codec_c_sparse_code)
+    *(.lc3_codec_d_code)
+    *(.lc3_codec_e_code)
+    . = ALIGN(4);
 #endif
 #if AUDIO_JLA_CODEC_AT_RAM
-		    *(.jla_dec.text.const)
-	    *(.jla_dec.text)
-	    *(.jla_enc.text.const)
-	    *(.jla_enc.text)
-	    *(.jla_codec_c_const)
-	    *(.jla_codec_c_code)
-	    *(.jla_codec_c_sparse_code)
-	    *(.jla_codec_d_code)
-	    *(.jla_codec_e_code)
-	    . = ALIGN(4);
+    *(.jla_dec.text.const)
+    *(.jla_dec.text)
+    *(.jla_enc.text.const)
+    *(.jla_enc.text)
+    *(.jla_codec_c_const)
+    *(.jla_codec_c_code)
+    *(.jla_codec_c_sparse_code)
+    *(.jla_codec_d_code)
+    *(.jla_codec_e_code)
+    . = ALIGN(4);
 #endif
 
-#if AUDIO_LC3_CODEC_AT_RAM ||  AUDIO_JLA_CODEC_AT_RAM
-			*(.jl_codec_c_const) 
-		*(.jl_codec_c_code)  
-		*(.jl_codec_ari_c_const)
-		*(.jl_codec_ari_c_code)
-		*(.jl_codec_c_sparse_code)
-		*(.jl_codec_d_code)
-		*(.jl_codec_e_code)
-		*(.jl_codec_t8k_code)
-		*(.jl_codec_t16k_code)
-		*(.jl_codec_t24k_code)
-		*(.jl_codec_t32k_code)
-		*(.jl_codec_t441k_code)
-		*(.jl_codec_const) 
+#if (AUDIO_LC3_CODEC_AT_RAM || AUDIO_JLA_CODEC_AT_RAM) && (defined CONFIG_CPU_BR56)
+	*(.jl_codec_c_const)
+	*(.jl_codec_c_code)
+	*(.jl_codec_ari_c_const)
+	*(.jl_codec_ari_c_code)
+	*(.jl_codec_c_sparse_code)
+	*(.jl_codec_d_code)
+	*(.jl_codec_e_code)
+	*(.jl_codec_const)
+	*(.jl_plc_c_code)
+    *(.jl_plc_c_const)
+#elif AUDIO_LC3_CODEC_AT_RAM ||  AUDIO_JLA_CODEC_AT_RAM
+	*(.jl_codec_c_const) 
+	*(.jl_codec_c_code)  
+	*(.jl_codec_ari_c_const)
+	*(.jl_codec_ari_c_code)
+	*(.jl_codec_c_sparse_code)
+	*(.jl_codec_d_code)
+	*(.jl_codec_e_code)
+	*(.jl_codec_const) 
+	*(.jl_plc_c_code) 
+	*(.jl_plc_c_const) 
+	*(.jl_codec_t8k_code)
+	*(.jl_codec_t16k_code)
+	*(.jl_codec_t24k_code)
+	*(.jl_codec_t32k_code)
+	*(.jl_codec_t441k_code)
 #endif
 
+#if AUDIO_JLA_V2_CODEC_AT_RAM
+	*(.jla_v2_enc_const)
+	*(.jla_v2_enc_code)
+	*(.jla_v2_dec_const)
+	*(.jla_v2_dec_code)
+	*(.jla_v2_codec_c_const)
+	*(.jla_v2_codec_c_code)
+	*(.jla_v2_codec_ari_c_const)
+	*(.jla_v2_codec_ari_c_code)
+	*(.jla_v2_codec_c_sparse_code)
+	*(.jla_v2_codec_e_code)
+	*(.jla_v2_decoder_const)
+	*(.jla_v2_decoder_code)
+	*(.jla_v2_codec_d_code)
+#endif
 
 #if AFx_VBASS_AT_RAM
     *(.vbss.text.cache.L2.code)	
+#endif
+
+#if AFx_VBASS_PRO_AT_RAM
+    *(.virtual_bass_pro.text.cache.L2.code)
+#if !AFX_SW_EQ_AT_RAM 
+    *(.iir_filter.text.cache.L2.code)
+#endif
+    *(.drc_advance.text.cache.L2.code)
+    *(.vbss_classic.text.cache.L2.code)
 #endif
 
 #if AFx_REVERB_AT_RAM
@@ -356,15 +404,45 @@
 	*(.freq_compressor.text.cache.L2.code)
 	*(.freq_compressor.text.cache.L2.const)
 #endif
+#if AFx_GAIN_MIX_AT_RAM
+	*(.gain_mix.text.cache.L2.code)	
+	*(.gain_mix.text.cache.L2.const)	
+#endif
 
 #if AFx_GAIN_MIX_AT_RAM
 	*(.gain_mix.text.cache.L2.code)	
 	*(.gain_mix.text.cache.L2.const)	
 #endif
+#if AFx_DAC_IO_IRQ_HANDLER_AT_RAM
+	*(.dac_io_irq_handler.text.cache.L2)	
+#endif
+
+#if AFx_MIXER_TEXT_AT_RAM
 	*(.mixer.text.cache.L2)
+#endif
+#if AFx_DAC_TEXT_AT_RAM
 	*(.dac.text.cache.L2)
+#endif
+#if AFx_CONVERT_TEXT_AT_RAM
 	*(.convert.text.cache.L2.code)
+#endif
+#if AFx_VOCAL_REMOVER_TEXT_AT_RAM
 	*(.VocalRemove.text.cache.L2.code)
+#endif
+
+#if AFx_SPECTRUM_ADV_TEXT_AT_RAM
+	*(.spectrum_adv.text)
+    *(.SPECTRUMTOOL.text)
+    *(.SPECTRUMTOOL.text.L2)
+#endif
+
+#if (AUDIO_JLSTREAM_TEXT_AT_RAM)
+    *(.jlstream.text.cache.L2)
+#endif
+#if AFx_STEREO_TO_LCR_AT_RAM
+    *(.StereoToLCR.text.cache.L2.const.cpp)
+    *(.StereoToLCR.text.cache.L2.code.cpp)
+#endif
 
     . = ALIGN(4);
     media_data_code_end = .;

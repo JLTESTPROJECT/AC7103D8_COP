@@ -4,6 +4,8 @@
 #include "audio_cfifo.h"
 #include "asm/dac.h"
 
+#define DAC_NOISEGATE_OFF()     audio_dac_noisefloor_optimize_onoff(0);
+#define DAC_NOISEGATE_ON()      audio_dac_noisefloor_optimize_onoff(1);
 
 struct audio_dac_channel_attr {
     u8  write_mode;         /*DAC写入模式*/
@@ -28,48 +30,6 @@ struct audio_dac_sync_node {
     void *hdl;
     struct list_head entry;
     void *ch;
-};
-
-
-// DAC IO
-struct audio_dac_io_param {
-    /*
-     *       state 通道初始状态
-     * 使能单左/单右声道，初始状态为高电平：state[0] = 1
-     * 使能双声道，左声道初始状态为高，右声道初始状态为低：state[0] = 1，state[1] = 0。
-     */
-    u8 state[4];
-    /*
-     *       irq_points 中断点数
-     * 申请buf的大小为 buf_len = irq_points * channel_num * 4
-     */
-    u16 irq_points;
-    /*
-     *       channel 打开的通道
-     * 可配 “BIT(0)、BIT(1)、BIT(2)、BIT(3)” 对应 “FL FR RL RR”
-     * 打开多通道时使用或配置：channel = BIT(0) | BIT(1) | BIT(2) | BIT(3);
-     *
-     * 注意，不支持以下配置类型：
-     * channel = BIT(1)                             "MONO FR"
-     * channel = DAC_CH(0) | DAC_CH(1) | DAC_CH(3)  "FL FR RR"
-     */
-    u8 channel;
-    /*
-     *       digital_gain 增益
-     * 影响输出电平幅值，-8192~8192可配
-     */
-    u16 digital_gain;
-
-    /*
-     *       ldo_volt 电压
-     * 影响输出电平幅值，0~3可配
-     */
-    u8 ldo_volt;
-    /*
-     *       clk_sel 时钟源选择
-     * 差分晶振时钟/单端数字时钟
-     */
-    u8 clk_sel;
 };
 
 #define DAC_READ_MAGIC		0xAA55
@@ -447,7 +407,6 @@ int audio_dac_noisefloor_optimize_onoff(u8 onoff);
 
 
 void audio_dac_anc_set(struct audio_dac_hdl *dac, u8 toggle);
-void audio_anc_dac_gain(u8 gain_l, u8 gain_r);
 void audio_anc_dac_dsm_sel(u8 sel);
 void audio_anc_dac_open(u8 gain_l, u8 gain_r);
 void audio_anc_dac_close(void);
@@ -461,22 +420,33 @@ int dac_analog_light_open_cb(struct audio_dac_hdl *);
 int dac_analog_light_close_cb(struct audio_dac_hdl *);
 
 
-
+#if AUDIO_DAC_IO_ENABLE
 void audio_dac_io_init(struct audio_dac_io_param *param);
 void audio_dac_io_uninit(struct audio_dac_io_param *param);
 
 /*
  * ch：通道
- *    可配 “BIT(0)、BIT(1)、BIT(2)、BIT(3)” 对应 “FL FR RL RR”
- *    多通道时使用或配置：channel = BIT(0) | BIT(1) | BIT(2) | BIT(3);
+ *  - 四声道系列芯片(JL703N):
+ *      可配 “BIT(0)、BIT(1)、BIT(2)、BIT(3)” 对应 “FL FR RL RR”
+ *      多通道时使用或配置：channel = BIT(0) | BIT(1) | BIT(2) | BIT(3);
+ *  - 双声道系列芯片(JL701N/JL709N...):
+ *      初始化时使能单左/单右声道："ch = BIT(0)"
+ *      初始化时使能立体声：
+ *          左声道"ch = BIT(0)"
+ *          右声道"ch = BIT(1)"
+ *          左右声道"ch = BIT(0) | BIT(1)"
  * val：电平
  *    高电平 val = 1
  *    低电平 val = 0
  */
 void audio_dac_io_set(u8 ch, u8 val);
+#endif
 
 /*MIC Capless API*/
 void audio_dac_set_capless_DTB(struct audio_dac_hdl *dac, u32 dacr32);
+int wait_for_dac_stop(struct audio_dac_hdl *dac);
+
+void dac_try_power_on_thread();
 
 #endif
 

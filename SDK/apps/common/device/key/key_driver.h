@@ -254,6 +254,9 @@ void key_driver_init(void);
 void key_event_handler(struct key_event *key);
 
 
+void key_active_set(u8 port);
+
+void key_wakeup_init(void);
 #endif
 
 

@@ -18,7 +18,7 @@
 #include "generic/includes.h"
 #include "device/includes.h"
 #include "cpu/includes.h"
-
+#include "lib_system_config.h"
 
 
 #endif

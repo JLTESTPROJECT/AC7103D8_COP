@@ -23,10 +23,6 @@ void aeq_seg_design(void *seg_tmp, int sample_rate, void *coef)
     eq_seg_design((struct eq_seg_info *)seg_tmp, sample_rate, coef);
 }
 
-void eq_func_init()
-{
-    EQ_FUNC->aeq_seg_design = aeq_seg_design;
-}
 const struct eq_function EQ_FUNC_t = {
     .aeq_seg_design = aeq_seg_design,
 };
@@ -37,7 +33,6 @@ void aeq_get_par(struct aeq_default_seg_tab *aeq_def, void *eq_par)
 
     struct eq_default_seg_tab *eq_def = (struct eq_default_seg_tab *)eq_par;
 
-    eq_func_init();
     //
     aeq_def->seg_num        = eq_def->seg_num;
     aeq_def->global_gain    = eq_def->global_gain;

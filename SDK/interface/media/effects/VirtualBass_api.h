@@ -4,6 +4,7 @@
 #include "AudioEffect_DataType.h"
 
 extern const int butterworth_iir_filter_coeff_type_select; //0 float 1 int
+extern const int virtual_bass_eq_hard_select;
 extern const int virtual_bass_run_mode;
 
 #ifdef WIN32
@@ -36,12 +37,14 @@ typedef struct _VirtualBassParam {
     int channel;
     int SampleRate;
     af_DataType pcm_info;
+    struct hard_eq_func hard_eq;
 } VirtualBassParam;
 
 int getVirtualBassBuf();
 int VirtualBassInit(void *WorkBuf, VirtualBassParam *param);
 void VirtualBassUpdate(void *WorkBuf, VirtualBassParam *param);
 int VirtualBassRun(void *WorkBuf, int *tmpbuf, void *in, void *out, int per_channel_npoint);
+int virtual_bass_hard_eq_close(void *WorkBuf);
 
 #endif // !VIRTUALBASS_API_H
 

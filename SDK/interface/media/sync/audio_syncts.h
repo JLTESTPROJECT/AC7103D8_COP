@@ -7,7 +7,7 @@
 #ifndef _AUDIO_SYNCTS_H_
 #define _AUDIO_SYNCTS_H_
 #include "typedef.h"
-#include "asm/audio_src_base.h"
+#include "audio_src_base.h"
 
 
 #define PCM_INSIDE_DAC                      0
@@ -18,12 +18,18 @@
 #define AUDIO_NETWORK_BT2_1                 1
 #define AUDIO_NETWORK_BLE                   2
 #define AUDIO_NETWORK_IPV4                  3
-
+#define AUDIO_NETWORK_AUTO                  4
 #define TIME_US_FACTOR      32
 
 #define STREAM_TIMESTAMP_ENABLE             0x00000001
 #define STREAM_ERROR_SUSPEND                0x00000002
 #define STREAM_ERROR_RESUME                 0x00000004
+
+
+#define AUDIO_SYNCTS_FAST_ALIGN           0
+#define AUDIO_SYNCTS_SLOW_ALIGN           1
+#define AUDIO_SYNCTS_REAMPLE_BYPASS       2
+
 /*
  * Audio同步变采样参数
  */
@@ -113,4 +119,8 @@ u8 audio_syncts_support_use_trigger_timestamp(void *syncts);
 int audio_syncts_frame_resample(void *syncts, struct resample_frame *in_frame, struct resample_frame *out_frame);
 
 void audio_syncts_compensate_filter_latency(void *syncts, u8 enable);
+
+int audio_syncts_get_resample_phase(void *syncts);
+
+void audio_syncts_set_debug_name(void *syncts, char *name);
 #endif

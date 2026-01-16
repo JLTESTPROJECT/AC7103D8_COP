@@ -67,6 +67,10 @@ struct icsd_De_param_v2 {
     float fitness;
     u8 high_fgq_fix; // default:0
     u8 de_alg_sel;   // default:0
+    u8 reshape_en;
+
+    // 产测使能
+    u8 test_mode;
 };
 
 struct icsd_ff_candidate_v2 {
@@ -86,6 +90,12 @@ struct icsd_ff_candidate_v2 {
     float *degree_set_0;
     float *degree_set_1;
     float *degree_set_2;
+
+    float *vrange_gold;
+    float *biquad_gold;
+    float *weight_gold;
+    float *mse_gold;
+    float *degree_set_gold;
 
     u8 *biquad_type;
     float total_gain_adj_begin;

@@ -14,6 +14,7 @@
 #include "audio_manager.h"
 #include "clock_manager/clock_manager.h"
 #include "dac_node.h"
+#include "debug/audio_debug.h"
 #if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SINK_EN)
 #include "le_audio_player.h"
 #include "app_le_auracast.h"
@@ -26,11 +27,19 @@ enum {
     CMD_A2DP_PLAY = 1,
     CMD_A2DP_CLOSE,
     CMD_SET_A2DP_VOL,
+#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE
+    CMD_A2DP_PLAY_REQ,
+    CMD_A2DP_PLAY_RSP,
+#endif
 };
 
 
 int g_avrcp_vol_chance_timer = 0;
 u8 g_avrcp_vol_chance_data[8];
+#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE
+static u8 SEND_A2DP_PLAY_REQ_FLAG = 0;
+static u16 wait_enter_bt_timer = 0;
+#endif
 
 void tws_a2dp_play_send_cmd(u8 cmd, u8 *data, u8 len, u8 tx_do_action);
 
@@ -42,6 +51,20 @@ void tws_a2dp_player_close(u8 *bt_addr)
     a2dp_media_close(bt_addr);
 }
 
+#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE
+static void a2dp_wait_enter_bt(void *addr)
+{
+    if (app_in_mode(APP_MODE_BT) == 0) {
+        wait_enter_bt_timer =  sys_timeout_add(addr, a2dp_wait_enter_bt, 100);
+    } else {
+        u8 buf[7];
+        wait_enter_bt_timer = 0;
+        memcpy(buf, (u8 *)addr, 6);
+        tws_a2dp_play_send_cmd(CMD_A2DP_PLAY_RSP, buf, 6, 0);
+    }
+}
+#endif
+
 static void tws_a2dp_play_in_task(u8 *data)
 {
     u8 btaddr[6];
@@ -52,7 +75,17 @@ static void tws_a2dp_play_in_task(u8 *data)
     case CMD_A2DP_PLAY:
         puts("app_msg_bt_a2dp_play\n");
         put_buf(bt_addr, 6);
-#if (TCFG_BT_A2DP_PLAYER_ENABLE == 0)
+#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SINK_EN)
+        if (le_audio_player_is_playing()) {
+            if (tws_api_get_role() != TWS_ROLE_SLAVE) {
+                g_printf("a2dp_media_mute line:%d\n", __LINE__);
+                a2dp_media_mute(bt_addr);
+                break;
+            }
+        }
+#endif
+#if ((TCFG_BT_A2DP_PLAYER_ENABLE == 0) || BT_INTERFERE_WITH_AUDIO_DEBUG)
+        y_printf("a2dp_player disable");
         break;
 #endif
         dev_vol = data[8];
@@ -70,6 +103,34 @@ static void tws_a2dp_play_in_task(u8 *data)
         dev_vol = data[8];
         set_music_device_volume(dev_vol);
         break;
+#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE
+    case CMD_A2DP_PLAY_REQ:
+        r_printf("CMD_A2DP_PLAY_REQ tws_api_get_role() = %d", tws_api_get_role());
+        if (app_in_mode(APP_MODE_BT)) {
+            //如果已经在蓝牙模式了直接回复
+            memcpy(g_play_addr, bt_addr, 6);
+            tws_a2dp_play_send_cmd(CMD_A2DP_PLAY_RSP, g_play_addr, 6, 0);
+
+        } else {
+            //保存a2dp_addr, 后面进入蓝牙模式之后需要发回去
+            memcpy(g_play_addr, bt_addr, 6);
+            app_send_message(APP_MSG_GOTO_MODE, APP_MODE_BT);
+            wait_enter_bt_timer = sys_timeout_add(g_play_addr, a2dp_wait_enter_bt, 100);
+        }
+        break;
+
+    case CMD_A2DP_PLAY_RSP:
+        r_printf("CMD_A2DP_PLAY_RSP");
+
+        u8 buf[7];
+
+        SEND_A2DP_PLAY_REQ_FLAG = 0;
+        memcpy(buf, bt_addr, 6);
+
+        buf[6] = bt_get_music_volume(bt_addr);
+        tws_a2dp_play_send_cmd(CMD_A2DP_PLAY, buf, 7, 1);
+        break;
+#endif
     }
     if (data[1] != 2) {
         free(data);
@@ -140,10 +201,15 @@ void tws_a2dp_sync_play(u8 *bt_addr, bool tx_do_action)
     u8 data[8];
     memcpy(data, bt_addr, 6);
     data[6] = bt_get_music_volume(bt_addr);
+#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE
+    SEND_A2DP_PLAY_REQ_FLAG = 1;
+    tws_a2dp_play_send_cmd(CMD_A2DP_PLAY_REQ, data, 7, 0);
+#else
     if (data[6] > 127) {
         data[6] = app_audio_bt_volume_update(bt_addr, APP_AUDIO_STATE_MUSIC);
     }
     tws_a2dp_play_send_cmd(CMD_A2DP_PLAY, data, 7, tx_do_action);
+#endif
 }
 
 static void avrcp_vol_chance_timeout(void *priv)
@@ -169,11 +235,6 @@ static int a2dp_bt_status_event_handler(int *event)
         if (app_var.goto_poweroff_flag) {
             break;
         }
-#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SINK_EN)
-        if (le_audio_player_is_playing()) {
-            le_auracast_stop();
-        }
-#endif
         dac_try_power_on_thread();//dac初始化耗时有120ms,此处提前将dac指定到独立任务内做初始化，优化蓝牙通路启动的耗时，减少时间戳超时的情况
         if (tws_api_get_role() == TWS_ROLE_MASTER &&
             bt_get_call_status_for_addr(bt->args) == BT_CALL_INCOMING) {
@@ -269,6 +330,15 @@ static int a2dp_app_msg_handler(int *msg)
             btstack_device_control(device, USER_CTRL_AVCTP_OPID_PLAY);
         }
         break;
+    case APP_MSG_EXIT_MODE:
+        puts("APP_MSG_EXIT_MODE\n");
+#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE
+        if (wait_enter_bt_timer && (msg[1] == APP_MODE_BT)) {
+            sys_timeout_del(wait_enter_bt_timer);
+            wait_enter_bt_timer = 0;
+        }
+#endif
+        break;
     }
     return 0;
 }
@@ -300,6 +370,24 @@ static int a2dp_tws_msg_handler(int *msg)
         tws_a2dp_player_close(evt->args + 3);
         break;
     case TWS_EVENT_ROLE_SWITCH:
+        break;
+    case TWS_EVENT_CONNECTION_DETACH:
+#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE
+        r_printf("__func__ = %s   TWS_EVT_CONNECT_DETACH   SEND_A2DP_PLAY_REQ_FLAG = %d    wait_enter_bt_timer = %d", __func__, SEND_A2DP_PLAY_REQ_FLAG, wait_enter_bt_timer);
+        if (SEND_A2DP_PLAY_REQ_FLAG) {
+            //发了A2DP_PLAY_REQ从机无响应,且断开tws连接，那么主机自己播
+            u8 buf[7];
+            memcpy(buf, g_play_addr, 6);
+            put_buf(g_play_addr, 6);
+            buf[6] = bt_get_music_volume(g_play_addr);
+            tws_a2dp_play_send_cmd(CMD_A2DP_PLAY, g_play_addr, 7, 1);
+            SEND_A2DP_PLAY_REQ_FLAG = 0;
+        }
+        if (wait_enter_bt_timer) {
+            sys_timeout_del(wait_enter_bt_timer);
+            wait_enter_bt_timer = 0;
+        }
+#endif
         break;
     }
     return 0;

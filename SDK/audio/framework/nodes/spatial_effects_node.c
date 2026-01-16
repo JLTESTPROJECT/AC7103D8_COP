@@ -62,7 +62,6 @@ struct SPATIAL_EFFECT_CONFIG {
 };
 
 struct spatial_effects_node_hdl {
-    char name[16];
     int sample_rate;
     struct SPATIAL_EFFECT_CONFIG effect_cfg;
     struct node_port_data_wide data_wide;
@@ -168,7 +167,8 @@ int spatial_effects_node_param_cfg_read(void *param, int size)
     /*
      *获取配置文件内的参数,及名字
      * */
-    len = jlstream_read_node_data_new(hdl_node(hdl)->uuid, hdl_node(hdl)->subid, (void *)(&hdl->effect_cfg), hdl->name);
+    char name[16];
+    len = jlstream_read_node_data_new(hdl_node(hdl)->uuid, hdl_node(hdl)->subid, (void *)(&hdl->effect_cfg), name);
     if (len != sizeof(hdl->effect_cfg)) {
         printf("%s, read node data err %d != %d\n", __FUNCTION__, len, (int)sizeof(hdl->effect_cfg));
         return 0 ;
@@ -180,7 +180,7 @@ int spatial_effects_node_param_cfg_read(void *param, int size)
      * */
     if (config_audio_cfg_online_enable) {
         if (hdl) {
-            if (jlstream_read_effects_online_param(hdl_node(hdl)->uuid, hdl->name, (void *)(&hdl->effect_cfg), len)) {
+            if (jlstream_read_effects_online_param(hdl_node(hdl)->uuid, name, (void *)(&hdl->effect_cfg), len)) {
                 printf("get spatial effects online param\n");
             }
         }
@@ -341,7 +341,6 @@ static int spatial_effects_adapter_bind(struct stream_node *node, u16 uuid)
 /*打开改节点输入接口*/
 static void spatial_effects_ioc_open_iport(struct stream_iport *iport)
 {
-    iport->handle_frame = spatial_effects_handle_frame;
 }
 
 /*节点参数协商*/
@@ -439,11 +438,6 @@ static int spatial_effects_adapter_ioctl(struct stream_iport *iport, int cmd, in
     case NODE_IOC_STOP:
         spatial_effects_ioc_stop(hdl);
         break;
-    case NODE_IOC_NAME_MATCH:
-        if (!strcmp((const char *)arg, hdl->name)) {
-            ret = 1;
-        }
-        break;
     case NODE_IOC_SET_PARAM:
         ret = spatial_effects_ioc_update_parm(hdl, arg);
         break;
@@ -469,11 +463,11 @@ static void spatial_effects_adapter_release(struct stream_node *node)
 
 /*节点adapter 注意需要在sdk_used_list声明，否则会被优化*/
 REGISTER_STREAM_NODE_ADAPTER(spatial_effects_node_adapter) = {
-    .name       = "spatial_effects",
     .uuid       = NODE_UUID_SPATIAL_EFFECTS,
     .bind       = spatial_effects_adapter_bind,
     .ioctl      = spatial_effects_adapter_ioctl,
     .release    = spatial_effects_adapter_release,
+    .handle_frame = spatial_effects_handle_frame,
     .hdl_size   = sizeof(struct spatial_effects_node_hdl),
     .ability_channel_in = 2, //输入只支持双声道
     .ability_channel_out =  1 | 2, //输出单声道或者双声道

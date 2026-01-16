@@ -103,7 +103,7 @@
     *(.lhdc_dec.text.cache.L2.run)
     *(.lhdcv4_dec.text)
     *(.lhdcv4_dec.const)
-	*(.lhdcv4_dec_text.cashe.L2.run)
+	*(.lhdcv4_dec_text.cache.L2.run)
     . = ALIGN(4);
 #endif
 
@@ -114,7 +114,7 @@
 
     *(.lhdcv5_dec.text)
     *(.lhdcv5_dec.const)
-	*(.lhdcv5_dec_text.cashe.L2.run)
+	*(.lhdcv5_dec_text.cache.L2.run)
 #endif
 
 #if AUDIO_LDAC_AT_RAM == 0
@@ -197,7 +197,13 @@
     *(.ogg.text)
     *(.ogg.text.const)
     *(.ogg_vorbis_dec.text)
-
+    *(.jlvodecode.text)
+	*(.jlvodecode.text.const)
+	*(.jlvodecode.text.cache.L2.code)
+    *(.jlvoencode.text)
+    *(.jlvoencode.text.const)
+    *(.jlvoencode.text.cache.L2.code)
+	
     *(.ape_dec.text)
     *(.ape_dec.text.const)
     *(.ape.text)
@@ -315,46 +321,79 @@
     . = ALIGN(4);
     . = ALIGN(4);
 	
-#if !AUDIO_LC3_CODEC_AT_RAM
-	    *(.lc3_dec.text.const)
-	    *(.lc3_dec.text)
-	    *(.lc3_enc.text.const)
-	    *(.lc3_enc.text)
-	    *(.lc3_codec_c_const)
-	    *(.lc3_codec_c_code)
-	    *(.lc3_codec_c_sparse_code)
-	    *(.lc3_codec_d_code)
-	    *(.lc3_codec_e_code)
-	    . = ALIGN(4);
+    *(.lc3_dec.text.const)
+    *(.lc3_dec.text)
+    *(.lc3_enc.text.const)
+    *(.lc3_enc.text)
+
+#if (AUDIO_LC3_CODEC_AT_RAM) && (defined CONFIG_CPU_BR56)
+    *(.lc3_codec_c_const)
+    *(.lc3_codec_c_code)
+    *(.lc3_codec_c_sparse_code)
+    *(.lc3_codec_d_code)
+    *(.lc3_codec_e_code)
+#elif !AUDIO_LC3_CODEC_AT_RAM
+    *(.lc3_enc.text.cache.L2.run)
+    *(.lc3_dec.text.cache.L2.run)
+    *(.lc3_codec_c_const)
+    *(.lc3_codec_c_code)
+    *(.lc3_codec_c_sparse_code)
+    *(.lc3_codec_d_code)
+    *(.lc3_codec_e_code)
+    . = ALIGN(4);
 #endif
 #if !AUDIO_JLA_CODEC_AT_RAM
-		*(.jla_dec.text.const)
-	    *(.jla_dec.text)
-	    *(.jla_enc.text.const)
-	    *(.jla_enc.text)
-	    *(.jla_codec_c_const)
-	    *(.jla_codec_c_code)
-	    *(.jla_codec_c_sparse_code)
-	    *(.jla_codec_d_code)
-	    *(.jla_codec_e_code)
-	    . = ALIGN(4);
-#endif
-#if !(AUDIO_JLA_CODEC_AT_RAM || AUDIO_JLA_CODEC_AT_RAM)
-		*(.jl_codec_c_const) 
-		*(.jl_codec_c_code)  
-		*(.jl_codec_ari_c_const)
-		*(.jl_codec_ari_c_code)
-		*(.jl_codec_c_sparse_code)
-		*(.jl_codec_d_code)
-		*(.jl_codec_e_code)
-		*(.jl_codec_t8k_code)
-		*(.jl_codec_t16k_code)
-		*(.jl_codec_t24k_code)
-		*(.jl_codec_t32k_code)
-		*(.jl_codec_t441k_code)
-		*(.jl_codec_const) 
+    *(.jla_dec.text.const)
+    *(.jla_dec.text)
+    *(.jla_enc.text.const)
+    *(.jla_enc.text)
+    *(.jla_codec_c_const)
+    *(.jla_codec_c_code)
+    *(.jla_codec_c_sparse_code)
+    *(.jla_codec_d_code)
+    *(.jla_codec_e_code)
+    . = ALIGN(4);
 #endif
 
+#if (AUDIO_LC3_CODEC_AT_RAM || AUDIO_JLA_CODEC_AT_RAM) && (defined CONFIG_CPU_BR56)
+	*(.jl_codec_t8k_code)
+	*(.jl_codec_t16k_code)
+	*(.jl_codec_t24k_code)
+	*(.jl_codec_t32k_code)
+	*(.jl_codec_t441k_code)
+#elif !(AUDIO_LC3_CODEC_AT_RAM || AUDIO_JLA_CODEC_AT_RAM)
+	*(.jl_codec_c_const) 
+	*(.jl_codec_c_code)  
+	*(.jl_codec_ari_c_const)
+	*(.jl_codec_ari_c_code)
+	*(.jl_codec_c_sparse_code)
+	*(.jl_codec_d_code)
+	*(.jl_codec_e_code)
+	*(.jl_codec_const) 
+	*(.jl_plc_c_code) 
+	*(.jl_plc_c_const) 
+	*(.jl_codec_t8k_code)
+	*(.jl_codec_t16k_code)
+	*(.jl_codec_t24k_code)
+	*(.jl_codec_t32k_code)
+	*(.jl_codec_t441k_code)
+#endif
+
+#if !AUDIO_JLA_V2_CODEC_AT_RAM
+	*(.jla_v2_enc_const)
+	*(.jla_v2_enc_code)
+	*(.jla_v2_dec_const)
+	*(.jla_v2_dec_code)
+	*(.jla_v2_codec_c_const)
+	*(.jla_v2_codec_c_code)
+	*(.jla_v2_codec_ari_c_const)
+	*(.jla_v2_codec_ari_c_code)
+	*(.jla_v2_codec_c_sparse_code)
+	*(.jla_v2_codec_e_code)
+	*(.jla_v2_decoder_const)
+	*(.jla_v2_decoder_code)
+	*(.jla_v2_codec_d_code)
+#endif
     *(.speex_code)
     *(.speex_encoder_code)
     *(.opus_code)
@@ -363,7 +402,18 @@
     *(.audio_codec_code)
 
 	/********************CODEC LD Ends*************************/
-	
+#if (!AUDIO_LLNS_DNS_CODEC_AT_RAM && !AUDIO_LLNS_DNS_BASIC_CODEC_AT_RAM)
+    *(.llns_dns.const)
+    *(.llns_dns.code)
+    *(.conv_params)
+    *(.seq_params)
+    *(.seq2_params)
+#elif !AUDIO_LLNS_DNS_CODEC_AT_RAM && AUDIO_LLNS_DNS_BASIC_CODEC_AT_RAM
+    *(.llns_dns.const)
+    *(.conv_params)
+    *(.seq_params)
+    *(.seq2_params)
+#endif
     *(.media_device_code)
     *(.media_device_const)
     *(.audio_encoder_code)

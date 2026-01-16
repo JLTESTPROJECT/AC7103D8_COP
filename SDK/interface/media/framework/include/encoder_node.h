@@ -45,6 +45,9 @@ struct seamless_recording {
     int (*change_file)(void *priv, enum change_file_step step);
 };
 
+extern const struct encoder_plug_ops encoder_plug_begin[];
+extern const struct encoder_plug_ops encoder_plug_end[];
+
 #define REGISTER_ENCODER_PLUG(plug) \
     const struct encoder_plug_ops plug sec(.encoder_plug)
 

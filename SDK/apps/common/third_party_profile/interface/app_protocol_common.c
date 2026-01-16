@@ -636,6 +636,7 @@ static int app_protocol_bt_status_event_handler(struct bt_event *bt)
         break;
     case BT_STATUS_SECOND_CONNECTED:
     case BT_STATUS_FIRST_CONNECTED:
+    case BT_STATUS_THIRD_CONNECTED:
         if (app_protocol_check_connect_success()) {
             app_protocol_tone_play(APP_PROTOCOL_TONE_CONNECTED_ALL_FINISH, 1);
         } else {

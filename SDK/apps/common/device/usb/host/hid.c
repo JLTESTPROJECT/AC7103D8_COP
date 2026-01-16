@@ -654,7 +654,11 @@ void hid_process(u32 id)
                     hid_intr_ep_in_buf[id] = usb_h_alloc_ep_buffer(id, host_ep | USB_DIR_IN, 64);
                 }
 #ifdef USB_HW_20
+#if USB_HUB
+                usb_hub_rxreg_set(id, host_ep, target_ep, &(host_dev->private_data.hub_info));
+#else
                 usb_write_rxfuncaddr(id, host_ep, host_dev->private_data.devnum);
+#endif
 #endif
                 usb_h_ep_config(id,  host_ep | USB_DIR_IN, USB_ENDPOINT_XFER_INT, 1,
                                 interval[id][target_ep], hid_intr_ep_in_buf[id], 64);

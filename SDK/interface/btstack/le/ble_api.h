@@ -79,6 +79,8 @@ typedef enum {
     //sync edr pair list
     BLE_CMD_EDR_PAIR_SYNC,
 
+    BLE_CMD_SET_LEAGCY_INIT_PRIORITY,
+    BLE_CMD_SET_LEAGCY_SCAN_PRIORITY,
     //< ble5
     BLE_CMD_EXT_ADV_PARAM = 0x40,
     BLE_CMD_EXT_ADV_DATA,
@@ -95,6 +97,8 @@ typedef enum {
     BLE_CMD_PERIODIC_ADV_TERMINATE_SYNC,
     BLE_CMD_PERIODIC_ADV_CREATE_SYNC_CANCEL,
     BLE_CMD_EXT_ADV_ADRESS,  //如果支持两个广播包，操作地址的配置流程也要统一。
+    BLE_CMD_SET_RXMAXBUF,
+    BLE_CMD_SET_MORE_DATA,
 
     //client
     BLE_CMD_SEARCH_PROFILE = 0x80,
@@ -335,6 +339,22 @@ u16 ble_vendor_set_default_att_mtu(u16 mtu_size);
  */
 /*************************************************************************************************/
 void user_client_set_search_complete(void);
+
+/**
+ * @brief 添加回调函数（同时添加 `search_result` 和 `search_close`）
+ *
+ * @param callback1 `search_result` 回调函数
+ * @param callback2 `search_close` 回调函数
+ */
+void user_client_add_callback(void *callback1, void *callback2);
+
+/**
+ * @brief 移除回调函数（同时移除 `search_result` 和 `search_close`）
+ *
+ * @param callback1 `search_result` 回调函数
+ * @param callback2 `search_close` 回调函数
+ */
+void user_client_remove_callback(void *callback1, void *callback2);
 
 /*************************************************************************************************/
 /*!
@@ -1180,7 +1200,34 @@ void lib_make_ble_address(u8 *ble_address, u8 *edr_address);
 #define ble_op_latency_close(con_handle)     \
 	ble_user_cmd_prepare(BLE_CMD_LATENCY_CLOSE, 1, con_handle)
 
+/*************************************************************************************************/
+/*!
+ *  \brief      设置rxmaxbuf
+ *
+ *  \function   ble_cmd_ret_e ble_op_set_rxmaxbuf(u16 con_handle, u8 rxmaxbuf).
+ *
+ *  \param      [in] con_handle     range：>0.
+ *  \param      [in] rxmaxbuf     range：0~255.
+ *
+ *  \return     see ble_cmd_ret_e.
+ */
+/*************************************************************************************************/
+#define ble_op_set_rxmaxbuf(con_handle, rxmaxbuf)     \
+	ble_user_cmd_prepare(BLE_CMD_SET_RXMAXBUF, 2, con_handle, rxmaxbuf)
 
+/*************************************************************************************************/
+/*!
+ *  \brief      设置acl的 more dat
+ *
+ *  \function   ble_cmd_ret_e ble_op_set_more_data(con_handle, enable).
+ *
+ *  \param      [in] con_handle     range：>0.
+ *
+ *  \return     see ble_cmd_ret_e.
+ */
+/*************************************************************************************************/
+#define ble_op_set_more_data(con_handle, enable)     \
+	ble_user_cmd_prepare(BLE_CMD_SET_MORE_DATA, 2, con_handle, enable)
 
 /*************************************************************************************************/
 /*!
@@ -1397,8 +1444,19 @@ int att_server_change_profile(u8 const *profile_data);
 /* ***************************************************************************/
 void ble_vendor_set_tx_power(u8 level);
 
+void update_list_local_addr(u8 *old_local_addr, u8 *new_local_addr);
+
+#define ble_op_set_leagcy_init_priority(param)     \
+	ble_user_cmd_prepare(BLE_CMD_SET_LEAGCY_INIT_PRIORITY, 1, param)
 
 void update_list_local_addr(u8 *old_local_addr, u8 *new_local_addr);
+
+#define ble_op_set_leagcy_init_priority(param)     \
+	ble_user_cmd_prepare(BLE_CMD_SET_LEAGCY_INIT_PRIORITY, 1, param)
+
+
+#define ble_op_set_leagcy_scan_priority(param)     \
+	ble_user_cmd_prepare(BLE_CMD_SET_LEAGCY_SCAN_PRIORITY, 1, param)
 
 
 

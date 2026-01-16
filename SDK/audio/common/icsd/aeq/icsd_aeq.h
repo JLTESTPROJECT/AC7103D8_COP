@@ -8,12 +8,13 @@
 #include "icsd_common_v2.h"
 #include "icsd_aeq_config.h"
 
-extern int (*aeq_printf)(const char *format, ...);
-#if 0
+#if AEQ_PRINTF_EN
 #define _aeq_printf printf                  //打开自适应ANC参数调试信息
 #else
 #define _aeq_printf icsd_printf_off
 #endif
+extern int (*aeq_printf)(const char *format, ...);
+
 
 #define AEQ_FLEN 120// (TARLEN2+TARLEN2_L-DRPPNT2)
 
@@ -55,6 +56,5 @@ extern struct eq_function *EQ_FUNC;
 
 
 
-
-
+extern char lib_aeq_version[];
 #endif

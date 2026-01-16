@@ -9,7 +9,7 @@
 #include "icsd_common.h"
 #include "icsd_common_v2.h"
 
-#if 0
+#if VDT_PRINTF_EN
 #define _vdt_printf printf
 #else
 #define _vdt_printf icsd_printf_off
@@ -68,7 +68,7 @@ typedef struct {
 void icsd_vdt_get_libfmt(struct icsd_vdt_libfmt *libfmt);
 void icsd_vdt_set_infmt(struct icsd_vdt_infmt *fmt);
 void icsd_alg_vdt_run(__icsd_vdt_run_parm *run_parm, __icsd_vdt_output *output);
-void icsd_vdt_data_init(u8 _anc_mode_ind, float ref_mgain, float err_mgain, float tlk_mgain);
+void icsd_vdt_data_init(u8 _anc_mode_ind, float refl_mgain, float errl_mgain, float refr_mgain, float errr_mgain, float tlk_mgain, u8 mic_ver);
 
 
 extern const u8 VDT_TRAIN_EN;
@@ -82,4 +82,5 @@ extern const float vdt_dmahgain;
 
 void vdt_config_init(__vdt_config *_vdt_config);
 
+extern char lib_vdt_version[];
 #endif

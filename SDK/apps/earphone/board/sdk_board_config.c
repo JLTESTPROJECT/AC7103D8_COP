@@ -41,7 +41,7 @@
 #include "../adkey_config.c"
 
 
-//INDEX-OFF
+// *INDENT-OFF*
 
 /************************** imu sensor ****************************/
 #if TCFG_IMUSENSOR_ENABLE
@@ -107,26 +107,47 @@ IMU_SENSOR_PLATFORM_DATA_END();
 /************************** gsensor ****************************/
 #if TCFG_GSENSOR_ENABLE
 GSENSOR_PLATFORM_DATA_BEGIN(gSensor_data)
-.iic = 0,
- .gSensor_name = "stk832x",
-  GSENSOR_PLATFORM_DATA_END();
+#if TCFG_SC7A20_EN
+    .iic = 0,
+    .gSensor_name = "sc7a20",
+#elif TCFG_STK832x_EN
+    .iic = 0,
+    .gSensor_name = "stk832x",
 #endif
+GSENSOR_PLATFORM_DATA_END();
+#endif
+
+void imu_sensor_ad0_selete(u32 gpio, u8 out_en)
+{
+#if (TCFG_MPU6887P_AD0_SELETE_IO != NO_CONFIG_PORT) || \
+    (TCFG_QMI8658_AD0_SELETE_IO != NO_CONFIG_PORT)
+    gpio_set_mode(IO_PORT_SPILT(gpio), !!out_en);
+#endif
+}
+
+void imu_sensor_power_ctl(u32 gpio, u8 out_en)
+{
+#if (TCFG_IMU_SENSOR_PWR_PORT != NO_CONFIG_PORT)
+    gpio_set_mode(IO_PORT_SPILT(gpio), !!out_en);
+#endif
+}
 
 /************************** hrsensor ****************************/
 #if TCFG_HRSENSOR_ENABLE
 HRSENSOR_PLATFORM_DATA_BEGIN(hr_sensor_data)
 #if TCFG_HX3918_ENABLE
-.iic = 0,
- .hrSensor_name = "hx3918",
+    .iic = 0,
+    .hrSensor_name = "hx3918",
+#elif TCFG_HX3011_ENABLE
+    .iic = 0,
+    .hrSensor_name = "hx3011",
 #endif
-  HRSENSOR_PLATFORM_DATA_END()
+HRSENSOR_PLATFORM_DATA_END()
 #endif
 
-  void board_imu_sensor_init()
+void board_imu_sensor_init()
 {
 #if (TCFG_AUDIO_SPATIAL_EFFECT_ENABLE || TCFG_AUDIO_SOMATOSENSORY_ENABLE)
-    extern void imu_sensor_power_ctl(u32 gpio, u8 value);
-    extern void imu_sensor_ad0_selete(u32 gpio, u8 value);
 #ifdef TCFG_IMU_SENSOR_PWR_PORT
     imu_sensor_power_ctl(TCFG_IMU_SENSOR_PWR_PORT, 1);
 #endif
@@ -255,10 +276,34 @@ LP_TOUCH_KEY_PLATFORM_DATA_BEGIN(lp_touch_key_pdata)
 LP_TOUCH_KEY_PLATFORM_DATA_END();
 #endif
 
-
+__INITCALL_BANK_CODE
 void board_init()
 {
     board_power_init();
+
+#if TCFG_UPDATE_UART_IO_EN
+    {
+#include "uart_update.h"
+        /* uart_update_cfg  update_cfg = { */
+        /*     .rx = IO_PORTA_02, */
+        /*     .tx = IO_PORTA_03, */
+        /* }; */
+        y_printf(">>>[test]:old uart update\n");
+        uart_update_init();
+    }
+#endif
+
+#if CONFIG_UPDATE_MUTIL_CPU_UART
+    {
+#include "update_interactive_uart.h"
+        /* update_interactive_uart_cfg  update_interactive_cfg = { */
+        /*     .rx = CONFIG_UPDATE_MUTIL_CPU_UART_TX_PIN, */
+        /*     .tx = CONFIG_UPDATE_MUTIL_CPU_UART_RX_PIN, */
+        /* }; */
+        y_printf(">>>[test]:new uart update\n");
+        update_interactive_uart_init();
+    }
+#endif
 
     gpadc_init();
 

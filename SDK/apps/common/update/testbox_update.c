@@ -169,7 +169,7 @@ static void testbox_ble_update_state_cbk(int type, u32 state, void *priv)
 
                 ble_update_ready_jump_flag = 1;
                 /* ble_app_disconnect(); */
-#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN | LE_AUDIO_JL_CIS_PERIPHERAL_EN))
                 extern void le_hci_disconnect_all_connections(void);
                 extern void bt_le_audio_adv_enable(u8 enable);
                 le_hci_disconnect_all_connections();
@@ -215,7 +215,12 @@ void testbox_update_msg_handle(int msg)
                 .p_op_api = &lmp_ch_update_op,
                 .task_en = 1,
             };
+#if CONFIG_UPDATE_MUTIL_CPU_UART
+            printf("\n >>>[test]:func = %s,line= %d\n", __FUNCTION__, __LINE__);
+            update_interactive_task_start((void *)&info, bt_update_set_offset_addr, 1);
+#else
             app_active_update_task_init(&info);
+#endif
         }
         break;
 

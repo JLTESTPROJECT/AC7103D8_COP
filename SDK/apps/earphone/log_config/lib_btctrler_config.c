@@ -29,9 +29,17 @@
 const int CONFIG_BTCTLER_JL_DONGLE_SOURCE_ENABLE=0;//dongle master
 const int config_master_qos_poll=0;
 #if TCFG_BT_DUAL_CONN_ENABLE
+#if TCFG_BT_DUAL_1T3_CONN_ENABLE//1t3
+const int CONFIG_1T3_CONNECTION_ENABLE = 1;
+const int CONFIG_LMP_CONNECTION_NUM = 3;
+const int CONFIG_LMP_CONNECTION_LIMIT_NUM = 3;
+#else
+const int CONFIG_1T3_CONNECTION_ENABLE = 0;
 const int CONFIG_LMP_CONNECTION_NUM = 2;
 const int CONFIG_LMP_CONNECTION_LIMIT_NUM = 2;
+#endif
 #else
+const int CONFIG_1T3_CONNECTION_ENABLE = 0;
 const int CONFIG_LMP_CONNECTION_NUM = 1;
 const int CONFIG_LMP_CONNECTION_LIMIT_NUM = 1;
 #endif
@@ -41,7 +49,7 @@ const int CONFIG_DISTURB_SCAN_ENABLE = 0;
 #define TWS_PURE_MONITOR_MODE    0//1:纯监听模式
 
 #if TWS_PURE_MONITOR_MODE
-	u8 get_extws_nack_adjust(u8 per_v, int a2dp_dly_paly_time, int msec)
+	u8 get_extws_nack_adjust(u8 per_v, int a2dp_dly_paly_time, int msec, int num)
 	{
 		return 0;
 	}
@@ -134,7 +142,11 @@ const int CONFIG_LNA_CHECK_VAL = -80;
 
     const int CONFIG_TWS_POWER_BALANCE_ENABLE   = TCFG_TWS_POWER_BALANCE_ENABLE;
     const int CONFIG_LOW_LATENCY_ENABLE         = 1;
+#if TCFG_LOCAL_TWS_ENABLE
+    const int CONFIG_TWS_DATA_TRANS_ENABLE = 1;
+#else
     const int CONFIG_TWS_DATA_TRANS_ENABLE = 0;
+#endif
 #else //TCFG_USER_TWS_ENABLE
 	#if (TCFG_USER_BLE_ENABLE)
 		const int config_btctler_modules        = BT_MODULE_CLASSIC | BT_MODULE_LE;
@@ -193,15 +205,10 @@ u32 get_a2dp_max_buf_size(u8 codec_type)
         a2dp_max_buf_size = CONFIG_A2DP_LHDC_MAX_BUF_SIZE;
     }
 
-#if TCFG_USER_TWS_ENABLE
-    if (tws_api_get_role_async() == TWS_ROLE_SLAVE) {
-        a2dp_max_buf_size += 1024;
-    }
-#endif
-
     return a2dp_max_buf_size;
 }
 
+const int CONFIG_BT_DUAL_MODE_MANAGER_ENABLE = 0;
 #if 0
 // 可重写函数实时调试qos硬件开关状态，判断当前qos是开还是关
 void user_qos_run_debug(u8 en)
@@ -382,10 +389,10 @@ const int config_delete_link_key          = 1;           //配置是否连接失
  */
 
 #if (TCFG_USER_BLE_ENABLE)
-	#define DEFAULT_LE_FEATURES (LE_ENCRYPTION | LE_DATA_PACKET_LENGTH_EXTENSION | LL_FEAT_LE_EXT_ADV)
+	#define DEFAULT_LE_FEATURES (LE_ENCRYPTION | LE_DATA_PACKET_LENGTH_EXTENSION | LL_FEAT_LE_EXT_ADV | LL_FEAT_CHANNEL_CLASSIFICATION)
 
 	#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN)))
-	    #define LE_AUDIO_CIS_LE_FEATURES (LE_ENCRYPTION | LE_FEATURES_CIS | LE_2M_PHY|CHANNEL_SELECTION_ALGORITHM_2|LL_FEAT_LE_EXT_ADV)
+	    #define LE_AUDIO_CIS_LE_FEATURES (LE_ENCRYPTION | LE_FEATURES_CIS | LE_2M_PHY|CHANNEL_SELECTION_ALGORITHM_2|LL_FEAT_LE_EXT_ADV | LL_FEAT_ISO_HOST_SUPPORT)
     #else
 		#define LE_AUDIO_CIS_LE_FEATURES  0
 	#endif
@@ -401,19 +408,27 @@ const int config_delete_link_key          = 1;           //配置是否连接失
 	#endif
 
 	#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN)))
-       #define LE_AUDIO_BIS_RX_LE_FEATURES (LE_FEATURES_BIS | LE_CORE_V50_FEATURES)
+       #define LE_AUDIO_BIS_RX_LE_FEATURES (LE_FEATURES_BIS | LE_CORE_V50_FEATURES | LL_FEAT_ISO_HOST_SUPPORT)
        #define LE_AUDIO_BIS_RX_LE_ROLE (LE_MASTER  | LE_SCAN)
     #else
        #define LE_AUDIO_BIS_RX_LE_FEATURES 0
        #define LE_AUDIO_BIS_RX_LE_ROLE     0
 	#endif
 
+    #if (THIRD_PARTY_PROTOCOLS_SEL & MULTI_CLIENT_EN)
+        #define MULTI_CLIENT_LE_ROLE (LE_MASTER | LE_SCAN | LE_INIT)
+        #define MULTI_CLIENT_LE_FEATURES (LE_ENCRYPTION | LE_DATA_PACKET_LENGTH_EXTENSION | LE_2M_PHY)
+    #else
+        #define MULTI_CLIENT_LE_ROLE 0
+        #define MULTI_CLIENT_LE_FEATURES 0
+    #endif
+
 #if TCFG_THIRD_PARTY_PROTOCOLS_SIMPLIFIED
 	const int config_btctler_le_roles    = (LE_SLAVE | LE_ADV);
 	const uint64_t config_btctler_le_features = LE_ENCRYPTION;
 #else
-	const int config_btctler_le_roles    = (LE_SLAVE  | LE_ADV|LE_AUDIO_BIS_RX_LE_ROLE);
-	const uint64_t config_btctler_le_features = LE_AUDIO_CIS_LE_FEATURES|DEFAULT_LE_FEATURES|RCSP_MODE_LE_FEATURES|LE_AUDIO_BIS_RX_LE_FEATURES;
+	const int config_btctler_le_roles    = (LE_SLAVE  | LE_ADV|LE_AUDIO_BIS_RX_LE_ROLE | MULTI_CLIENT_LE_ROLE);
+	const uint64_t config_btctler_le_features = LE_AUDIO_CIS_LE_FEATURES|DEFAULT_LE_FEATURES|RCSP_MODE_LE_FEATURES|LE_AUDIO_BIS_RX_LE_FEATURES|MULTI_CLIENT_LE_FEATURES;
 #endif
 
 #else /* TCFG_USER_BLE_ENABLE */
@@ -447,10 +462,25 @@ const int config_btctler_le_master_multilink = 0;
 	const int config_btctler_le_hw_nums = 2;
 #endif
 
+#if ((TCFG_LE_AUDIO_APP_CONFIG) & (LE_AUDIO_JL_UNICAST_SINK_EN))
+	const int CONFIG_JL_UNICAST_ENABLE     = 1;
+#else
+	const int CONFIG_JL_UNICAST_ENABLE     = 0;
+#endif
 
+#if ((TCFG_LE_AUDIO_APP_CONFIG) & (LE_AUDIO_JL_AURACAST_SINK_EN))
+	const int CONFIG_JL_AURACAST_ENABLE    = 1;
+#else
+	const int CONFIG_JL_AURACAST_ENABLE    = 0;
+#endif
 
 const int config_btctler_le_slave_conn_update_winden = 2500;//range:100 to 2500
-const int config_bb_optimized_ctrl = VENDOR_BB_ISO_DIRECT_PUSH;//BIT(7);//|BIT(8);
+#if (defined CONFIG_CPU_BR28 || defined CONFIG_CPU_BR50 || defined CONFIG_CPU_BR52 || defined CONFIG_CPU_BR56)
+//br28 br50 br52 br56 默认开启频道监测
+const int config_bb_optimized_ctrl = LE_BB_OPT_FEAT_ISO_DIRECT_PUSH | BIT(11) | BIT(12) | BIT(13);
+#else
+const int config_bb_optimized_ctrl = LE_BB_OPT_FEAT_ISO_DIRECT_PUSH;
+#endif
 
 
 #if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN)))
@@ -491,266 +521,24 @@ const int sniff_support_reset_anchor_point = 0;   //sniff状态下是否支持re
 const int sniff_long_interval = (500 / 0.625);    //sniff状态下进入long interval的通信间隔(ms)
 const int config_rf_oob = 0;
 
-// *INDENT-ON*
-/*-----------------------------------------------------------*/
+const int ll_vendor_ctrl_cmd_support = 1; //1:for testbox or private transmission; 0:for ll bqb mode
 
-/**
- * @brief Log (Verbose/Info/Debug/Warn/Error)
- */
-/*-----------------------------------------------------------*/
-//RF part
-const char log_tag_const_v_Analog  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_i_Analog  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_w_Analog  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_d_Analog  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_e_Analog  = CONFIG_DEBUG_LIB(0);
+//#if TCFG_BT_HFP_ONLY_DISPLAY_BAT_ENABLE
+//#if TCFG_BT_SNIFF_ENABLE
+//const int CONFIG_BTCTLER_FUN = EDR_LMP_SUPPORT_SNIFF;
+//#else
+//const int CONFIG_BTCTLER_FUN = 0;
+//#endif
+//#else
+//#if TCFG_BT_SNIFF_ENABLE && TCFG_BT_SUPPORT_HFP
+//const int CONFIG_BTCTLER_FUN = EDR_LMP_SUPPORT_ESCO | EDR_LMP_SUPPORT_SNIFF;
+//#elif TCFG_BT_SUPPORT_HFP
+//const int CONFIG_BTCTLER_FUN = EDR_LMP_SUPPORT_ESCO;
+//#elif TCFG_BT_SNIFF_ENABLE
+//const int CONFIG_BTCTLER_FUN = EDR_LMP_SUPPORT_SNIFF;
+//#else
+//const int CONFIG_BTCTLER_FUN = 0;
+//#endif
+//#endif
 
-const char log_tag_const_v_RF  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_i_RF  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_d_RF  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_w_RF  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_e_RF  = CONFIG_DEBUG_LIB(0);
-
-const char log_tag_const_v_BDMGR   = CONFIG_DEBUG_ENABLE;
-const char log_tag_const_i_BDMGR   = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_d_BDMGR   = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_w_BDMGR   = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_e_BDMGR   = CONFIG_DEBUG_LIB(1);
-
-//Classic part
-const char log_tag_const_v_HCI_LMP   = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_i_HCI_LMP   = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_d_HCI_LMP   = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_w_HCI_LMP   = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_e_HCI_LMP   = CONFIG_DEBUG_LIB(1);
-
-const char log_tag_const_v_LMP  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_i_LMP  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_d_LMP  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_w_LMP  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_e_LMP  = CONFIG_DEBUG_LIB(1);
-
-const char log_tag_const_v_LINK   = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_i_LINK   = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_d_LINK   = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_w_LINK   = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_e_LINK   = CONFIG_DEBUG_LIB(0);
-
-//LE part
-const char log_tag_const_v_LE_BB  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_i_LE_BB  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_d_LE_BB  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_w_LE_BB  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_e_LE_BB  = CONFIG_DEBUG_LIB(1);
-
-const char log_tag_const_v_LE5_BB  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_i_LE5_BB  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_d_LE5_BB  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_w_LE5_BB  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_e_LE5_BB  = CONFIG_DEBUG_LIB(1);
-
-const char log_tag_const_v_HCI_LL  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_i_HCI_LL  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_d_HCI_LL  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_w_HCI_LL  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_e_HCI_LL  = CONFIG_DEBUG_LIB(1);
-
-const char log_tag_const_v_LL  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_i_LL  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_d_LL  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_w_LL  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_e_LL  = CONFIG_DEBUG_LIB(1);
-
-const char log_tag_const_v_LL_E  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_i_LL_E  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_d_LL_E  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_w_LL_E  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_e_LL_E  = CONFIG_DEBUG_LIB(1);
-
-const char log_tag_const_v_LL_M  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_i_LL_M  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_d_LL_M  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_w_LL_M  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_e_LL_M  = CONFIG_DEBUG_LIB(1);
-
-const char log_tag_const_v_LL_ADV  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_i_LL_ADV  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_d_LL_ADV  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_w_LL_ADV  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_e_LL_ADV  = CONFIG_DEBUG_LIB(1);
-
-const char log_tag_const_v_LL_SCAN  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_i_LL_SCAN  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_d_LL_SCAN  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_w_LL_SCAN  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_e_LL_SCAN  = CONFIG_DEBUG_LIB(1);
-
-const char log_tag_const_v_LL_INIT  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_i_LL_INIT  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_d_LL_INIT  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_w_LL_INIT  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_e_LL_INIT  = CONFIG_DEBUG_LIB(1);
-
-const char log_tag_const_v_LL_EXT_ADV  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_i_LL_EXT_ADV  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_d_LL_EXT_ADV  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_w_LL_EXT_ADV  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_e_LL_EXT_ADV  = CONFIG_DEBUG_LIB(1);
-
-const char log_tag_const_v_LL_EXT_SCAN  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_i_LL_EXT_SCAN  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_d_LL_EXT_SCAN  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_w_LL_EXT_SCAN  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_e_LL_EXT_SCAN  = CONFIG_DEBUG_LIB(1);
-
-const char log_tag_const_v_LL_EXT_INIT  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_i_LL_EXT_INIT  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_d_LL_EXT_INIT  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_w_LL_EXT_INIT  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_e_LL_EXT_INIT  = CONFIG_DEBUG_LIB(1);
-
-const char log_tag_const_v_LL_TWS_ADV  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_i_LL_TWS_ADV  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_d_LL_TWS_ADV  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_w_LL_TWS_ADV  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_e_LL_TWS_ADV  = CONFIG_DEBUG_LIB(1);
-
-const char log_tag_const_v_LL_TWS_SCAN  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_i_LL_TWS_SCAN  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_d_LL_TWS_SCAN  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_w_LL_TWS_SCAN  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_e_LL_TWS_SCAN  = CONFIG_DEBUG_LIB(1);
-
-const char log_tag_const_v_LL_S  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_i_LL_S  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_d_LL_S  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_w_LL_S  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_e_LL_S  = CONFIG_DEBUG_LIB(1);
-
-const char log_tag_const_v_LL_RL  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_i_LL_RL  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_d_LL_RL  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_w_LL_RL  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_e_LL_RL  = CONFIG_DEBUG_LIB(1);
-
-const char log_tag_const_v_LL_WL  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_i_LL_WL  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_d_LL_WL  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_w_LL_WL  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_e_LL_WL  = CONFIG_DEBUG_LIB(1);
-
-const char log_tag_const_v_AES  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_i_AES  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_d_AES  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_w_AES  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_e_AES  = CONFIG_DEBUG_LIB(1);
-
-
-const char log_tag_const_v_AES128  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_i_AES128  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_d_AES128  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_w_AES128  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_e_AES128  = CONFIG_DEBUG_LIB(1);
-
-
-const char log_tag_const_v_LL_PADV  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_i_LL_PADV  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_d_LL_PADV  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_w_LL_PADV  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_e_LL_PADV  = CONFIG_DEBUG_LIB(1);
-
-const char log_tag_const_v_LL_DX  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_i_LL_DX  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_d_LL_DX  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_w_LL_DX  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_e_LL_DX  = CONFIG_DEBUG_LIB(1);
-
-const char log_tag_const_v_LL_PHY  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_i_LL_PHY  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_d_LL_PHY  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_w_LL_PHY  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_e_LL_PHY  = CONFIG_DEBUG_LIB(1);
-
-const char log_tag_const_v_LL_AFH  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_i_LL_AFH  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_d_LL_AFH  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_w_LL_AFH  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_e_LL_AFH  = CONFIG_DEBUG_LIB(1);
-
-//HCI part
-const char log_tag_const_v_Thread  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_i_Thread  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_d_Thread  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_w_Thread  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_e_Thread  = CONFIG_DEBUG_LIB(1);
-
-const char log_tag_const_v_HCI_STD  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_i_HCI_STD  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_d_HCI_STD  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_w_HCI_STD  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_e_HCI_STD  = CONFIG_DEBUG_LIB(1);
-
-const char log_tag_const_v_HCI_LL5  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_i_HCI_LL5  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_d_HCI_LL5  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_w_HCI_LL5  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_e_HCI_LL5  = CONFIG_DEBUG_LIB(1);
-
-const char log_tag_const_v_LL_ISO  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_i_LL_ISO  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_d_LL_ISO  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_w_LL_ISO  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_e_LL_ISO  = CONFIG_DEBUG_LIB(1);
-
-const char log_tag_const_v_LL_BIS  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_i_LL_BIS  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_d_LL_BIS  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_w_LL_BIS  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_e_LL_BIS  = CONFIG_DEBUG_LIB(1);
-
-const char log_tag_const_v_LL_CIS  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_i_LL_CIS  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_d_LL_CIS  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_w_LL_CIS  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_e_LL_CIS  = CONFIG_DEBUG_LIB(1);
-
-const char log_tag_const_v_BL  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_i_BL  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_d_BL  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_w_BL  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_e_BL  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_c_BL  = CONFIG_DEBUG_LIB(1);
-
-
-const char log_tag_const_v_TWS_LE  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_i_TWS_LE  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_d_TWS_LE  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_w_TWS_LE  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_e_TWS_LE  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_c_TWS_LE  = CONFIG_DEBUG_LIB(1);
-
-
-const char log_tag_const_v_TWS_LMP  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_i_TWS_LMP  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_d_TWS_LMP  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_w_TWS_LMP  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_e_TWS_LMP  = CONFIG_DEBUG_LIB(0);
-
-const char log_tag_const_v_TWS  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_i_TWS  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_d_TWS  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_w_TWS  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_e_TWS  = CONFIG_DEBUG_LIB(1);
-
-const char log_tag_const_v_TWS_ESCO  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_i_TWS_ESCO  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_d_TWS_ESCO  = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_w_TWS_ESCO  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_e_TWS_ESCO  = CONFIG_DEBUG_LIB(1);
-
-const char log_tag_const_v_QUICK_CONN  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_i_QUICK_CONN  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_d_QUICK_CONN  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_w_QUICK_CONN  = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_e_QUICK_CONN  = CONFIG_DEBUG_LIB(0);
 

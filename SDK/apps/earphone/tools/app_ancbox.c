@@ -23,12 +23,12 @@
 #include "app_action.h"
 #include "app_main.h"
 #include "app_ancbox.h"
-#include "audio_anc_common.h"
 #include "app_power_manage.h"
 #include "app_chargestore.h"
 #include "anc_btspp.h"
 #include "audio_config.h"
 #include "btstack/avctp_user.h"
+#include "audio_anc_includes.h"
 
 #if AUDIO_ENC_MPT_SELF_ENABLE
 #include "audio_enc_mpt_self.h"
@@ -44,18 +44,6 @@
 
 #if TCFG_SPEAKER_EQ_NODE_ENABLE
 #include "effects/audio_spk_eq.h"
-#endif
-
-#if TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN
-#include "icsd_adt_app.h"
-#endif
-
-#if ANC_MULT_ORDER_ENABLE
-#include "audio_anc_mult_scene.h"
-#endif/*ANC_MULT_ORDER_ENABLE*/
-
-#if TCFG_AUDIO_ANC_EXT_TOOL_ENABLE
-#include "anc_ext_tool.h"
 #endif
 
 #define LOG_TAG_CONST       APP_ANCBOX
@@ -176,6 +164,9 @@ struct _ancbox_info {
     int audio_dut_len;
     u8 *audio_dut_buffer;
 #endif
+    u8 *last_data;		//最后一包数据
+    u32 last_offset;	//最后一包数据的偏移量
+    u32 last_data_len;	//最后一包数据长度
 };
 
 #define DEFAULT_BAUDRATE            9600
@@ -263,11 +254,6 @@ enum {
 
 static struct _ancbox_info *ancbox_info;
 #define __this  ancbox_info
-extern void set_temp_link_key(u8 *linkkey);
-extern void chargestore_set_baudrate(u32 baudrate);
-extern int anc_mode_change_tool(u8 dat);
-extern void sys_auto_shut_down_disable(void);
-extern void sys_auto_shut_down_enable(void);
 
 static void ancbox_callback(u8 mode, u8 command)
 {
@@ -451,9 +437,15 @@ static void anc_read_file_data(u8 *cmd, u32 offset, u32 data_len)
     cmd[0] = CMD_ANC_MODULE;
     cmd[1] = CMD_ANC_READ_FILE_DATA;
     if (__this->file_hdl == NULL) {
-        cmd[1] = CMD_ANC_FAIL;
-        chargestore_api_write(cmd, 2);
-        return;
+        //若offset等于上次的offset, 则表示数据重发，发送最后一包数据
+        if ((__this->last_offset == offset) && __this->last_data && __this->last_data_len) {
+            memcpy(&cmd[2], __this->last_data, __this->last_data_len);
+            chargestore_api_write(cmd, data_len + 2);
+        } else {
+            cmd[1] = CMD_ANC_FAIL;
+            chargestore_api_write(cmd, 2);
+            return;
+        }
     }
 
     //读文件限制拦截
@@ -471,11 +463,21 @@ static void anc_read_file_data(u8 *cmd, u32 offset, u32 data_len)
     }
 
     //拆包读取数据
+    __this->last_offset = offset;
     memcpy(&cmd[2], __this->file_hdl + offset, data_len);
     chargestore_api_write(cmd, data_len + 2);
 
     //-----读文件结束:释放资源-----
     if (__this->file_len == offset + data_len) {
+
+        //记录最后一包数据缓存，支持最后一包数据重发
+        __this->last_data_len = data_len;
+        if (__this->last_data) {
+            free(__this->last_data)	;
+        }
+        __this->last_data = malloc(data_len);
+        memcpy(__this->last_data, __this->file_hdl + offset, data_len);
+
         switch (__this->file_id) {
         case FILE_ID_MIC_SPK:
             anc_debug_ctr(1);
@@ -561,17 +563,15 @@ static void anc_write_file_start(u8 *cmd, u32 id, u32 data_len)
 
 static void anc_write_file_data(u8 *cmd, u32 offset, u8 *data, u32 data_len)
 {
-    if (__this->file_id) {
-        if (__this->file_hdl == NULL || ((offset + data_len) > __this->file_len)) {
-            cmd[0] = CMD_ANC_MODULE;
-            cmd[1] = CMD_ANC_FAIL;
-            chargestore_api_write(cmd, 2);
-        } else {
-            memcpy(__this->file_hdl + offset, data, data_len);
-            cmd[0] = CMD_ANC_MODULE;
-            cmd[1] = CMD_ANC_WRITE_FILE_DATA;
-            chargestore_api_write(cmd, 2);
-        }
+    if (__this->file_hdl == NULL || ((offset + data_len) > __this->file_len)) {
+        cmd[0] = CMD_ANC_MODULE;
+        cmd[1] = CMD_ANC_FAIL;
+        chargestore_api_write(cmd, 2);
+    } else {
+        memcpy(__this->file_hdl + offset, data, data_len);
+        cmd[0] = CMD_ANC_MODULE;
+        cmd[1] = CMD_ANC_WRITE_FILE_DATA;
+        chargestore_api_write(cmd, 2);
     }
 }
 
@@ -836,12 +836,6 @@ int app_ancbox_event_handler(int *msg)
     case CMD_ANC_STATUS:
     case CMD_ANC_TOOLS_SYNC:
         putchar('S');
-#if TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN
-        /*关闭所有模块*/
-        if (audio_icsd_adt_is_running()) {
-            audio_icsd_adt_close_all();
-        }
-#endif
 #if TCFG_CHARGESTORE_PORT == LDOIN_BIND_IO
         if (!app_in_mode(APP_MODE_IDLE)) {
             os_time_dly(1);

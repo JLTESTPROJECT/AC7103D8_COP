@@ -30,7 +30,7 @@
 #include "rcsp_setting_opt.h"
 #endif
 
-#if (RCSP_MODE == RCSP_MODE_EARPHONE)
+#if	TCFG_USER_TWS_ENABLE
 #include "bt_tws.h"
 #endif
 
@@ -42,6 +42,10 @@
 #include "rcsp_misc_setting.h"
 #endif
 
+
+#if (TCFG_MIC_EFFECT_ENABLE)
+#include "mic_effect.h"
+#endif
 
 #define RCSP_DEBUG_EN
 #ifdef  RCSP_DEBUG_EN
@@ -114,7 +118,9 @@ static void rcsp_update_prepare()
 #endif
 
 #if (TCFG_MIC_EFFECT_ENABLE && (0 == RCSP_REVERBERATION_SETTING))
-    mic_effect_player_close();
+    if (mic_effect_player_runing()) {
+        mic_effect_player_close();
+    }
 #endif
 
 }
@@ -925,4 +931,5 @@ u8 rcsp_get_update_flag(void)
 }
 
 #endif // (RCSP_MODE && RCSP_UPDATE_EN && !RCSP_BLE_MASTER)
+
 

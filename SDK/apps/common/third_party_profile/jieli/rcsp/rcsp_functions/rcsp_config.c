@@ -56,11 +56,7 @@ u8 rcsp_get_auth_support()
 
 u8 get_defalut_bt_channel_sel(void)
 {
-#if (RCSP_CHANNEL_SEL)
     return RCSP_CHANNEL_SEL;
-#else
-    return 0;
-#endif
 }
 
 u8 get_curr_platform(void)
@@ -121,6 +117,10 @@ void rcsp_config(struct RcspModel *rcspModel)
 #if (RCSP_SDK_TYPE)
     ///sdk类型
     rcspModel->sdk_type = RCSP_SDK_TYPE;
+#if (defined(RCSP_DISPLAY_AS_DONGLE) && RCSP_DISPLAY_AS_DONGLE)
+    rcspModel->sdk_type = RCSP_SDK_TYPE_DONGLE;
+#endif
+
 #endif
 
     ///OTA升级类型

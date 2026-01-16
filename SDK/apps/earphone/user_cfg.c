@@ -40,8 +40,6 @@ BT_CONFIG bt_cfg = {
     .mac_addr        = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
     .tws_local_addr  = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
     .rf_power        = 10,
-    .dac_analog_gain = 25,
-    .mic_analog_gain = 7,
     .tws_device_indicate = 0x6688,
 };
 
@@ -68,13 +66,18 @@ const struct btif_item btif_table[] = {
     {0, 						0 },   //reserved cfg
 };
 
-//============================= VM 区域空间最大值 ======================================//
-/* const int vm_max_size_config = VM_MAX_SIZE_CONFIG; //该宏在app_cfg中配置 */
-const int vm_max_page_align_size_config   = TCFG_VM_SIZE; 		//page对齐vm管理空间最大值配置
-const int vm_max_sector_align_size_config = TCFG_VM_SIZE; 	//sector对齐vm管理空间最大值配置
-//======================================================================================//
-
-#if TCFG_BT_SNIFF_ENABLE
+#ifndef CONFIG_LRC_WIN_SIZE
+#define CONFIG_LRC_WIN_SIZE 400 // LRC窗口初值
+#endif
+#ifndef CONFIG_LRC_WIN_STEP
+#define CONFIG_LRC_WIN_STEP 400 // LRC窗口步进
+#endif
+#ifndef CONFIG_OSC_WIN_SIZE
+#define CONFIG_OSC_WIN_SIZE 400 // OSC窗口初值
+#endif
+#ifndef CONFIG_OSC_WIN_STEP
+#define CONFIG_OSC_WIN_STEP 400 // OSC窗口步进
+#endif
 const struct lp_ws_t lp_winsize = {
     .lrc_ws_inc = CONFIG_LRC_WIN_STEP,      //260
     .lrc_ws_init = CONFIG_LRC_WIN_SIZE,
@@ -82,11 +85,14 @@ const struct lp_ws_t lp_winsize = {
     .bt_osc_ws_init = CONFIG_OSC_WIN_SIZE,
     .osc_change_mode = 1,                       //低功耗时钟，0：仅使用LRC 1：自动切换 2：保留
 };
-#endif
 
 u16 bt_get_tws_device_indicate(u8 *tws_device_indicate)
 {
-    return bt_cfg.tws_device_indicate;
+    u16 crc = 0;
+#if CONFIG_TWS_DIFF_NAME_NOT_MATCH
+    crc = CRC16(bt_get_local_name(), strlen(bt_get_local_name()));
+#endif
+    return bt_cfg.tws_device_indicate + crc;
 }
 
 const u8 *bt_get_mac_addr()
@@ -237,17 +243,6 @@ void cfg_file_parse(u8 idx)
     put_float(app_var.audio_mic_cmp.fb);
 #endif
 
-    //-----------------------------CFG_MIC_TYPE_ID------------------------------------//
-#if USE_CONFIG_MIC_TYPE_SETTING
-    log_info("mic_type_config:");
-    extern int read_mic_type_config(void);
-    read_mic_type_config();
-
-#endif
-
-#if TCFG_MC_BIAS_AUTO_ADJUST
-#endif
-
     s16 default_volume;
     s16 music_volume = -1;
     struct volume_cfg music_vol_cfg;
@@ -377,9 +372,7 @@ void cfg_file_parse(u8 idx)
     /*     lp_winsize.osc_change_mode = lrc_cfg.lrc_change_mode; */
     /* } */
     /* printf("%d %d %d ",lp_winsize.lrc_ws_inc,lp_winsize.lrc_ws_init,lp_winsize.osc_change_mode); */
-#if TCFG_BT_SNIFF_ENABLE
     lp_winsize_init(&lp_winsize);
-#endif
 }
 
 int bt_modify_name(u8 *new_name)

@@ -262,6 +262,11 @@ static int audio_aec_probe(short *talk_mic, short *talk_ref_mic, short *mic3, sh
         audio_dc_offset_remove_run(cvp_sms->dcc_hdl, (void *)talk_mic, len);
     }
 #endif
+    if (cvp_sms->inbuf_clear_cnt) {
+        cvp_sms->inbuf_clear_cnt--;
+        memset(talk_mic, 0, len);
+    }
+
     return 0;
 }
 
@@ -523,24 +528,32 @@ int audio_aec_open(struct audio_aec_init_param_t *init_param, s16 enablebit, int
 #endif/*TCFG_AEC_TOOL_ONLINE_ENABLE*/
     aec_param->output_handle = audio_aec_output;
     aec_param->far_noise_gate = 10;
+    audio_aec_param_init(aec_param, init_param->node_uuid);
     if (ref_sr) {
-        aec_param->ref_sr  = ref_sr;
+        if (aec_param->adc_ref_en) {
+            aec_param->ref_sr  = sample_rate; // 硬回采参考数据采样率ref_sr和ADC采样率sample_rate保持一致
+        } else {
+            aec_param->ref_sr  = ref_sr;	  // 软回采
+        }
     } else {
         aec_param->ref_sr  = usb_mic_is_running();
     }
     if (aec_param->ref_sr == 0) {
-        if (TCFG_ESCO_DL_CVSD_SR_USE_16K && (sample_rate == 8000)) {
+#if TCFG_ESCO_DL_CVSD_SR_USE_16K
+        if (sample_rate == 8000) {
             aec_param->ref_sr = 16000;	//CVSD 下行为16K
         } else {
             aec_param->ref_sr = sample_rate;
         }
+#else
+        aec_param->ref_sr = sample_rate;
+#endif
     }
     if (ref_channel != 2) {
         ref_channel = 1;
     }
     aec_param->ref_channel = ref_channel;
 
-    audio_aec_param_init(aec_param, init_param->node_uuid);
     if (enablebit >= 0) {
         aec_param->EnableBit = enablebit;
     }
@@ -584,9 +597,9 @@ int audio_aec_open(struct audio_aec_init_param_t *init_param, s16 enablebit, int
 
 #if TCFG_AEC_SIMPLEX
     aec_param->wn_en = 1;
-    aec_param.EnableBit = AEC_MODE_SIMPLEX;
-    if (sr == 8000) {
-        aec_param.SimplexTail = aec_param.SimplexTail / 2;
+    aec_param->EnableBit = AEC_MODE_SIMPLEX;
+    if (sample_rate == 8000) {
+        aec_param->SimplexTail = aec_param->SimplexTail / 2;
     }
 #else
     aec_param->wn_en = 0;
@@ -771,7 +784,8 @@ u8 audio_aec_status(void)
 void audio_aec_inbuf(s16 *buf, u16 len)
 {
     if (len != 512) {
-        printf("[error] aec point fault\n"); //aec一帧长度需要256 points,需修改文件(esco_recorder.c/pc_mic_recorder.c)的ADC中断点数
+        //aec一帧长度需要256 points,需修改文件(esco_recorder.c/pc_mic_recorder.c)的ADC中断点数
+        ASSERT(0, "CVP frame size unsupport %d samples,only support 256 samples\n", len >> 1);
     }
 
     if (cvp_sms && cvp_sms->start) {
@@ -779,10 +793,6 @@ void audio_aec_inbuf(s16 *buf, u16 len)
             memset(buf, 0, len);
         }
 #if CVP_TOGGLE
-        if (cvp_sms->inbuf_clear_cnt) {
-            cvp_sms->inbuf_clear_cnt--;
-            memset(buf, 0, len);
-        }
         int ret = aec_in_data(buf, len);
         if (ret == -1) {
         } else if (ret == -2) {
@@ -925,15 +935,30 @@ void aec_input_clear_enable(u8 enable)
 #endif/*TCFG_AUDIO_DUAL_MIC_ENABLE == 0) && TCFG_AUDIO_TRIPLE_MIC_ENABLE == 0*/
 #endif /*TCFG_CVP_DEVELOP_ENABLE*/
 
+const u16 audio_cvp_uuid_table[10] = {
+    NODE_UUID_CVP_SMS_ANS,
+    NODE_UUID_CVP_SMS_DNS,
+    NODE_UUID_CVP_DMS_ANS,
+    NODE_UUID_CVP_DMS_DNS,
+    NODE_UUID_CVP_DMS_FLEXIBLE_DNS,
+
+    NODE_UUID_CVP_DMS_FLEXIBLE_ANS,
+    NODE_UUID_CVP_DMS_HYBRID_DNS,
+    NODE_UUID_CVP_DMS_AWN_DNS,
+    NODE_UUID_CVP_3MIC,
+    NODE_UUID_CVP_V3
+};
+
 struct cvp_context_setup {
     u16 active_node_uuid;
+    u8(*aec_status)(void);
     int (*read_ref_data)(void);
 };
 struct cvp_context_setup g_cvp_context = {0};
 
 int audio_cvp_phase_align(void)
 {
-    if ((audio_aec_status() == 0) || (g_cvp_context.read_ref_data == NULL)) {
+    if ((g_cvp_context.aec_status == NULL) || (g_cvp_context.aec_status() == 0)  || (g_cvp_context.read_ref_data == NULL)) {
         return 0;
     }
     return g_cvp_context.read_ref_data();
@@ -950,9 +975,16 @@ void cvp_node_context_setup(u16 uuid)
 
 #if defined(TCFG_CVP_DEVELOP_ENABLE) && (TCFG_CVP_DEVELOP_ENABLE)
     g_cvp_context.read_ref_data = cvp_develop_read_ref_data;
+    g_cvp_context.aec_status = audio_aec_status;
 #endif
 
     switch (g_cvp_context.active_node_uuid) {
+    case NODE_UUID_CVP_SMS_VF:
+#if TCFG_AUDIO_CVP_SMS_VF_MODE
+        g_cvp_context.read_ref_data = cvp_sms_vf_tde_read_ref_data;
+        g_cvp_context.aec_status = audio_sms_vf_status;
+#endif
+        break;
     case NODE_UUID_CVP_SMS_ANS:
     case NODE_UUID_CVP_SMS_DNS:
 #if (TCFG_AUDIO_CVP_SMS_ANS_MODE || TCFG_AUDIO_CVP_SMS_DNS_MODE)
@@ -962,35 +994,49 @@ void cvp_node_context_setup(u16 uuid)
 #else
         g_cvp_context.read_ref_data = cvp_sms_read_ref_data;
 #endif
+        g_cvp_context.aec_status = audio_aec_status;
 #endif
         break;
 #if (TCFG_AUDIO_CVP_DMS_ANS_MODE || TCFG_AUDIO_CVP_DMS_DNS_MODE)
     case NODE_UUID_CVP_DMS_ANS:
     case NODE_UUID_CVP_DMS_DNS:
         g_cvp_context.read_ref_data = cvp_dms_read_ref_data;
+        g_cvp_context.aec_status = audio_aec_status;
         break;
 #endif
 #if (TCFG_AUDIO_CVP_DMS_FLEXIBLE_ANS_MODE || TCFG_AUDIO_CVP_DMS_FLEXIBLE_DNS_MODE)
     case NODE_UUID_CVP_DMS_FLEXIBLE_DNS:
     case NODE_UUID_CVP_DMS_FLEXIBLE_ANS:
         g_cvp_context.read_ref_data = cvp_dms_flexible_read_ref_data;
+        g_cvp_context.aec_status = audio_aec_status;
+        break;
         break;
 #endif
 #if TCFG_AUDIO_CVP_DMS_HYBRID_DNS_MODE
     case NODE_UUID_CVP_DMS_HYBRID_DNS:
         g_cvp_context.read_ref_data = cvp_dms_hybrid_read_ref_data;
+        g_cvp_context.aec_status = audio_aec_status;
         break;
 #endif
 #if TCFG_AUDIO_CVP_DMS_AWN_DNS_MODE
     case NODE_UUID_CVP_DMS_AWN_DNS:
         g_cvp_context.read_ref_data = cvp_dms_awn_read_ref_data;
+        g_cvp_context.aec_status = audio_aec_status;
         break;
 #endif
 #if TCFG_AUDIO_CVP_3MIC_MODE
     case NODE_UUID_CVP_3MIC:
         g_cvp_context.read_ref_data =  cvp_tms_read_ref_data;
+        g_cvp_context.aec_status = audio_aec_status;
         break;
 #endif
+#if (TCFG_AUDIO_CVP_V3_MODE)
+    case NODE_UUID_CVP_V3:
+        g_cvp_context.read_ref_data = cvp_read_ref_data;
+        g_cvp_context.aec_status = audio_cvp_v3_status;
+        break;
+#endif
+
     default:
         printf("cvp node uuid process error:%x", g_cvp_context.active_node_uuid);
         break;
@@ -1003,8 +1049,10 @@ int cvp_param_cfg_read(void)
     return cvp_dms_param_cfg_read();
 #elif TCFG_AUDIO_TRIPLE_MIC_ENABLE
     return cvp_tms_param_cfg_read();
-#else
+#elif TCFG_AUDIO_SINGLE_MIC_ENABLE
     return cvp_sms_param_cfg_read();
+#else
+    return cvp_v3_param_cfg_read();
 #endif
 }
 
@@ -1013,3 +1061,13 @@ u16 get_cvp_node_uuid()
     y_printf("get cvp node uuid:%x\n", g_cvp_context.active_node_uuid);
     return g_cvp_context.active_node_uuid;
 }
+
+u8 get_cvp_context_status(void)
+{
+    if (g_cvp_context.aec_status != NULL) {
+        return g_cvp_context.aec_status();
+    }
+    return 0;
+}
+
+

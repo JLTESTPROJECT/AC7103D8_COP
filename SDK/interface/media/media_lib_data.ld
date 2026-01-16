@@ -36,12 +36,27 @@
 	*(.bt_audioplc_data)
 	*(.lc3_dec.data)
 	*(.lc3_enc.data)
-    *(.lc3_decoder_data)
 #if (TCFG_ENC_LC3_ENABLE || TCFG_DEC_LC3_ENABLE)
-	*(.lc3_codec_ari_c_const)
-	*(.lc3_codec_ari_c_data)
 	*(.lc3_codec_c_data)
 #endif
+	*(.jla_codec_c_data)
+	*(.jl_codec_c_data)
+	*(.jla_lw_codec_data)
+	*(.jla_lw.data)
+	*(.jla_ll_codec.data)
+	*(.jla_ll.data)
+
+	*(.jla_v2_dec_data)
+	*(.jla_v2_enc_data)
+	*(.jla_v2_codec_c_data)
+	*(.jla_v2_codec_ari_c_data)
+
+
+	*(.jla_v2_dec_data)
+	*(.jla_v2_enc_data)
+	*(.jla_v2_codec_c_data)
+	*(.jla_v2_codec_ari_c_data)
+
 
 	*(.mp3_dec.data)
 	*(.mp3.data)
@@ -95,6 +110,9 @@
 	*(.ape.data)
 	*(.ape_dec_data)
 	*(.ape_data)
+	*(.llns_dns.data)
+	*(.jlvodecode.data)
+	*(.jlvoencode.data)
 
 	*(.audio_track_data)
 	*(.audio_eq_data)

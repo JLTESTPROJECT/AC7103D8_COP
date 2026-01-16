@@ -22,12 +22,19 @@
 
 #if 0
 // LE CONTROLLER COMMANDS
+#define HCI_LE_CREATE_CONNECTION_CANCEL 				    0x0e
 #define HCI_LE_READ_ISO_TX_SYNC                             0x0061
 #define HCI_LE_SET_CIG_PARAMS                               0x0062
 #define HCI_LE_SETUP_ISO_DATA_PATH                          0x006E
 #define HCI_LE_CREATE_BIG                                   0x0068
+#define HCI_LE_SET_EXTENDED_ADVERTISING_ENABLE              0x0039
+#define HCI_LE_PERIODIC_ADVERTISING_TERMINATE_SYNC          0x0046
+#define HCI_LE_TERMINATE_BIG                                0x006A
 
 // LE EVENTS
+#define HCI_LE_CIS_ESTABLISHED_EVENT                        0x19
+#define HCI_LE_CIS_REQUEST_EVENT                            0x1A
+#define HCI_LE_CREATE_BIG_COMPLETE_EVENT                    0x1B
 #define HCI_SUBEVENT_LE_BIG_INFO_ADV_REPORT_EVT             0x22
 #define HCI_SUBEVENT_LE_TERMINATE_BIG_CMPL_EVT              0x1C
 #define HCI_SUBEVENT_LE_BIG_SYNC_EST_EVT                    0x1D
@@ -45,12 +52,6 @@
 // Controller Error Codes
 #define  CONNECTION_TERMINATED_BY_LOCAL_HOST                0x16
 
-enum {
-    LL_EVENT_SUPERVISION_TIMEOUT,
-    LL_EVENT_RX,
-    LL_EVENT_ACL_TX_POST,
-};
-
 //使用的例子枚举
 enum {
     NULL_SET = 0,
@@ -62,8 +63,14 @@ enum {
     ADV,
     EXT_ADV,
     EXT_SCAN,
-    HEART_SET_TX,  //新跳包发送房 BIG RX
-    HEART_SET_RX,  //新跳包发送房 BIG TX
+    HEART_SET_TX,
+    HEART_SET_RX,
+};
+
+enum {
+    LL_EVENT_SUPERVISION_TIMEOUT,
+    LL_EVENT_RX,
+    LL_EVENT_ACL_TX_POST,
 };
 
 typedef struct {
@@ -389,7 +396,7 @@ typedef struct {
     uint32_t        Packet_Status_Flag  : 2;
 
     uint8_t         ISO_SDU_Fragment[0];
-} _GNU_PACKED_ hci_iso_data_packets_t ;
+} _GNU_PACKED_ hci_iso_data_packets_t;
 
 typedef struct {
     u32 handle  : 12;
@@ -523,16 +530,17 @@ typedef struct {
 
 /*! \brief      LE Vendor BIG Sync Transfer */
 typedef struct {
-    uint16_t        auxHdl;
     uint8_t         bigHdl;
     uint8_t         maxPdu;
     uint8_t         nse;
     uint8_t         phys;
+    uint16_t        auxHdl;
     uint16_t        interval;
-    uint32_t        offset;
     uint16_t        syncTimeoutMs;
+    uint32_t        offset;
     uint8_t         encFormat;
     uint8_t         encSr;
+    uint8_t         bst_nums;
 } _GNU_PACKED_ leVendorBigSyncTrans_t;
 
 typedef struct {
@@ -636,7 +644,7 @@ void ll_hci_adv_scan_response_set_data(uint8_t scan_response_data_length, uint8_
 int ll_hci_adv_enable(bool enable);
 
 void ll_hci_scan_set_params(uint8_t scan_type, uint16_t scan_interval, uint16_t scan_window);
-
+void ll_hci_set_scan_parameters(uint8_t *data, size_t size);
 int ll_hci_scan_enable(bool enable, u8 filter_duplicates);
 
 int ll_hci_create_conn(u8 *conn_param, u8 *addr_param);
@@ -652,6 +660,13 @@ int ll_vendor_latency_hold_cnt(u16 conn_handle, u16 hold_cnt);
 int ll_vendor_open_latency(u16 conn_handle);
 
 int ll_vendor_close_latency(u16 conn_handle);
+
+int ll_vendor_rxmaxbuf(u16 conn_handle, u8 rxmaxbuf);
+
+int ll_vendor_more_data(u16 conn_handle, u8 enable);
+
+int ll_vendor_leagcy_scan_priority(u16 param);
+int ll_vendor_leagcy_init_priority(u16 param);
 
 int ll_hci_encryption(u8 *key, u8 *plaintext_data);
 
@@ -724,6 +739,7 @@ void ll_hci_set_default_periodic_adv_sync_transfer_param(uint8_t *data, size_t s
 void ll_hci_setup_iso_data_path(uint8_t *data, size_t size);
 void ll_hci_read_iso_tx_sync(uint8_t *data, size_t size);
 void ll_hci_terminate_big(uint8_t *data, size_t size);
+int ll_read_iso_tx_sync(u16 handle, u16 *pPsn, u32 *pTime_stamp, u32 *pTime_offset);
 
 int le_controller_set_mac(void *addr);
 void hci_add_event_handler(void *callback_handler);
@@ -759,7 +775,23 @@ uint8_t ble_vendor_priv_get_case_user();
 void le_hci_shutdown_connection(u16 handle);
 void ll_hci_terminate_big(uint8_t *data, size_t size);
 void ll_hci_setup_iso_data_path(uint8_t *data, size_t size);
+void ll_big_mst_get_rx_info(uint16_t bis_hdl, void *priv);
+void ll_big_mst_clear_rx_info(uint16_t bis_hdl);
+void ll_hci_event_callback_register(void (*callback)(uint8_t packet_type, uint8_t *packet, size_t size));
+void ll_set_private_access_addr_pair_channel(uint32_t access_addr);
+void bt_band_sw(unsigned char oob_en);
+s8 le_hb_rssi();
 
 void ll_hci_remove_iso_data_path(uint8_t *data, size_t size);
 uint8_t ble_vendor_priv_get_case_user();
+
+int ll_hci_vendor_send_priv_cmd(u16 conn_handle, u8 *data, u16 size); //通过hci命令发
+void ble_vendor_priv_cmd_handle_register(u16(*handle)(u16 hdl, u8 *cmd, u8 len, u8 *rsp));
+void ll_set_ext_scan_priority(uint8_t priority);
+
+void ll_set_wifi_detec_param(uint8_t enable_detec, uint8_t enable_log_info, uint8_t skip_num);
+
+uint32_t ll_big_slave_get_timer_gap(uint16_t big_handle);
+
+uint32_t ll_cis_get_aa_by_handle(uint16_t handle);
 #endif

@@ -7,23 +7,27 @@
 #define TAP 10
 
 typedef struct {
-    float freq_all[TAP];
-    float gain_all[TAP];
-    float qval_all[TAP];
-    float freq_range[TAP * 2];
-    float gain_range[TAP * 2];
-    float qval_range[TAP * 2];
-    u8   fgq_type[TAP];
-    float fitness;
-
-    float total_gain_limit;
-    float gain_cmp;	// gain cmp
+    u8    fgq_type[TAP];
+    u8    pz_cmp_en;
+    u8    alg_sel;
+    u8    param0;
     int   downsample;
     int   loop_max;
     int   gain_cal_f1;		// total gain cal point 1
     int   gain_cal_f2;		// total gain cal point 2
     int   mv_tap;
 
+    float fitness;
+
+    float freq_all[TAP];
+    float gain_all[TAP];
+    float qval_all[TAP];
+    float freq_range[TAP * 2];
+    float gain_range[TAP * 2];
+    float qval_range[TAP * 2];
+
+    float total_gain_limit;
+    float gain_cmp;	// gain cmp
     float gain_pz;
     float gain_sz;
     float stop_fitness;
@@ -37,7 +41,6 @@ typedef struct {
     float weight[2 * sFLEN];
     float mse_tar[2 * sFLEN];
 
-    float pz_cmp_en;
     float *hp_cmp;
 
 } __sDe_handler;

@@ -4,7 +4,7 @@
 
 static u8 touch_bt_tool_enable = 0;
 static int (*touch_bt_online_debug_init)(void) = NULL;
-static int (*touch_bt_online_debug_send)(u32, u16) = NULL;
+static int (*touch_bt_online_debug_send)(u32, u16 *) = NULL;
 static int (*touch_bt_online_debug_key_event_handle)(u32, u32) = NULL;
 void lp_touch_key_debug_init(u32 bt_debug_en, void *bt_debug_init, void *bt_debug_send, void *bt_debug_event)
 {
@@ -50,26 +50,23 @@ int __attribute__((weak)) lp_touch_key_event_remap(struct key_event *e)
     return true;
 }
 
+void lp_touch_key_record_last_key_action(u32 event)
+{
+    __this->last_key_action = event;
+}
+u32 lp_touch_key_get_last_key_action(void)
+{
+    u32 tmp = __this->last_key_action;
+    __this->last_key_action = KEY_ACTION_NO_KEY;
+    return tmp;
+}
 static void lp_touch_key_notify_key_event(struct key_event *event, u32 ch_idx)
 {
     event->init = 1;
     event->type = KEY_DRIVER_TYPE_CTMU_TOUCH;
 
-#if TCFG_LP_EARTCH_KEY_ENABLE
-
-    extern u32 lp_touch_key_eartch_state_is_out_ear(void);
-    if ((lp_touch_key_eartch_state_is_out_ear()) && (__this->eartch.touch_invalid)) {
-        if ((event->event == KEY_ACTION_LONG) || \
-            (event->event == KEY_ACTION_HOLD) || \
-            (event->event == KEY_ACTION_UP)) {
-        } else {
-            log_debug("key_event_abandon\n");
-            return;
-        }
-    }
-#endif
-
 #if TCFG_LP_TOUCH_KEY_BT_TOOL_ENABLE
+    lp_touch_key_record_last_key_action(event->event);
     if ((touch_bt_tool_enable) && (touch_bt_online_debug_key_event_handle)) {
         u32 ch = lp_touch_key_get_cur_ch_by_idx(ch_idx);
         if (touch_bt_online_debug_key_event_handle(ch, event->event)) {
@@ -104,7 +101,6 @@ static void lp_touch_key_ctmu_res_all_buf_clear(void)
 
 static u32 lp_touch_key_ctmu_res_buf_avg(u32 ch_idx)
 {
-#if !TCFG_LP_TOUCH_KEY_BT_TOOL_ENABLE
     u32 res_sum = 0;
     u32 i, j = 0;
     struct touch_key_arg *arg = &(__this->arg[ch_idx]);
@@ -125,14 +121,11 @@ static u32 lp_touch_key_ctmu_res_buf_avg(u32 ch_idx)
     if (res_sum) {
         return (res_sum / j);
     }
-#endif
     return 0;
 }
 
 static u32 lp_touch_key_check_long_click_by_ctmu_res(u32 ch_idx)
 {
-#if !TCFG_LP_TOUCH_KEY_BT_TOOL_ENABLE
-
     struct touch_key_arg *arg = &(__this->arg[ch_idx]);
     arg->long_event_res_avg = lp_touch_key_ctmu_res_buf_avg(ch_idx);
     log_debug("long_event_res_avg: %d\n", arg->long_event_res_avg);
@@ -155,7 +148,6 @@ static u32 lp_touch_key_check_long_click_by_ctmu_res(u32 ch_idx)
         lp_touch_key_reset_algo();
         return 1;
     }
-#endif
     return 0;
 }
 

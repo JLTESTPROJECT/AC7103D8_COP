@@ -79,9 +79,8 @@ struct CVP_ENC_HYBRID_CONFIG {
     u8 en;
     int enc_process_maxfreq;		//default:8000,range[3000:8000]
     int enc_process_minfreq;		//default:0,range[0:1000]
-    float snr_db_T0;  //sir设定阈值
-    float snr_db_T1;  //sir设定阈值
-    float floor_noise_db_T;
+    float noise_level_db_T0;  //噪声水平等级阈值下限,退出融合阈值,范围(10~90db)
+    float noise_level_db_T1;  //噪声水平等级阈值上限,进入融合阈值,范围(10~90db)
     float compen_db; //mic增益补偿, dB
 } __attribute__((packed));
 
@@ -100,6 +99,17 @@ struct CVP_DNS_CONFIG {
     float minsuppress;				//default:0.04,range[0.01:0.1]
     float init_noise_lvl;			//default:-75dB,range[-100:-30]
 } __attribute__((packed));
+
+struct CVP_HYBRID_DNS_CONFIG {
+    u8 en;
+    int dns_process_maxfrequency;	//default:8000,range[3000:8000]
+    int dns_process_minfrequency;	//default:0,range[0:1000]
+    float aggressfactor;			//default:1.25,range[1:2]
+    float minsuppress;				//default:0.04,range[0.01:0.1]
+    float init_noise_lvl;			//default:-75dB,range[-100:-30]
+    float compensate;				//default: 0dB,range[0:30]
+} __attribute__((packed));
+
 
 struct CVP_GLOBAL_CONFIG {
     float global_minsuppress;		//default:0.4,range[0.0:0.09]
@@ -198,7 +208,7 @@ struct cvp_dms_hybrid_cfg_t {
     struct CVP_AEC_CONFIG aec;
     struct CVP_NLP_CONFIG nlp;
     struct CVP_ENC_HYBRID_CONFIG enc;
-    struct CVP_DNS_CONFIG dns;
+    struct CVP_HYBRID_DNS_CONFIG dns;
     struct CVP_AGC_INTERNAL_CONFIG agc;
     struct CVP_WNC_CONFIG wnc;
     struct CVP_DEBUG_CONFIG debug;
@@ -237,7 +247,6 @@ union cvp_cfg_t {
 //------------------stream.bin CVP参数文件解析结构-END---------------//
 
 struct cvp_node_hdl {
-    char name[16];
     union  {
         AEC_DMS_CONFIG dms_beamfroming;
         DMS_FLEXIBLE_CONFIG dms_flexible;
@@ -252,6 +261,8 @@ struct cvp_node_hdl {
     s16 *buf_2;
     u32 ref_sr;
     u16 source_uuid; //源节点uuid
+    void (*lock)(void);
+    void (*unlock)(void);
     struct CVP_MIC_SEL_CONFIG mic_sel;
     struct CVP_REF_MIC_CONFIG ref_mic;
 };
@@ -508,9 +519,8 @@ int cvp_node_dms_hybrid_cfg_update(struct cvp_dms_hybrid_cfg_t *cfg, void *priv)
 
     p->enc_process_maxfreq = cfg->enc.enc_process_maxfreq;
     p->enc_process_minfreq = cfg->enc.enc_process_minfreq;
-    p->snr_db_T0 = cfg->enc.snr_db_T0;
-    p->snr_db_T1 = cfg->enc.snr_db_T1;
-    p->floor_noise_db_T = cfg->enc.floor_noise_db_T;
+    p->noise_level_db_T0 = cfg->enc.noise_level_db_T0;
+    p->noise_level_db_T1 = cfg->enc.noise_level_db_T1;
     p->compen_db = cfg->enc.compen_db;
 
     p->dns_process_maxfrequency = cfg->dns.dns_process_maxfrequency;
@@ -518,7 +528,7 @@ int cvp_node_dms_hybrid_cfg_update(struct cvp_dms_hybrid_cfg_t *cfg, void *priv)
     p->aggressfactor = cfg->dns.aggressfactor;
     p->minsuppress = cfg->dns.minsuppress;
     p->init_noise_lvl = cfg->dns.init_noise_lvl;
-
+    p->compensate = cfg->dns.compensate;
     p->agc_type = cfg->agc.agc_type;
     if (p->agc_type == AGC_EXTERNAL) {
         p->agc.agc_ext.ndt_fade_in = cfg->agc.ndt_fade_in;
@@ -771,8 +781,7 @@ int cvp_dms_node_param_cfg_read(void *priv, u8 ignore_subid, u16 node_uuid)
      * */
     if (config_audio_cfg_online_enable) {
         if (g_cvp_hdl) {
-            memcpy(g_cvp_hdl->name, ncfg.name, sizeof(ncfg.name));
-            if (jlstream_read_effects_online_param(hdl_node(g_cvp_hdl)->uuid, g_cvp_hdl->name, &cfg, sizeof(cfg))) {
+            if (jlstream_read_effects_online_param(hdl_node(g_cvp_hdl)->uuid, ncfg.name, &cfg, sizeof(cfg))) {
                 printf("get cvp online param\n");
             }
         }
@@ -821,6 +830,7 @@ static void cvp_handle_frame(struct stream_iport *iport, struct stream_note *not
                 tbuf_1[i] = dat[3 * i + 1];
                 tbuf_2[i] = dat[3 * i + 2];
             }
+            hdl->lock();
             u8 cnt = 0;
             u8 talk_data_num = 0;//记录通话MIC数据位置
             s16 *mic_data[3];
@@ -843,8 +853,10 @@ static void cvp_handle_frame(struct stream_iport *iport, struct stream_note *not
             }
             /*通话MIC数据需要最后传进算法*/
             audio_aec_inbuf(mic_data[talk_data_num], wlen << 1);
+            hdl->unlock();
 
         } else {//参考数据软回采
+            hdl->lock();
             wlen = in_frame->len >> 2;	//一个ADC的点数
             //模仿ADCbuff的存储方法
             tbuf_0 = hdl->buf + (wlen * hdl->buf_cnt);
@@ -864,15 +876,60 @@ static void cvp_handle_frame(struct stream_iport *iport, struct stream_note *not
                 audio_aec_inbuf_ref(tbuf_1, wlen << 1);
                 audio_aec_inbuf(tbuf_0, wlen << 1);
             }
+            hdl->unlock();
         }
         jlstream_free_frame(in_frame);	//释放iport资源
     }
+}
+
+static int cvp_dms_lock_int(struct cvp_node_hdl *hdl)
+{
+    int ret = false;
+    u16 node_uuid = hdl_node(hdl)->uuid;
+    if (hdl) {
+        switch (node_uuid) {
+        case NODE_UUID_CVP_DMS_ANS:
+        case NODE_UUID_CVP_DMS_DNS:
+#if (TCFG_AUDIO_CVP_DMS_ANS_MODE) || (TCFG_AUDIO_CVP_DMS_DNS_MODE)
+            hdl->lock   = audio_cvp_dms_lock;
+            hdl->unlock = audio_cvp_dms_unlock;
+#endif
+            break;
+        case NODE_UUID_CVP_DMS_FLEXIBLE_DNS:
+        case NODE_UUID_CVP_DMS_FLEXIBLE_ANS:
+#if (TCFG_AUDIO_CVP_DMS_FLEXIBLE_ANS_MODE) || (TCFG_AUDIO_CVP_DMS_FLEXIBLE_DNS_MODE)
+            hdl->lock   = audio_cvp_dms_flexible_lock;
+            hdl->unlock = audio_cvp_dms_flexible_unlock;
+#endif
+            break;
+        case NODE_UUID_CVP_DMS_HYBRID_DNS:
+#if (TCFG_AUDIO_CVP_DMS_HYBRID_DNS_MODE)
+            hdl->lock   =  audio_cvp_dms_hybrid_lock;
+            hdl->unlock =  audio_cvp_dms_hybrid_unlock;
+#endif
+            break;
+        case NODE_UUID_CVP_DMS_AWN_DNS:
+#if (TCFG_AUDIO_CVP_DMS_AWN_DNS_MODE)
+            hdl->lock   = audio_cvp_dms_awn_lock;
+            hdl->unlock = audio_cvp_dms_awn_unlock;
+#endif
+            break;
+        default:
+            ASSERT(0, "cvp_dms_lock_init: unknown node UUID\n");
+            break;
+
+        }
+        ret = true;
+    }
+    return ret;
 }
 
 /*节点预处理-在ioctl之前*/
 static int cvp_adapter_bind(struct stream_node *node, u16 uuid)
 {
     struct cvp_node_hdl *hdl = (struct cvp_node_hdl *)node->private_data;
+    /*初始化spinlock锁*/
+    cvp_dms_lock_int(hdl);
     cvp_node_context_setup(uuid);
     node->type = NODE_TYPE_ASYNC;
     g_cvp_hdl = hdl;
@@ -882,7 +939,6 @@ static int cvp_adapter_bind(struct stream_node *node, u16 uuid)
 /*打开改节点输入接口*/
 static void cvp_ioc_open_iport(struct stream_iport *iport)
 {
-    iport->handle_frame = cvp_handle_frame;				//注册输出回调
 }
 
 /*节点参数协商*/
@@ -1033,11 +1089,6 @@ static int cvp_adapter_ioctl(struct stream_iport *iport, int cmd, int arg)
     case NODE_IOC_STOP:
         cvp_ioc_stop(hdl);
         break;
-    case NODE_IOC_NAME_MATCH:
-        if (!strcmp((const char *)arg, hdl->name)) {
-            ret = 1;
-        }
-        break;
     case NODE_IOC_SET_PARAM:
 #if (TCFG_CFG_TOOL_ENABLE || TCFG_AEC_TOOL_ONLINE_ENABLE)
         ret = cvp_ioc_update_parm(hdl, arg);
@@ -1066,11 +1117,11 @@ static void cvp_adapter_release(struct stream_node *node)
 /*节点adapter 注意需要在sdk_used_list声明，否则会被优化*/
 #if (TCFG_AUDIO_CVP_DMS_ANS_MODE)
 REGISTER_STREAM_NODE_ADAPTER(dms_ans_node_adapter) = {
-    .name       = "cvp_dms_ans",
     .uuid       = NODE_UUID_CVP_DMS_ANS,
     .bind       = cvp_adapter_bind,
     .ioctl      = cvp_adapter_ioctl,
     .release    = cvp_adapter_release,
+    .handle_frame = cvp_handle_frame,				//注册输出回调
     .hdl_size   = sizeof(struct cvp_node_hdl),
     .ability_channel_convert = 1, //支持声道转换
 };
@@ -1081,11 +1132,11 @@ REGISTER_ONLINE_ADJUST_TARGET(cvp_dms_ans) = {
 
 #if (TCFG_AUDIO_CVP_DMS_DNS_MODE)
 REGISTER_STREAM_NODE_ADAPTER(dms_dns_node_adapter) = {
-    .name       = "cvp_dms_dns",
     .uuid       = NODE_UUID_CVP_DMS_DNS,
     .bind       = cvp_adapter_bind,
     .ioctl      = cvp_adapter_ioctl,
     .release    = cvp_adapter_release,
+    .handle_frame = cvp_handle_frame,				//注册输出回调
     .hdl_size   = sizeof(struct cvp_node_hdl),
     .ability_channel_convert = 1, //支持声道转换
 };
@@ -1096,11 +1147,11 @@ REGISTER_ONLINE_ADJUST_TARGET(cvp_dms_dns) = {
 
 #if (TCFG_AUDIO_CVP_DMS_FLEXIBLE_ANS_MODE)
 REGISTER_STREAM_NODE_ADAPTER(dms_flexible_ans_node_adapter) = {
-    .name       = "cvp_dms_flexible_ans",
     .uuid       = NODE_UUID_CVP_DMS_FLEXIBLE_ANS,
     .bind       = cvp_adapter_bind,
     .ioctl      = cvp_adapter_ioctl,
     .release    = cvp_adapter_release,
+    .handle_frame = cvp_handle_frame,				//注册输出回调
     .hdl_size   = sizeof(struct cvp_node_hdl),
     .ability_channel_convert = 1, //支持声道转换
 };
@@ -1111,11 +1162,11 @@ REGISTER_ONLINE_ADJUST_TARGET(cvp_dms_flexible_ans) = {
 
 #if (TCFG_AUDIO_CVP_DMS_FLEXIBLE_DNS_MODE)
 REGISTER_STREAM_NODE_ADAPTER(dms_flexible_dns_node_adapter) = {
-    .name       = "cvp_dms_flexible_dns",
     .uuid       = NODE_UUID_CVP_DMS_FLEXIBLE_DNS,
     .bind       = cvp_adapter_bind,
     .ioctl      = cvp_adapter_ioctl,
     .release    = cvp_adapter_release,
+    .handle_frame = cvp_handle_frame,				//注册输出回调
     .hdl_size   = sizeof(struct cvp_node_hdl),
     .ability_channel_convert = 1, //支持声道转换
 };
@@ -1126,11 +1177,11 @@ REGISTER_ONLINE_ADJUST_TARGET(cvp_dms_flexible_dns) = {
 
 #if (TCFG_AUDIO_CVP_DMS_HYBRID_DNS_MODE)
 REGISTER_STREAM_NODE_ADAPTER(dms_hybrid_dns_node_adapter) = {
-    .name       = "cvp_dms_hybrid_dns",
     .uuid       = NODE_UUID_CVP_DMS_HYBRID_DNS,
     .bind       = cvp_adapter_bind,
     .ioctl      = cvp_adapter_ioctl,
     .release    = cvp_adapter_release,
+    .handle_frame = cvp_handle_frame,				//注册输出回调
     .hdl_size   = sizeof(struct cvp_node_hdl),
     .ability_channel_convert = 1, //支持声道转换
 };
@@ -1142,11 +1193,11 @@ REGISTER_ONLINE_ADJUST_TARGET(cvp_dms_hybrid_dns) = {
 
 #if (TCFG_AUDIO_CVP_DMS_AWN_DNS_MODE)
 REGISTER_STREAM_NODE_ADAPTER(dms_awn_dns_node_adapter) = {
-    .name       = "cvp_dms_awn_dns",
     .uuid       = NODE_UUID_CVP_DMS_AWN_DNS,
     .bind       = cvp_adapter_bind,
     .ioctl      = cvp_adapter_ioctl,
     .release    = cvp_adapter_release,
+    .handle_frame = cvp_handle_frame,				//注册输出回调
     .hdl_size   = sizeof(struct cvp_node_hdl),
     .ability_channel_convert = 1, //支持声道转换
 };
@@ -1157,4 +1208,26 @@ REGISTER_ONLINE_ADJUST_TARGET(cvp_dms_awn_dns) = {
 #endif
 
 #endif/* TCFG_AUDIO_CVP_DMS_ANS_MODE || TCFG_AUDIO_CVP_DMS_DNS_MODE*/
+
+__attribute__((used))
+int dms_flexible_dns_version_1_0_0(void)
+{
+    return 0x100;
+}
+
+__attribute__((used))
+int dms_flexible_ans_version_1_0_0(void)
+{
+    return 0x100;
+}
+__attribute__((used))
+int dms_dns_version_1_0_0(void)
+{
+    return 0x100;
+}
+__attribute__((used))
+int dms_ans_version_1_0_0(void)
+{
+    return 0x100;
+}
 

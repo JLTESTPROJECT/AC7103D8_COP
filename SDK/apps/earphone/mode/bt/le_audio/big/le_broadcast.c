@@ -345,7 +345,7 @@ static int broadcast_tx_align_data_handler(u8 big_hdl)
                     broadcast_get_bis_tick_time(&txsync);
                     timestamp = (txsync.tx_ts + broadcast_hdl->big_sync_delay +
                                  get_big_mtl_time() + get_big_sdu_period_us()) & 0xfffffff;
-                    rlen = le_audio_stream_tx_data_handler(bis_hdl_info->recorder, transmit_buf, get_big_transmit_data_len(), timestamp);
+                    rlen = le_audio_stream_tx_data_handler(bis_hdl_info->recorder, transmit_buf, get_big_transmit_data_len(), timestamp, 0);
                 }
 
                 if (!rlen) {

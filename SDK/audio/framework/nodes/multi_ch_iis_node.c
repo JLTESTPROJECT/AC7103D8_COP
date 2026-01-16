@@ -85,10 +85,11 @@ platform_initcall(miis_global_hdl_init);
 
 
 struct iis_write_cb_t {
+    u8 is_after_write_over; //是否在写iis后拿数据，0：写iis前拿数据，1：写iis后拿数据
     u8 scene;
     const char *name;
     struct list_head entry;
-    void (*write_callback)(void *buf, int len);
+    void (*write_callback)(void *priv, void *buf, int len);
 };
 
 struct iis_gloabl_hdl_t {
@@ -245,7 +246,7 @@ syncts_start:
     return 0;
 }
 
-void muliti_ch_iis_node_write_callback_add(const char *name, u8 scene, void (*cb)(void *, int))
+void muliti_ch_iis_node_write_callback_add(const char *name, u8 is_after_write_over, u8 scene, void (*cb)(void *, void *, int))
 {
     if (!iis_gloabl_hdl.init) {
         iis_gloabl_hdl.init = 1;
@@ -255,6 +256,7 @@ void muliti_ch_iis_node_write_callback_add(const char *name, u8 scene, void (*cb
     bulk->name = name;
     bulk->write_callback = cb;
     bulk->scene = scene;
+    bulk->is_after_write_over = is_after_write_over;
     list_add(&bulk->entry, &iis_gloabl_hdl.head);
 }
 
@@ -273,15 +275,29 @@ void muliti_ch_iis_node_write_callback_del(const char *name)
 
 
 
-static void muliti_ch_iis_node_write_callback_deal(u8 scene, struct stream_frame *frame)
+static void muliti_ch_iis_node_write_callback_deal(u8 is_after_write_over, struct iis_ch_hdl *iis, void *priv, void *data, int len)
 {
     struct iis_write_cb_t *bulk;
     struct iis_write_cb_t *temp;
     if (iis_gloabl_hdl.init) {
         list_for_each_entry_safe(bulk, temp, &iis_gloabl_hdl.head, entry) {
             if (bulk->write_callback) {
-                if ((bulk->scene == scene) || (bulk->scene == 0XFF)) {
-                    bulk->write_callback(frame->data, frame->len);
+                if (is_after_write_over) {
+                    /*获取写iis后的数据时，里面是包含4个通道的数据*/
+                    for (int i = 0; i < 4; i++) {
+                        if ((bulk->scene == iis[i].scene) || (bulk->scene == 0XFF)) {
+                            bulk->write_callback((void *)i, data, len);
+                            break;
+                        }
+                    }
+
+                } else {
+                    /*获取写iis后的数据时，里面是包含4个通道的数据*/
+                    if ((bulk->scene == iis->scene) || (bulk->scene == 0XFF)) {
+                        if (is_after_write_over == bulk->is_after_write_over) {
+                            bulk->write_callback(priv, data, len);
+                        }
+                    }
                 }
             }
         }
@@ -353,6 +369,10 @@ static int iis_multi_write(struct iis_node_hdl *hdl)
         }
     }
     audio_iis_multi_channel_write(&mch, data, remain, wlen);
+
+    /*写iis后拿数据*/
+    muliti_ch_iis_node_write_callback_deal(1, hdl->iis, NULL, data, (int)wlen);
+
     u8 num = 0;
     for (int i = 0; i < 4; i++) {
         if (hdl->iis[i].frame) {
@@ -395,7 +415,9 @@ static int iis_iport_write(struct stream_iport *iport, struct stream_note *note)
             return 0;
         }
         iis->frame->offset = 0;
-        muliti_ch_iis_node_write_callback_deal(iis->scene, iis->frame);
+        int port_id = iport->id;
+        /*写iis前拿数据*/
+        muliti_ch_iis_node_write_callback_deal(0, iis, (void *)(port_id), iis->frame->data, iis->frame->len);
     }
     for (int i = 0; i < 4; i++) {
         if (hdl->attr.ch_idx & BIT(i)) {
@@ -515,6 +537,11 @@ static void iis_handle_frame(struct stream_iport *iport, struct stream_note *not
 
 static int iis_ioc_get_delay(struct iis_node_hdl *hdl, struct audio_iis_channel *ch)
 {
+
+    if (!hdl->iis_start) {
+        return 0;
+    }
+
     int len = audio_iis_data_len(ch);
     if (len == 0) {
         return 0;
@@ -601,7 +628,6 @@ static int iis_ioc_negotiate(struct stream_iport *iport, int nego_state)
 
 static void iis_adapter_open_iport(struct stream_iport *iport)
 {
-    iport->handle_frame = iis_handle_frame;
 }
 
 static void iis_ioc_start(struct iis_node_hdl *hdl, struct stream_iport *iport)
@@ -649,6 +675,7 @@ static void iis_ioc_start(struct iis_node_hdl *hdl, struct stream_iport *iport)
         params.sr         = hdl->sample_rate;
         params.bit_width  = hdl->bit_width;
         params.fixed_pns  = const_out_dev_pns_time_ms;
+        params.clk_close = TCFG_AUDIO_IIS_CLOCK_CLOSE;
         iis_hdl[hdl->module_idx] = audio_iis_init(params);
     }
 
@@ -679,6 +706,9 @@ static void iis_ioc_start(struct iis_node_hdl *hdl, struct stream_iport *iport)
     attr.ch_idx = ch_idx;//界面参数的ch_idx内存储多个通道的选配信息，此处需要做个转换后，再更新给对应通道
     audio_iis_channel_set_attr(&iis->iis_ch, &attr);
     iis->ch_status = HW_CH_INIT;
+
+    audio_iis_check_hw_cfg_status(hdl->module_idx, ch_idx, ALINK_DIR_TX);
+
 }
 
 static void iis_ioc_stop(struct stream_iport *iport)
@@ -701,6 +731,7 @@ static void iis_ioc_stop(struct stream_iport *iport)
             log_debug(">>>>>>>>>>>>>>>>>>>>>>>>tx uninit <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
         }
     }
+
     iis->ch_status = 0;
     iis->value = 0;
     iis->syncts_enabled = 0;
@@ -773,7 +804,7 @@ static int iis_adapter_ioctl(struct stream_iport *iport, int cmd, int arg)
         iis_adapter_syncts_ioctl(iport, (struct audio_syncts_ioc_params *)arg);
         break;
     case NODE_IOC_GET_ODEV_CACHE:
-        return audio_iis_data_len(&iis->iis_ch);
+        return hdl->iis_start ? audio_iis_data_len(&iis->iis_ch) : 0;
     case NODE_IOC_SET_PARAM:
         iis->reference_network = arg;
         break;
@@ -813,19 +844,19 @@ static void iis_adapter_release(struct stream_node *node)
 }
 
 REGISTER_STREAM_NODE_ADAPTER(multi_ch_iis0_node_adapter) = {
-    .name       = "multi_ch_iis0",
     .uuid       = NODE_UUID_MULTI_CH_IIS0_TX,
     .bind       = iis_adapter_bind,
     .ioctl      = iis_adapter_ioctl,
     .release    = iis_adapter_release,
+    .handle_frame = iis_handle_frame,
     .hdl_size   = sizeof(struct iis_node_hdl),
 };
 REGISTER_STREAM_NODE_ADAPTER(multi_ch_iis1_node_adapter) = {
-    .name       = "multi_ch_iis1",
     .uuid       = NODE_UUID_MULTI_CH_IIS1_TX,
     .bind       = iis_adapter_bind,
     .ioctl      = iis_adapter_ioctl,
     .release    = iis_adapter_release,
+    .handle_frame = iis_handle_frame,
     .hdl_size   = sizeof(struct iis_node_hdl),
 };
 

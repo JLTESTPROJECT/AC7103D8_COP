@@ -18,10 +18,6 @@
 #include "dev_manager.h"
 #endif
 
-#if TCFG_USB_APPLE_DOCK_EN
-#include "apple_dock/iAP.h"
-#endif
-
 #if TCFG_USB_SLAVE_MSD_ENABLE
 
 #define LOG_TAG_CONST       USB
@@ -375,14 +371,6 @@ u32 msd_desc_config(const usb_dev usb_id, u8 *ptr, u32 *cur_itf_num)
     struct usb_device_t *usb_device = usb_id2device(usb_id);
     memcpy(ptr, sMassDescriptor, sizeof(sMassDescriptor));
     ptr[2] = *cur_itf_num;
-#if TCFG_USB_APPLE_DOCK_EN
-    if (apple_mfi_chip_online_lib()) {
-        ptr[5] = 0xff;	//bInterfaceClass:Vendor-Specific
-        ptr[6] = 0xf0; 	//bInterfaceSubClass:MFi Accessory
-        ptr[7] = 0x00;	//bInterfaceProtocol */
-        ptr[8] = MSD_STR_INDEX;	//bInterfaceString*/
-    }
-#endif
 #if defined(FUSB_MODE) && FUSB_MODE == 0
     if (usb_device->bSpeed == USB_SPEED_FULL) {
         ptr[9 + 4] = LOBYTE(MAXP_SIZE_BULKIN_FS);
@@ -1157,44 +1145,4 @@ u32 msd_release()
     return 0;
 }
 
-#if TCFG_USB_APPLE_DOCK_EN
-int usb_g_ep_read_check(const usb_dev id, u32 ep, u32 rx_len)
-{
-    if (apple_mfi_chip_online_lib()) {
-        if (ep != MSD_BULK_EP_OUT) {
-            return 0;
-        }
-        u32 dma_size = usb_get_dma_size(id, ep);
-        /* printf("dma:%d, rl:%d, ep:%d \n", dma_size, rx_len, ep); */
-        if (rx_len < dma_size) {
-            return -1;
-        }
-    }
-    return 0;
-}
-void apple_usb_msd_wakeup(struct usb_device_t *usb_device)
-{
-    msd_wakeup(usb_device, MSD_BULK_EP_IN);
-}
-u8 MCU_SRAMToUSB_app(void *hdl, u8 *pBuf, u16 uCount)
-{
-    return msd_mcu2usb(hdl, pBuf, uCount);
-}
-u8 MCU_USBToSRAM_app(void *hdl, u8 *pBuf, u16 uCount)
-{
-    /* return msd_usb2mcu(hdl, pBuf, uCount); */
-    usb_dev usb_id = usb_device2id(hdl);
-    int ret;
-    int cnt = 10000;
-    while (cnt--) {
-        ret = usb_g_bulk_read(usb_id, MSD_BULK_EP_OUT, pBuf, uCount, 0);
-        if (ret) {
-            break;
-        }
-    }
-    // printf("%s,%d, ret:%d, cnt:%d \n", __func__, __LINE__, ret, cnt);
-    // put_buf(pBuf, ret);
-    return ret;
-}
-#endif
 #endif

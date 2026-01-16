@@ -3,7 +3,7 @@
 #define AUDIO_ANC_MULT_SCENE_H
 
 #include "generic/typedef.h"
-#include "asm/anc.h"
+#include "anc.h"
 
 typedef enum {
     ANC_MULT_COEFF_FILL_ALL = 0,	//滤波器全部填充

@@ -156,7 +156,7 @@
   cbuf_read_alloc_len_updata = ABSOLUTE(0xff990);
 #endif
 
-  get_aac_ops = ABSOLUTE(0xff994);
+  get_aacrom_ops = ABSOLUTE(0xff994);
   bt_aac_eng_buf_size = ABSOLUTE(0xff998);
   aac_decoder_run = ABSOLUTE(0xff99c);
   bt_aac_eng_run = ABSOLUTE(0xff9a0);

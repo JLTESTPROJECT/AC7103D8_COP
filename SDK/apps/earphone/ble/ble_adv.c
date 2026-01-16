@@ -109,6 +109,7 @@ static int adv_bt_status_event_handler(int *msg)
     switch (bt->event) {
     case BT_STATUS_SECOND_CONNECTED:
     case BT_STATUS_FIRST_CONNECTED:
+    case BT_STATUS_THIRD_CONNECTED:
         if (bt_get_auto_connect_state(bt->args)) {
             connet_type = ICON_TYPE_RECONNECT;
         } else {
@@ -123,6 +124,7 @@ static int adv_bt_status_event_handler(int *msg)
         break;
     case BT_STATUS_FIRST_DISCONNECT:
     case BT_STATUS_SECOND_DISCONNECT:
+    case BT_STATUS_THIRD_DISCONNECT:
         break;
     case BT_STATUS_SCO_STATUS_CHANGE:
         break;

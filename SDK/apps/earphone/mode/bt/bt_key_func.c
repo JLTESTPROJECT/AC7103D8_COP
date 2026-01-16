@@ -19,13 +19,20 @@
 
 void bt_volume_up(u8 inc)
 {
+    if (g_bt_hdl.control_device_type != CONTROL_ALL && g_bt_hdl.control_device_type != CONTROL_EDR) {
+        return;
+    }
+
     u8 test_box_vol_up = 0x41;
     s8 cur_vol = 0;
     u8 call_status = bt_get_call_status();
     u8 cur_state;
     s16 max_volume;
-    u8 data[6];
-    a2dp_player_get_btaddr(data);
+    u8 *data = NULL;
+    u8 bt_mac[6];
+    if (a2dp_player_get_btaddr(bt_mac)) {
+        data = bt_mac;
+    }
 
     if ((tone_player_runing() || ring_player_runing())) {
         if (bt_get_call_status() == BT_CALL_INCOMING) {
@@ -91,11 +98,17 @@ void bt_volume_up(u8 inc)
 
 void bt_volume_down(u8 dec)
 {
+    if (g_bt_hdl.control_device_type != CONTROL_ALL && g_bt_hdl.control_device_type != CONTROL_EDR) {
+        return;
+    }
     u8 test_box_vol_down = 0x42;
     u8 call_status = bt_get_call_status();
     u8 cur_state;
-    u8 data[6];
-    a2dp_player_get_btaddr(data);
+    u8 *data = NULL;
+    u8 bt_mac[6];
+    if (a2dp_player_get_btaddr(bt_mac)) {
+        data = bt_mac;
+    }
 
     if ((tone_player_runing() || ring_player_runing())) {
         if (bt_get_call_status() == BT_CALL_INCOMING) {
@@ -468,6 +481,10 @@ void bt_send_a2dp_cmd(int msg)
     u8 addr[6];
     u8 *bt_addr = NULL;
 
+    if (g_bt_hdl.control_device_type != CONTROL_ALL && g_bt_hdl.control_device_type != CONTROL_EDR) {
+        return;
+    }
+
     if (a2dp_player_get_btaddr(addr)) {
         bt_addr = addr;
     }
@@ -510,6 +527,10 @@ void bt_send_a2dp_cmd(int msg)
 #if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN)))
 void bt_send_jl_cis_cmd(int msg)
 {
+    if (g_bt_hdl.control_device_type != CONTROL_ALL && g_bt_hdl.control_device_type != CONTROL_CIS) {
+        return;
+    }
+
     u8 data[1];
 
     switch (msg) {

@@ -38,7 +38,7 @@
 #define APPEND(size, eps)           _APPEND(size, USB_DMA_BUF_ALIGN, eps)
 
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~ usb slave begin    ~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-#if TCFG_USB_SLAVE_MSD_ENABLE
+#if TCFG_USB_SLAVE_MSD_ENABLE || TCFG_USB_APPLE_DOCK_EN
 #define     MSD_DMA_SIZE            APPEND(MAXP_SIZE_BULKOUT * 2, 1)
 #else
 #define     MSD_DMA_SIZE            0

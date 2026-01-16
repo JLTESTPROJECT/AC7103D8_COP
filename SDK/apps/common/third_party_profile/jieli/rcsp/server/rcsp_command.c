@@ -250,6 +250,8 @@ void earphone_mute_handler(u8 *other_opt, u32 msec)
     }
 }
 
+#endif
+
 void find_decice_tws_connect_handle(u8 flag, u8 *param)
 {
 #if TCFG_USER_TWS_ENABLE
@@ -292,7 +294,6 @@ void find_decice_tws_connect_handle(u8 flag, u8 *param)
 
 }
 
-#endif
 
 void rcsp_find_device(void *priv)
 {

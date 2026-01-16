@@ -19,19 +19,18 @@
 #include "rcsp_bt_manage.h"
 #include "rcsp_config.h"
 #include "app_main.h"
+#include "rcsp.h"
 
 #if (THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN) && !TCFG_THIRD_PARTY_PROTOCOLS_SIMPLIFIED
-
-#define BD_ADDR_TYPE_EDR_ATT    0xfb
 
 static int g_rcsp_ble_conn_num = 0;
 static int g_rcsp_adt_conn_num = 0;
 static int g_rcsp_spp_conn_num = 0;
 
-#if 0
+#ifdef RCSP_DEBUG_EN
 #define rcsp_lib_puts(x)				puts(x)
 #define rcsp_lib_putchar(x)				putchar(x)
-#define rcsp_lib_printf					printf
+#define rcsp_lib_printf					y_printf
 #define rcsp_lib_printf_buf(x, y)		put_buf(x, y)
 #else
 #define rcsp_lib_puts(...)
@@ -54,6 +53,7 @@ void *rcsp_server_edr_att_hdl1 = NULL;
 	(((u8)('E' + 'D' + 'R') << (1 * 8)) | \
 	 ((u8)('A' + 'T' + 'T') << (0 * 8)))
 
+
 /*****************************************
                  RCSP PROTOCOL
  *****************************************/
@@ -73,8 +73,27 @@ u8 *rcsp_get_ble_hdl_remote_mac_addr(u16 ble_con_handle)
             return app_ble_remote_mac_addr_get(rcsp_server_ble_hdl1);
         }
     }
-
+    if (adt_profile_support && rcsp_adt_support) {
+        u16 adt_con_handle = app_ble_get_hdl_con_handle(rcsp_server_edr_att_hdl);
+        if (ble_con_handle == adt_con_handle) {
+            return app_ble_remote_mac_addr_get(rcsp_server_edr_att_hdl);
+        }
+        if (rcsp_dual_support) {
+            u16 adt_con_handle1 = app_ble_get_hdl_con_handle(rcsp_server_edr_att_hdl1);
+            if (ble_con_handle == adt_con_handle1) {
+                return app_ble_remote_mac_addr_get(rcsp_server_edr_att_hdl1);
+            }
+        }
+    }
     return NULL;
+}
+
+// 获取rcsp_ble_con_handle
+u16 rcsp_ble_con_handle_get()
+{
+    u16 rcsp_ble_con_handle = app_ble_get_hdl_con_handle(rcsp_server_ble_hdl);
+    rcsp_lib_printf("%s, %s, %d, rcsp_ble_con_handle:%d\n", __FILE__, __FUNCTION__, __LINE__, rcsp_ble_con_handle);
+    return rcsp_ble_con_handle;
 }
 
 // 获取当前已连接ble数目
@@ -103,6 +122,7 @@ u8 bt_rcsp_device_conn_num(void)
     u8 cnt = 0;
     cnt += bt_rcsp_ble_conn_num();
     cnt += bt_rcsp_spp_conn_num();
+    cnt += bt_rcsp_edr_att_conn_num();
     /* rcsp_lib_printf("%s, %s, %d, cnt:%d\n", __FILE__, __FUNCTION__, __LINE__, cnt); */
     return cnt;
 }
@@ -121,7 +141,11 @@ u16 rcsp_interface_tws_sync_buf_size()
 {
     u16 ble_hdl_size = (u16)app_ble_hdl_core_data_size();
     u16 spp_hdl_size = (u16)app_spp_hdl_core_data_size();
-    u16 buf_size = ble_hdl_size + spp_hdl_size;
+    u16 adt_hdl_size = 0;
+    if (adt_profile_support && rcsp_adt_support) {
+        adt_hdl_size = (u16)app_ble_hdl_core_data_size();
+    }
+    u16 buf_size = ble_hdl_size + adt_hdl_size + spp_hdl_size;
     if (rcsp_dual_support) {
         buf_size *= 2;
     }
@@ -141,11 +165,19 @@ void rcsp_interface_set_bt_hdl_with_tws_data(u8 *recieve_buf, u16 recieve_len)
     rcsp_lib_printf("%s, %s, %d\n", __FILE__, __FUNCTION__, __LINE__);
     u16 ble_hdl_size = (u16)app_ble_hdl_core_data_size();
     u16 spp_hdl_size = (u16)app_spp_hdl_core_data_size();
+    u16 adt_hdl_size = 0;
+    if (adt_profile_support && rcsp_adt_support) {
+        adt_hdl_size = (u16)app_ble_hdl_core_data_size();
+    }
     u16 buf_index = 0;
     app_ble_hdl_core_data_set(rcsp_server_ble_hdl, recieve_buf);
     buf_index += ble_hdl_size;
     app_spp_hdl_core_data_set(bt_rcsp_spp_hdl, recieve_buf + buf_index);
     buf_index += spp_hdl_size;
+    if (adt_profile_support && rcsp_adt_support) {
+        app_ble_hdl_core_data_set(rcsp_server_edr_att_hdl, recieve_buf + buf_index);
+        buf_index += adt_hdl_size;
+    }
     g_rcsp_ble_conn_num = 0;
     g_rcsp_adt_conn_num = 0;
     g_rcsp_spp_conn_num = 0;
@@ -157,28 +189,34 @@ void rcsp_interface_set_bt_hdl_with_tws_data(u8 *recieve_buf, u16 recieve_len)
     if (spp_remote_addr) {
         g_rcsp_spp_conn_num++;
     }
+    u16 adt_con_handle;
+    if (adt_profile_support && rcsp_adt_support) {
+        adt_con_handle = app_ble_get_hdl_con_handle(rcsp_server_edr_att_hdl);
+        if (adt_con_handle) {
+            g_rcsp_adt_conn_num++;
+        }
+    }
     if (rcsp_dual_support) {
         app_ble_hdl_core_data_set(rcsp_server_ble_hdl1, recieve_buf + buf_index);
         buf_index += ble_hdl_size;
         app_spp_hdl_core_data_set(bt_rcsp_spp_hdl1, recieve_buf + buf_index);
-        if (rcsp_dual_support) {
-            u16 ble_con_handle1 = app_ble_get_hdl_con_handle(rcsp_server_ble_hdl1);
-            if (ble_con_handle1) {
-                g_rcsp_ble_conn_num++;
-            }
-            u8 *spp_remote_addr1 = app_spp_get_hdl_remote_addr(bt_rcsp_spp_hdl1);
-            if (spp_remote_addr1) {
-                g_rcsp_spp_conn_num++;
-            }
+        buf_index += spp_hdl_size;
+        if (adt_profile_support && rcsp_adt_support) {
+            app_ble_hdl_core_data_set(rcsp_server_edr_att_hdl1, recieve_buf + buf_index);
+            //cppcheck-suppress unreadVariable
+            buf_index += adt_hdl_size;
         }
-    }
-    if (adt_profile_support && rcsp_adt_support) {
-        u16 adt_con_handle = app_ble_get_hdl_con_handle(rcsp_server_edr_att_hdl);
-        if (adt_con_handle) {
-            g_rcsp_adt_conn_num++;
+        u16 ble_con_handle1 = app_ble_get_hdl_con_handle(rcsp_server_ble_hdl1);
+        if (ble_con_handle1) {
+            g_rcsp_ble_conn_num++;
         }
-        if (rcsp_dual_support) {
-            u16 adt_con_handle1 = app_ble_get_hdl_con_handle(rcsp_server_edr_att_hdl1);
+        u8 *spp_remote_addr1 = app_spp_get_hdl_remote_addr(bt_rcsp_spp_hdl1);
+        if (spp_remote_addr1) {
+            g_rcsp_spp_conn_num++;
+        }
+        u16 adt_con_handle1;
+        if (adt_profile_support && rcsp_adt_support) {
+            adt_con_handle1 = app_ble_get_hdl_con_handle(rcsp_server_edr_att_hdl1);
             if (adt_con_handle1) {
                 g_rcsp_adt_conn_num++;
             }
@@ -218,6 +256,7 @@ void rcsp_interface_tws_sync_buf_content_free()
 
 /**
  * @brief rcsp主机同步bt handle数据给从机
+ * 注：该任务需保证在app_core任务中执行
  *
  * @param send_buf 外部malloc的一个指针，size根据rcsp_interface_tws_sync_buf_size获取
  */
@@ -236,6 +275,10 @@ void rcsp_interface_tws_sync_buf_content(u8 *send_buf)
     u16 buf_index = 0;
     u16 ble_hdl_size = (u16)app_ble_hdl_core_data_size();
     u16 spp_hdl_size = (u16)app_spp_hdl_core_data_size();
+    u16 adt_hdl_size = 0;
+    if (adt_profile_support && rcsp_adt_support) {
+        adt_hdl_size = (u16)app_ble_hdl_core_data_size();
+    }
     u8 *ble_hdl = zalloc(ble_hdl_size);
     ASSERT(ble_hdl, "rcsp tws sync, ble_buf malloc fail!");
     app_ble_hdl_core_data_get(rcsp_server_ble_hdl, ble_hdl);
@@ -254,6 +297,16 @@ void rcsp_interface_tws_sync_buf_content(u8 *send_buf)
     /* rcsp_lib_printf_buf((u8 *)&spp_hdl, spp_hdl_size); */
     memcpy(tws_sync_buf + buf_index, spp_hdl, spp_hdl_size);
     buf_index += spp_hdl_size;
+    u8 *adt_hdl = NULL;
+    if (adt_profile_support && rcsp_adt_support) {
+        adt_hdl = zalloc(adt_hdl_size);
+        ASSERT(adt_hdl, "rcsp tws sync, adt_buf malloc fail!");
+        app_ble_hdl_core_data_get(rcsp_server_edr_att_hdl, adt_hdl);
+        /* rcsp_lib_printf("%s, %s, %d\n", __FILE__, __FUNCTION__, __LINE__); */
+        /* put_buf((u8 *)&adt_hdl, adt_hdl_size); */
+        memcpy(tws_sync_buf + buf_index, adt_hdl, adt_hdl_size);
+        buf_index += adt_hdl_size;
+    }
     if (rcsp_dual_support) {
         u8 *ble_hdl1 = ble_hdl;
         app_ble_hdl_core_data_get(rcsp_server_ble_hdl1, ble_hdl1);
@@ -266,9 +319,22 @@ void rcsp_interface_tws_sync_buf_content(u8 *send_buf)
         /* rcsp_lib_printf("%s, %s, %d\n", __FILE__, __FUNCTION__, __LINE__); */
         /* rcsp_lib_printf_buf((u8 *)&spp_hdl1, spp_hdl_size); */
         memcpy(tws_sync_buf + buf_index, spp_hdl1, spp_hdl_size);
+        buf_index += spp_hdl_size;
+        u8 *adt_hdl1 = adt_hdl;
+        if (adt_profile_support && rcsp_adt_support) {
+            app_ble_hdl_core_data_get(rcsp_server_edr_att_hdl1, adt_hdl1);
+            /* rcsp_lib_printf("%s, %s, %d\n", __FILE__, __FUNCTION__, __LINE__); */
+            /* put_buf((u8 *)&adt_hdl1, adt_hdl_size); */
+            memcpy(tws_sync_buf + buf_index, adt_hdl1, adt_hdl_size);
+            //cppcheck-suppress unreadVariable
+            buf_index += adt_hdl_size;
+        }
     }
     free(ble_hdl);
     free(spp_hdl);
+    if (adt_profile_support && rcsp_adt_support) {
+        free(adt_hdl);
+    }
     /* rcsp_lib_printf("%s, %s, %d\n", __FILE__, __FUNCTION__, __LINE__); */
     /* rcsp_lib_printf_buf(tws_sync_buf, buf_size); */
     memcpy(send_buf, tws_sync_buf, buf_size);
@@ -452,7 +518,6 @@ void bt_rcsp_recieve_callback(void *hdl, void *remote_addr, u8 *buf, u16 len)
     /* if (remote_addr) { */
     /* rcsp_lib_printf_buf(remote_addr, 6); */
     /* } */
-
     // 获取监听hdl绑定的bthdl
     // 只有连接时绑定了handle才能处理数据
     if (hdl && (!remote_addr)) {
@@ -469,7 +534,7 @@ void bt_rcsp_recieve_callback(void *hdl, void *remote_addr, u8 *buf, u16 len)
                 adt_con_handle1 = app_ble_get_hdl_con_handle(rcsp_server_edr_att_hdl1);
             }
         }
-        rcsp_lib_printf("ble_con_handle:%d, ble_con_handle1:%d\n", ble_con_handle, ble_con_handle1);
+        rcsp_lib_printf("ble_con_handle:%x, ble_con_handle1:%x, adt_con_handle %x, adt_con_handle1 %x\n", ble_con_handle, ble_con_handle1, adt_con_handle, adt_con_handle1);
         if (ble_con_handle && (hdl == rcsp_server_ble_hdl)) {
             /* rcsp_lib_printf("%s, %s, %d\n", __FILE__, __FUNCTION__, __LINE__); */
             if (!JL_rcsp_get_auth_flag_with_bthdl(ble_con_handle, NULL)) {
@@ -586,6 +651,11 @@ _WEAK_ u8 bt_rcsp_spp_can_send(void)
     return 1;
 }
 
+_WEAK_ int bt_rcsp_data_send_filter(u16 ble_con_hdl, u8 *remote_addr, u8 *buf, u16 len)
+{
+    return 0;
+}
+
 /**
  *	@brief 用于发送rcsp的数据使用
  *
@@ -596,6 +666,9 @@ _WEAK_ u8 bt_rcsp_spp_can_send(void)
  */
 int bt_rcsp_data_send(u16 ble_con_hdl, u8 *remote_addr, u8 *buf, u16 len)
 {
+    if (bt_rcsp_data_send_filter(ble_con_hdl, remote_addr, buf, len)) {
+        return 0;
+    }
     if (ble_con_hdl) {
         rcsp_lib_printf("ble_con_hdl:%d\n", ble_con_hdl);
     }
@@ -610,10 +683,10 @@ int bt_rcsp_data_send(u16 ble_con_hdl, u8 *remote_addr, u8 *buf, u16 len)
     }
     rcsp_lib_printf("===rcsp_tx(%d):", len);
     rcsp_lib_printf_buf(buf, len);
-    u16 ble_con_handle = 0, ble_con_handle1 = 0, adt_con_handle = 0;
+    u16 ble_con_handle = 0, ble_con_handle1 = 0;
+    u16 adt_con_handle = 0, adt_con_handle1 = 0;
     u8 *spp_remote_addr = NULL;
     u8 *spp_remote_addr1 = NULL;
-    u16 adt_con_handle1 = 0;
     if (ble_con_hdl) {
         ble_con_handle = app_ble_get_hdl_con_handle(rcsp_server_ble_hdl);
         if (rcsp_dual_support) {
@@ -776,7 +849,7 @@ void bt_rcsp_spp_state_callback(void *hdl, void *remote_addr, u8 state)
 {
     switch (state) {
     case SPP_USER_ST_CONNECT:
-        printf("bt_rcsp rfcomm connect###########\n");
+        printf("bt_rcsp spp comm connect###########\n");
 
         bt_rcsp_set_conn_info(0, remote_addr, true);
 
@@ -840,7 +913,7 @@ void bt_rcsp_interface_init(const uint8_t *rcsp_profile_data)
             }
         }
         app_ble_adv_address_type_set(rcsp_server_edr_att_hdl, 0);
-        app_ble_att_connect_type_set(rcsp_server_edr_att_hdl, BD_ADDR_TYPE_EDR_ATT);
+        app_ble_gatt_over_edr_connect_type_set(rcsp_server_edr_att_hdl, 1);
         app_ble_hdl_uuid_set(rcsp_server_edr_att_hdl, EDR_ATT_HDL_UUID);
         app_ble_profile_set(rcsp_server_edr_att_hdl, rcsp_profile_data);
         app_ble_callback_register(rcsp_server_edr_att_hdl);
@@ -853,7 +926,7 @@ void bt_rcsp_interface_init(const uint8_t *rcsp_profile_data)
                 }
             }
             app_ble_adv_address_type_set(rcsp_server_edr_att_hdl1, 0);
-            app_ble_att_connect_type_set(rcsp_server_edr_att_hdl1, BD_ADDR_TYPE_EDR_ATT);
+            app_ble_gatt_over_edr_connect_type_set(rcsp_server_edr_att_hdl1, 1);
             app_ble_hdl_uuid_set(rcsp_server_edr_att_hdl1, EDR_ATT_HDL_UUID);
             app_ble_profile_set(rcsp_server_edr_att_hdl1, rcsp_profile_data);
             app_ble_callback_register(rcsp_server_edr_att_hdl1);
@@ -953,4 +1026,5 @@ void app_spp_callback_register(void *bt_rcsp_spp_hdl)
 }
 
 #endif
+
 

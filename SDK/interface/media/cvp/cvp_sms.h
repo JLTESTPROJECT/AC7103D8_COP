@@ -4,7 +4,6 @@
 #include "generic/typedef.h"
 #include "cvp_common.h"
 
-
 //aec_cfg:
 typedef struct __AEC_CONFIG {
     u8 mic_again;			//DAC增益,default:3(0~14)
@@ -36,6 +35,16 @@ typedef struct __AEC_CONFIG {
     u16 adc_ref_en;         //adc回采参考数据使能
     float init_noise_lvl;	//初始噪声水平，default:-75dB,range[-100:-30]
 } AEC_CONFIG;
+
+typedef struct __AEC_NLP_CONFIG {
+    u8 aec_mode;        	//AEC模式,default:advance(diable(0), reduce(1), advance(2))
+    /*AEC*/
+    float aec_dt_aggress;   //原音回音追踪等级, default: 1.0f(1 ~ 5)
+    float aec_refengthr;    //进入回音消除参考值, default: -70.0f(-90 ~ -60 dB)
+    /*ES*/
+    float es_aggress_factor;//回音前级动态压制,越小越强,default: -3.0f(-1 ~ -5)
+    float es_min_suppress;	//回音后级静态压制,越大越强,default: 4.f(0 ~ 10)
+} AEC_NLP_CONFIG;
 
 struct aec_s_attr {
     u8 agc_en: 1;				//AGC使能配置
@@ -185,7 +194,8 @@ void aec_toggle(u8 toggle);
 *********************************************************************
 */
 int aec_cfg_update(AEC_CONFIG *cfg);
-
+int sms_tde_cfg_update(AEC_CONFIG *cfg);
+int aec_nlp_cfg_update(AEC_NLP_CONFIG *cfg);//仅更新aec、nlp参数
 /*
 *********************************************************************
 *                  			AEC Reboot
@@ -200,17 +210,37 @@ int aec_reboot(u8 enablebit);
 u8 get_aec_rebooting();
 
 int sms_tde_init(struct aec_s_attr *attr);
+int sms_vf_tde_init(struct aec_s_attr *attr);
 int sms_tde_exit();
+int sms_vf_tde_exit();
 int sms_tde_fill_in_data(void *dat, u16 len);
+int sms_vf_tde_fill_in_data(void *dat, u16 len);
 int sms_tde_fill_ref_data(void *data0, void *data1, u16 len);
+int sms_vf_tde_fill_ref_data(void *data0, void *data1, u16 len);
 int sms_tde_reboot(u8 enablebit);
+int sms_vf_tde_reboot(u8 enablebit);
 void sms_tde_toggle(u8 toggle);
+void sms_vf_tde_toggle(u8 toggle);
+int sms_vf_tde_cfg_update(AEC_CONFIG *cfg);
+
 /*获取是否在重启中*/
 u8 get_sms_tde_rebooting();
+u8 get_sms_vf_tde_rebooting();
 int cvp_sms_read_ref_data(void);
 int cvp_sms_tde_read_ref_data(void);
+int cvp_sms_vf_tde_read_ref_data(void);
 /*可写长度*/
 int get_cvp_sms_output_way_writable_len();
 int get_cvp_sms_tde_output_way_writable_len();
+int get_cvp_vf_sms_tde_output_way_writable_len();
 
+/*spinlock*/
+void audio_cvp_sms_lock();
+void audio_cvp_sms_unlock();
+
+void audio_cvp_sms_tde_lock();
+void audio_cvp_sms_tde_unlock();
+
+void audio_cvp_sms_vf_tde_lock();
+void audio_cvp_sms_vf_tde_unlock();
 #endif/*_CVP_SMS_H_*/

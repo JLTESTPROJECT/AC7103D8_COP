@@ -143,6 +143,7 @@ void connected_uninit(void);
 /* ----------------------------------------------------------------------------*/
 int connected_send_acl_data(u16 acl_hdl, void *data, size_t length);
 
+int connected_send_cis_data(u8 cig_hdl, void *data, size_t length);
 /* --------------------------------------------------------------------------*/
 /**
  * @brief CIG主机连接成功处理事件
@@ -225,7 +226,20 @@ void connected_perip_connect_recoder(u8 en, u16 acl_hdl);
  * @param len 	事件消息长度
  */
 /* ----------------------------------------------------------------------------*/
+
+u8 is_cis_connected_init();
+/* ----------------------------------------------------------------------------*/
+/**
+ * @brief 判断cis连接是否初始化
+ *
+ * @return 1:初始化 0:已卸载，未初始化
+ */
+/* ----------------------------------------------------------------------------*/
+
 int cig_event_to_user(int event, void *value, u32 len);
+int cis_audio_player_close(u8 cig_hdl);
+int cis_audio_player_resume(u8 cig_hdl, u8 cig_phone_call_play);
+int connected_iso_recv_handle_register(void *priv, void (*recv_handle)(u16 conn_handle, const void *const buf, size_t length, void *priv));
 
 #ifdef __cplusplus
 };

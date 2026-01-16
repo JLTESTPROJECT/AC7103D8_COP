@@ -264,6 +264,8 @@ typedef enum {
     USER_CTRL_IAP_SEND_DATA, //len <= 512
     //serial port profile disconnect command
     USER_CTRL_IAP_DISCONNECT,
+    USER_CTRL_IAP_CONN,
+    USER_CTRL_IAP_CONN_RFCOMM,
     USER_CTRL_IAP_CMD_END,
 
 ///pbg发送命令
@@ -322,6 +324,8 @@ typedef enum {
     USER_CTRL_MAP_READ_DRAFT,
     //MAP停止读取
     USER_CTRL_MAP_STOP_READING,
+
+    USER_CTRL_MAP_SET_NOTIFICATION,
     USER_CTRL_MAP_CMD_END,
 
     //PAN功能发送命令
@@ -335,6 +339,12 @@ typedef enum {
     USER_CTRL_OPP_CONNECTION,
     USER_CTRL_OPP_DISCONNECTION,
     USER_CTRL_OPP_CMD_END,
+
+    USER_CTRL_BIP_CMD_BEGIN       = 0xFA,
+    USER_CTRL_BIP_CONNECTION,
+    USER_CTRL_BIP_GET_IMAGE,
+    USER_CTRL_BIP_DISCONNECTION,
+    USER_CTRL_BIP_CMD_END,
 
     //蓝牙其他操作
     //蓝牙关闭
@@ -370,6 +380,12 @@ typedef enum {
     USER_CTRL_TWS_AUDIO_SHARE_START_CONNECT,
     USER_CTRL_ATWS_AUDIO_SHARE_CMD_START					,
     USER_CTRL_ATWS_AUDIO_SHARE_CMD_SUSPEND					,
+    USER_CTRL_ADT_SYNC_CONNECT_FLAG,
+
+    USER_CTRL_FTP_CMD_BEGIN = 0x200,
+    USER_CTRL_FTP_CONNECTION,
+    USER_CTRL_FTP_DISCONNECTION,
+    USER_CTRL_FTP_CMD_END,
 
     USER_CTRL_LAST
 } USER_CMD_TYPE;
@@ -452,7 +468,38 @@ typedef enum {
     BT_STATUS_TRIM_OVER,        /*测试盒TRIM完成*/
     BT_STATUS_PHONE_NAME,   /*获取来电号码name*/
     BT_STATUS_CALL_MIC_VOL_CHANGE,
+    BT_STATUS_THIRD_CONNECTED,        /*第三台连接成功*/
+    BT_STATUS_THIRD_DISCONNECT,        /*第三台断开连接*/
 } STATUS_FOR_USER;
+
+typedef enum {
+    FTP_NOT_USE,
+    FTP_WAIT_OPEN_RFCOMM_L2CAP,            /* 等待RFCOMM/L2CAP连接 */
+    FTP_OBEX_SEND_CONNECT,                 /* 发送连接请求 */
+    FTP_OBEX_CONNECT_SUCCESS,              /* 连接成功 */
+    FTP_OBEX_SEND_PATH,                    /* 发送路径设置请求 */
+    FTP_OBEX_SEND_LISTING,                 /* 发送列表获取请求 */
+    FTP_OBEX_SEND_PUT_OBJ,                 /* 发送上传文件请求 */
+    FTP_OBEX_SEND_GEI_OBJ,                 /* 发送获取文件请求 */
+    FTP_OBEX_SEND_SET_PERMISSION_OBJ,      /* 发送设置权限请求 */
+    FTP_OBEX_SEND_MOVE_RENAME_OBJ,         /* 发送移动/重命名请求 */
+    FTP_OBEX_SEND_CPY_OBJ,                 /* 发送复制文件请求 */
+    FTP_OBEX_SEND_DELET_FOLDERS,           /* 发送删除文件夹请求 */
+    FTP_OBEX_SEND_NEW_FOLDERS,             /* 发送创建新文件夹请求 */
+} FTP_STATUS;
+
+typedef enum {
+    COPY_ACTION,               /* 文件复制操作 */
+    MOVE_RENAME_ACTION,         /* 文件移动/重命名操作 */
+    SET_PERMISSION_ACTION,      /* 文件权限设置操作 */
+} FTP_Action_ID;
+
+typedef enum {
+    FTP_DATA_STATUS_START,	        //开始包
+    FTP_DATA_STATUS_CONTINUE,		//继续包(中间包)
+    FTP_DATA_STATUS_STOP,			//结束包
+    FTP_DATA_STATUS_ERR,			//错误包，
+} FTP_DATA_STATUS;
 
 typedef enum {
     BT_CALL_BATTERY_CHG = 0, //电池电量改变
@@ -545,8 +592,10 @@ extern u32 bt_cmd_prepare_for_addr(u8 *addr, USER_CMD_TYPE cmd, u16 param_len, u
 extern u32 bt_cmd_prepare(USER_CMD_TYPE cmd, u16 param_len, u8 *param);
 //作为发射器时操作命令的接口
 extern u32 bt_emitter_cmd_prepare(USER_CMD_TYPE cmd, u16 param_len, u8 *param);
+extern u32 bt_emitter_cmd_prepare_for_addr(u8 *addr, USER_CMD_TYPE cmd, u16 param_len, u8 *param);
 /*根据规则生产BLE的随机地址*/
 extern void bt_make_ble_address(u8 *ble_address, u8 *edr_address);
+extern void set_start_search_spp_device(u8 spp);
 
 
 /****************蓝牙的一些状态获取接口*************************/
@@ -650,7 +699,8 @@ extern void bt_set_support_lhdc_flag(bool flag);
 extern void bt_set_support_lhdc_v5_flag(bool flag);
 /*配置协议栈使用支持LDAC的信息*/
 extern void bt_set_support_ldac_flag(bool flag);
-
+/*配置协议栈使用支持Super Wide Band Speech*/
+extern void bt_set_support_hfp_swb_flag(bool flag);
 
 
 /*有些自选接口用来实现个性化功能流程，回调函数注册，记得常来看看哟*/
@@ -774,8 +824,8 @@ typedef struct {
     u8  *data_ptr;
 } hid_s_param_t;
 
-extern u16 bt_sdp_create_diy_device_ID_service(u8 *buffer, u16 buffer_size);
-extern u16 bt_sdp_create_diy_hid_service(u8 *buffer, u16 buffer_size, const u8 *hid_descriptor, u16 hid_descriptor_size);
+u16 bt_sdp_create_diy_device_ID_service(u8 *buffer, u16 buffer_size);
+u16 bt_sdp_create_diy_hid_service(u8 *buffer, u16 buffer_size, const u8 *hid_descriptor, u16 hid_descriptor_size);
 /************用户自定义HID的一些接口 end*******************/
 
 
@@ -855,6 +905,7 @@ u8 btstack_get_inband_ringtone_flag_for_addr(u8 *addr);
 void bt_api_esco_status(u8 *addr, u8 status);
 /*可以获取传入地址之外的另一个设备地址信息,没有返回NULL*/
 u8 *btstack_get_other_dev_addr(u8 *addr);
+u8 *btstack_get_other2_dev_addr(u8 *addr, u8 *other_addr); //get third conn
 /*上电会根据配置读取连接过的设备地址,保持在一个数组
  * 这个接口根据数组位置获取地址出来,返回真表示获取成功，addr是获取到的地址值*/
 bool btstack_get_remote_addr(u8 *addr, u8 index);
@@ -862,18 +913,31 @@ bool btstack_get_remote_addr(u8 *addr, u8 index);
 u16 bt_get_curr_channel_state_for_addr(u8 *addr);
 //跟bt_get_connect_status一样，支持按地址查询
 u16 bt_get_connect_state_for_addr(u8 *addr);
+/* 获取a2dp解码器状态 */
+u8 get_a2dp_decoder_status();
+/* 获取手机音量 */
+int get_music_sync_volume();
 //或取蓝牙的RSSI
-extern s8 get_rssi_api(s8 *phone_rssi, s8 *tws_rssi);
+s8 get_rssi_api(s8 *phone_rssi, s8 *tws_rssi);
 //pdg自定义l2cap协议的一个例子
-extern void pbg_profile_init(u16 psm);
-extern void pbg_event_handler_register(void (*handler)(u8 packet_type, u16 channel, u8 *packet, u16 size));
+void pbg_profile_init(u16 psm);
+void pbg_event_handler_register(void (*handler)(u8 packet_type, u16 channel, u8 *packet, u16 size));
 //根据地址刷新一下连接信息的时间戳,第2个参数用get_remote_dev_info_index或取
 void updata_last_link_key(bd_addr_t bd_addr, u8 id);
 u8 get_remote_dev_info_index();
-extern int bt_a2dp_source_init(void *buf, u16 len, int deal_flag);
+int bt_a2dp_source_init(void *buf, u16 len, int deal_flag);
 u8 *get_cur_connect_phone_mac_addr(void);
 bool is_have_dongle_dev_conn();
-extern u8 get_inband_ringtone_flag_for_addr(u8 *addr);
+u8 get_inband_ringtone_flag_for_addr(u8 *addr);
 u8 *get_other_dev_addr(u8 *addr);
-extern void make_rand_num(u8 *buf);
+void make_rand_num(u8 *buf);
+u32 unactice_device_cmd_prepare(USER_CMD_TYPE cmd, u16 param_len, u8 *param);
+
+void set_temp_link_key(u8 *linkkey);
+void bredr_adt_init();
+void bt_set_support_3M_size(u8 en);
+void delete_link_key(u8 *bd_addr, u8 id);
+
+//获取另一个设备的a2dp状态
+extern u8 bt_a2dp_get_status_for_other_addr(bd_addr_t addr);
 #endif

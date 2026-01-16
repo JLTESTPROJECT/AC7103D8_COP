@@ -7,7 +7,6 @@
 #include "app_config.h"
 #include "asm/charge.h"
 #include "asm/power_interface.h"
-#include "system/event.h"
 #include "system/includes.h"
 #include "app_action.h"
 #include "asm/wdt.h"
@@ -48,8 +47,6 @@ u8 get_charge_full_flag(void)
 static void charge_start_deal(void)
 {
     log_info("%s\n", __FUNCTION__);
-
-    power_set_mode(PWR_LDO15);
 
     batmgr_send_msg(BAT_MSG_CHARGE_START, 0);
 }
@@ -93,18 +90,15 @@ static void charge_close_deal(void)
 {
     log_info("%s\n", __FUNCTION__);
 
-    power_set_mode(TCFG_LOWPOWER_POWER_SEL);
-
     batmgr_send_msg(BAT_MSG_CHARGE_CLOSE, 0);
 }
-
 
 void app_charge_power_off_keep_mode()
 {
     //兼容一些充电仓5v输出慢的时候会导致无法充电的问题
     if (get_lvcmp_det()) {
         log_info("...charge ing...\n");
-        cpu_reset();
+        charge_system_reset();
     }
 
     log_info("get_charge_online_flag:%d %d\n", get_charge_online_flag(), get_ldo5v_online_hw());
@@ -113,7 +107,7 @@ void app_charge_power_off_keep_mode()
     } else {
         charge_check_and_set_pinr(1);
 #if TCFG_CHARGE_OFF_POWERON_EN
-        cpu_reset();
+        charge_system_reset();
 #else
         power_set_soft_poweroff();
 #endif
@@ -140,6 +134,8 @@ void ldo5v_keep_deal(void)
     log_info("%s\n", __func__);
 
     charge_close();
+
+    power_set_mode(TCFG_LOWPOWER_POWER_SEL);
 
     //插入交换
     batmgr_send_msg(POWER_EVENT_POWER_CHANGE, 0);
@@ -176,6 +172,8 @@ void charge_ldo5v_in_deal(void)
     //插入交换
     batmgr_send_msg(POWER_EVENT_POWER_CHANGE, 0);
 
+    power_set_mode(PWR_LDO15);
+
     charge_full_flag = 0;
 
     charge_check_and_set_pinr(0);
@@ -194,7 +192,7 @@ void charge_ldo5v_in_deal(void)
     if (get_charge_poweron_en() == 0) {
         if (!app_in_mode(APP_MODE_IDLE)) {
             if (abandon == 0) {
-                sys_enter_soft_poweroff(POWEROFF_RESET);
+                sys_enter_soft_poweroff(POWEROFF_POWER_RESET);
             }
         } else {
             charge_start();
@@ -211,7 +209,7 @@ void charge_ldo5v_in_deal(void)
 _check_reset:
     //防止耳机低电时,插拔充电有几率出现关机不充电问题
     if (app_var.goto_poweroff_flag) {
-        cpu_reset();
+        charge_system_reset();
     }
 }
 
@@ -230,6 +228,8 @@ void charge_ldo5v_off_deal(void)
     charge_full_flag = 0;
 
     charge_close();
+
+    power_set_mode(TCFG_LOWPOWER_POWER_SEL);
 
     batmgr_send_msg(BAT_MSG_CHARGE_LDO5V_OFF, 0);
 
@@ -251,14 +251,14 @@ void charge_ldo5v_off_deal(void)
 #endif
 #if TCFG_CHARGE_OFF_POWERON_EN
             log_info("ldo5v off,task switch to BT\n");
-            if (app_var.goto_poweroff_flag == 0) {
-                if (!is_bt_mode) {
-                    if (lowpower_flag == FALSE) {
-                        off_type = LDO5V_OFF_TYPE_NORMAL_ON;//正常拔出开机
-                    } else {
-                        log_info("ldo5v off,lowpower,need enter softpoweroff\n");
-                        off_type = LDO5V_OFF_TYPE_LOWPOWER_OFF;//拔出低电关机
-                    }
+            app_var.goto_poweroff_flag = 0;
+            if (!is_bt_mode) {
+                if (lowpower_flag == FALSE) {
+                    log_info("ldo5v off,lowpower,task switch to BT LDO5V_OFF_TYPE_NORMAL_ON\n");
+                    off_type = LDO5V_OFF_TYPE_NORMAL_ON;//正常拔出开机
+                } else {
+                    log_info("ldo5v off,lowpower,need enter softpoweroff\n");
+                    off_type = LDO5V_OFF_TYPE_LOWPOWER_OFF;//拔出低电关机
                 }
             }
 #else //TCFG_CHARGE_OFF_POWERON_EN
@@ -307,7 +307,6 @@ void charge_ldo5v_off_deal(void)
         break;
     case LDO5V_OFF_TYPE_NORMAL_ON:
         app_var.play_poweron_tone = 0;
-        app_var.goto_poweroff_flag = 0;
         if (app_in_mode(APP_MODE_IDLE)) { //开机充电的时候,不在IDLE模式,充电拔出的时候不需要退出当前模式到蓝牙模式
             app_send_message(APP_MSG_GOTO_MODE, APP_MODE_BT);
         }

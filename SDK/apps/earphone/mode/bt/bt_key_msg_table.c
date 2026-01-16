@@ -37,25 +37,25 @@ const int adkey_msg_table[10][KEY_ACTION_MAX] = {
     //双击, 3击, 4击, 5击,
     //按住3s, 按住5s
     [0] = {
-        APP_MSG_MUSIC_PP,   APP_MSG_CALL_HANGUP,   APP_MSG_NULL,   APP_MSG_NULL,
+        APP_MSG_GOTO_NEXT_MODE,   APP_MSG_CALL_HANGUP,   APP_MSG_NULL,   APP_MSG_NULL,
         APP_MSG_LOW_LANTECY,       APP_MSG_NULL,   APP_MSG_NULL,   APP_MSG_NULL,
         APP_MSG_NULL,       APP_MSG_NULL,   APP_MSG_NULL,   APP_MSG_NULL,
-        APP_MSG_POWER_OFF,
+        APP_MSG_KEY_POWER_OFF,
     },
     [1] = {
-        APP_MSG_MUSIC_NEXT, APP_MSG_VOL_UP,   APP_MSG_VOL_UP,   APP_MSG_NULL,
+        APP_MSG_MUSIC_PP, APP_MSG_VOL_UP,   APP_MSG_VOL_UP,   APP_MSG_NULL,
         APP_MSG_NULL,       APP_MSG_NULL,   APP_MSG_NULL,   APP_MSG_NULL,
         APP_MSG_NULL,       APP_MSG_NULL,   APP_MSG_NULL,   APP_MSG_NULL,
         APP_MSG_NULL,
     },
     [2] = {
-        APP_MSG_MUSIC_PREV, APP_MSG_VOL_DOWN,   APP_MSG_VOL_DOWN,   APP_MSG_NULL,
+        APP_MSG_MUSIC_NEXT, APP_MSG_VOL_DOWN,   APP_MSG_VOL_DOWN,   APP_MSG_NULL,
         APP_MSG_NULL,       APP_MSG_NULL,   APP_MSG_NULL,   APP_MSG_NULL,
         APP_MSG_NULL,       APP_MSG_NULL,   APP_MSG_NULL,   APP_MSG_NULL,
         APP_MSG_NULL,
     },
     [3] = {
-        APP_MSG_GOTO_NEXT_MODE,   APP_MSG_NULL,   APP_MSG_NULL,   APP_MSG_NULL,
+        APP_MSG_MUSIC_PREV,   APP_MSG_NULL,   APP_MSG_NULL,   APP_MSG_NULL,
         APP_MSG_NULL,       APP_MSG_NULL,   APP_MSG_NULL,   APP_MSG_NULL,
         APP_MSG_NULL,       APP_MSG_NULL,   APP_MSG_NULL,   APP_MSG_NULL,
         APP_MSG_NULL,
@@ -120,14 +120,19 @@ int bt_key_power_msg_remap(int *msg)
         return APP_MSG_NULL;
     }
 
-    void *devices[2];
     void *active_device = NULL;
     void *incoming_device = NULL;
     void *outgoing_device = NULL;
     void *siri_device = NULL;
 
     int tws_state = tws_api_get_tws_state();
+#if TCFG_BT_DUAL_1T3_CONN_ENABLE
+    void *devices[3];
+    int num = btstack_get_conn_devices(devices, 3);
+#else
+    void *devices[2];
     int num = btstack_get_conn_devices(devices, 2);
+#endif
     for (int i = 0; i < num; i++) {
         int state = bt_get_phone_state(devices[i]);
         if (state == BT_CALL_ACTIVE) {
@@ -178,11 +183,11 @@ int bt_key_power_msg_remap(int *msg)
         }
     } else {
         /* 非通话相关场景下按键流程 */
-#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN)))
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
         int tws_cig_state = is_cig_phone_conn();
         if ((tws_state & TWS_STA_PHONE_CONNECTED) || tws_cig_state) { //已连接手机经典蓝牙或者cig
 #elif (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SINK_EN)
-        if ((tws_state & TWS_STA_PHONE_CONNECTED) && (le_auracast_status_get() != BROADCAST_STATUS_START)) { //已连接手机经典蓝牙&&耳机没有auracast播歌
+        if ((tws_state & TWS_STA_PHONE_CONNECTED) && (!le_auracast_is_running())) { //已连接手机经典蓝牙&&耳机没有auracast播歌
 #else
         if (tws_state & TWS_STA_PHONE_CONNECTED) { //已连接手机经典蓝牙
 #endif
@@ -226,7 +231,7 @@ int bt_key_power_msg_remap(int *msg)
             }
         }
 #if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SINK_EN)
-        if (le_auracast_status_get() == BROADCAST_STATUS_START) {
+        if (le_auracast_is_running()) {
             switch (key_action) {
             case KEY_ACTION_DOUBLE_CLICK:
                 app_msg = APP_MSG_VOL_UP;
@@ -253,12 +258,21 @@ int bt_key_power_msg_remap(int *msg)
         app_msg = APP_MSG_KEY_POWER_OFF;
 #endif
         break;
-#if (TCFG_USER_TWS_ENABLE && (CONFIG_TWS_PAIR_MODE == CONFIG_TWS_PAIR_BY_CLICK))
     case KEY_ACTION_FOURTH_CLICK:
+#if (TCFG_USER_TWS_ENABLE && (CONFIG_TWS_PAIR_MODE == CONFIG_TWS_PAIR_BY_CLICK))
         if (tws_state & TWS_STA_TWS_UNPAIRED) { // TWS未配对，按键配对
             app_msg = APP_MSG_TWS_START_PAIR;
-            break;
         }
+#else
+#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_UNICAST_SINK_EN) && TCFG_JL_UNICAST_EDR_MODE_SWITCH_ENABLE
+        jl_unicast_edr_mode_switch();
+#endif
+#endif
+        break;
+#if 0
+    case KEY_ACTION_FIRTH_CLICK:
+        app_msg = APP_MSG_DEL_ALL_REMOTE_DEV;
+        break;
 #endif
     default:
         break;

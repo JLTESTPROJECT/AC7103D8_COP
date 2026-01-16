@@ -192,6 +192,7 @@ void rcsp_close_inquiry_scan(bool close_inquiry_scan);
  * @param len
  */
 void rcsp_ble_master_recieve_callback(void *buf, u16 len);
+void rcsp_ble_app_disconnect(void);
 
 #endif // (TCFG_BLE_DEMO_SELECT == DEF_BLE_DEMO_RCSP_DEMO)
 #endif // _BLE_RCSP_SERVER_H

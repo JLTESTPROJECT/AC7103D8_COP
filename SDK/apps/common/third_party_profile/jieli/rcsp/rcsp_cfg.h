@@ -51,6 +51,7 @@ RCSP_BTMATE_EN
 
 // BLE从机配置
 #define RCSP_ADV_EN												1
+#define RCSP_ADV_VERSION                                        6       //RCSP广播包版本
 #define RCSP_DEVICE_STATUS_ENABLE								1		//设备状态信息功能
 #define RCSP_BT_CONTROL_ENABLE									1		//bt控制功能
 
@@ -104,6 +105,7 @@ RCSP_BTMATE_EN
 #elif (RCSP_MODE == RCSP_MODE_WATCH)
 
 #define RCSP_ADV_EN												0
+#define RCSP_ADV_VERSION                                        6       //RCSP广播包版本
 #define RCSP_DEVICE_STATUS_ENABLE								1		//设备状态信息功能
 #define RCSP_BT_CONTROL_ENABLE									1		//bt控制功能
 
@@ -158,7 +160,11 @@ RCSP_BTMATE_EN
 // 耳机SDK可配置工具版本 RCSP功能配置
 #elif (RCSP_MODE == RCSP_MODE_EARPHONE)
 #if !TCFG_THIRD_PARTY_PROTOCOLS_SIMPLIFIED
+#define JL_RCSP_EAR_SENSORS_DATA_OPT                            0   // 耳机传感器功能
+#define HEALTH_ALL_DAY_CHECK_ENABLE                             0   // 全天健康检测功能
+
 #define RCSP_ADV_EN												1
+#define RCSP_ADV_VERSION                                        6       //RCSP广播包版本
 #define RCSP_DEVICE_STATUS_ENABLE								1		//设备状态信息功能
 #define RCSP_BT_CONTROL_ENABLE									0		//bt控制功能
 #define RCSP_TONE_FILE_TRANSFER_ENABLE                          0       //提示音传输至预留区域功能
@@ -167,13 +173,13 @@ RCSP_BTMATE_EN
 
 #if RCSP_TONE_FILE_TRANSFER_ENABLE
 #define TONE_FILE_RESERVED_AREA_NAME                            "TONE" // 存放提示音的预留区域名称
-#define TONE_FILE_NUM											1 // 存放到预留区域文件个数
+#define TONE_FILE_NUM                                           1 // 存放到预留区域文件个数
 #define TONE_EATCH_FILE_MAX_SIZE                                (60 * 1024) // 每个存放到预留区域文件的最大大小
 
 #ifdef TONE_FILE_RESERVED_AREA_NAME
 #define TONE_FILE_RESERVED_AREA_CONFIG_NAME                     TONE // 存放提示音的预留区域名称，需要与TONE_FILE_RESERVED_AREA_NAME宏保持一致
-#define TONE_FILE_RESERVED_AREA_CONFIG_SIZE						64K	// 需要写立即数，大小要比TONE_FILE_NUM * TONE_EATCH_FILE_MAX_SIZE值要大
-#define TONE_FILE_RESERVED_AREA_CONFIG_OPT						1
+#define TONE_FILE_RESERVED_AREA_CONFIG_SIZE                     64K // 需要写立即数，大小要比TONE_FILE_NUM * TONE_EATCH_FILE_MAX_SIZE值要大
+#define TONE_FILE_RESERVED_AREA_CONFIG_OPT                      1
 #endif
 
 #define TONE_FILE_DEFAULT_NAME                                  "tone"
@@ -186,10 +192,13 @@ RCSP_BTMATE_EN
 #if CONFIG_DOUBLE_BANK_ENABLE              						//双备份才能打开同步升级流程
 #define OTA_TWS_SAME_TIME_ENABLE     		 TCFG_USER_TWS_ENABLE		//是否支持TWS同步升级
 #define OTA_TWS_SAME_TIME_NEW        		 TCFG_USER_TWS_ENABLE		//使用新的tws ota流程
+#define OTA_TWS_SAME_TIME_NEW_LESS           CONFIG_DOUBLE_BANK_LESS	//使用tws ota 升级app1区域更小结构（压缩/差分）
+
 #define UPDATE_MD5_ENABLE            							0		//升级是否支持MD5校验
 #else
 #define OTA_TWS_SAME_TIME_ENABLE     							0		//是否支持TWS同步升级
 #define OTA_TWS_SAME_TIME_NEW        							0		//使用新的tws ota流程
+#define OTA_TWS_SAME_TIME_NEW_LESS                              0	//使用tws ota 升级app1区域更小结构（压缩/差分）
 #define UPDATE_MD5_ENABLE            							0		//升级是否支持MD5校验
 #endif      //CONFIG_DOUBLE_BANK_ENABLE
 
@@ -209,6 +218,7 @@ RCSP_BTMATE_EN
 #define RCSP_ADV_KARAOKE_SET_ENABLE								0		// 卡拉OK设置
 #define RCSP_ADV_KARAOKE_EQ_SET_ENABLE							0		// 卡拉OK EQ设置
 #define RCSP_ADV_AI_NO_PICK										0		// 智能免摘
+#define RCSP_ADV_TRANSLATOR                                     0       // 翻译功能
 #define RCSP_ADV_ASSISTED_HEARING								0		// 辅听，注意开启辅听后，需要关闭ANC相关功能
 
 #if !RCSP_ADV_ASSISTED_HEARING
@@ -225,6 +235,7 @@ RCSP_BTMATE_EN
 #else
 
 #define RCSP_ADV_EN												1
+#define RCSP_ADV_VERSION                                        6       //RCSP广播包版本
 #define RCSP_DEVICE_STATUS_ENABLE								0		//设备状态信息功能
 #define RCSP_BT_CONTROL_ENABLE									0		//bt控制功能
 #define RCSP_TONE_FILE_TRANSFER_ENABLE                          0       //提示音传输至预留区域功能
@@ -276,6 +287,10 @@ RCSP_BTMATE_EN
 
 #endif // RCSP_MODE
 
+// RCSP 支持 AURACAST
+#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_AURACAST_SINK_EN)
+#define RCSP_ADV_AURCAST_SINK								    1
+#endif
 
 #if (defined CONFIG_CPU_BR21)
 #define		RCSP_SDK_TYPE		RCSP_SDK_TYPE_AC692X
@@ -340,6 +355,10 @@ RCSP_BTMATE_EN
 #define RCSP_ADV_EN         									0
 #endif
 
+#ifndef RCSP_ADV_VERSION
+#define RCSP_ADV_VERSION                                        2       //RCSP广播包版本
+#endif
+
 #ifndef UPDATE_MD5_ENABLE
 #define UPDATE_MD5_ENABLE            							0		//升级是否支持MD5校验
 #endif
@@ -386,6 +405,10 @@ RCSP_BTMATE_EN
 
 #ifndef RCSP_ADV_AI_NO_PICK
 #define RCSP_ADV_AI_NO_PICK										0
+#endif
+
+#ifndef RCSP_ADV_TRANSLATOR
+#define RCSP_ADV_TRANSLATOR                                     0
 #endif
 
 #ifndef RCSP_ADV_SCENE_NOISE_REDUCTION
@@ -498,6 +521,14 @@ RCSP_BTMATE_EN
 
 #ifndef RCSP_KARAOKE_SOUND_PARAM
 #define RCSP_KARAOKE_SOUND_PARAM								0
+#endif
+
+#ifndef RCSP_ADV_AURCAST_SINK
+#define RCSP_ADV_AURCAST_SINK								    0
+#endif
+
+#ifndef RCSP_ADV_AURCAST_SOURCE
+#define RCSP_ADV_AURCAST_SOURCE								    0
 #endif
 
 #endif // __RCSP_CFG_H__

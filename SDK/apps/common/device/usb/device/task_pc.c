@@ -22,6 +22,7 @@
 #include "app_charge.h"
 #include "asm/charge.h"
 #include "app_main.h"
+#include "system/event.h"
 
 #if TCFG_USB_SLAVE_ENABLE
 #if  USB_PC_NO_APP_MODE == 0
@@ -52,7 +53,7 @@
 #endif
 
 #if TCFG_USB_APPLE_DOCK_EN
-#include "apple_dock/iAP.h"
+#include "usb/device/iap.h"
 #endif
 
 #if TCFG_CFG_TOOL_ENABLE
@@ -105,6 +106,13 @@ static void usb_msd_reset_wakeup(struct usb_device_t *usb_device, u32 itf_num)
 }
 #endif
 
+#if TCFG_USB_APPLE_DOCK_EN
+static void usb_iap_wakeup(struct usb_device_t *usb_device)
+{
+    os_taskq_post_msg(USB_TASK_NAME, 2, USBSTACK_IAP_RUN, usb_device);
+}
+#endif
+
 #if TCFG_USB_SLAVE_MTP_ENABLE
 static void usb_mtp_wakeup(struct usb_device_t *usb_device)
 {
@@ -113,7 +121,7 @@ static void usb_mtp_wakeup(struct usb_device_t *usb_device)
 #endif
 
 #if TCFG_USB_SLAVE_CDC_ENABLE
-static void usb_cdc_wakeup(struct usb_device_t *usb_device)
+static void usb_cdc_wakeup(struct usb_device_t *usb_device, u32 num)
 {
     //回调函数在中断里，正式使用不要在这里加太多东西阻塞中断，
     //或者先post到任务，由任务调用cdc_read_data()读取再执行后续工作
@@ -129,9 +137,10 @@ static void usb_cdc_wakeup(struct usb_device_t *usb_device)
     /* cdc_write_data(usb_id, buf, rlen);//固件三部测试使用 */
 
 #if TCFG_CFG_TOOL_ENABLE && (TCFG_COMM_TYPE == TCFG_USB_COMM)
-    int msg[1] = {0};
+    int msg[2] = {0};
     msg[0] = (u32)usb_device;
-    if (OS_NO_ERR != os_taskq_post_type("app_core", MSG_FROM_CDC_DATA, 1, msg)) {
+    msg[1] = num;
+    if (OS_NO_ERR != os_taskq_post_type("app_core", MSG_FROM_CDC_DATA, 2, msg)) {
         log_error("cdc_rx post error\n");
     }
 #endif
@@ -142,15 +151,18 @@ static int cdc_rx_data(int *msg)
     /* log_debug("msg[0]:0x%x\n", (u32)msg[0]); */
     const struct usb_device_t *usb_device = (struct usb_device_t *)msg[0];
     const usb_dev usb_id = usb_device2id(usb_device);
+    const u32 num = (u32)msg[1];
     u8 buf[64] = {0};
     u32 rlen;
 
-    rlen = cdc_read_data(usb_id, buf, 64);
+    rlen = cdc_read_data(usb_id, buf, 64, num);
     /* log_debug("cdc rx data"); */
     /* put_buf(buf, rlen);//固件三部测试使用 */
-    /* cdc_write_data(usb_id, buf, rlen);//固件三部测试使用 */
+    /* cdc_write_data(usb_id, buf, rlen, num);//echo data to host for loopback test */
 
-    cfg_tool_data_from_cdc(buf, rlen);
+#if TCFG_CFG_TOOL_ENABLE
+    cfg_tool_data_from_cdc(buf, rlen, num);
+#endif
     return rlen;
 }
 
@@ -248,6 +260,9 @@ void usb_start(const usb_dev usbfd)
 #if TCFG_USB_SLAVE_PRINTER_ENABLE
     class |= PRINTER_CLASS;
 #endif
+#if TCFG_USB_APPLE_DOCK_EN
+    class |= IAP_CLASS;
+#endif
     g_printf("USB_DEVICE_CLASS_CONFIG:%x", class);
     usb_device_mode(usbfd, class);
 
@@ -281,6 +296,10 @@ void usb_start(const usb_dev usbfd)
     msd_set_reset_wakeup_handle(usb_msd_reset_wakeup);
 #endif
 
+#if TCFG_USB_APPLE_DOCK_EN
+    iap_set_wakeup_handler(usb_iap_wakeup);
+#endif
+
 #if TCFG_USB_SLAVE_MTP_ENABLE
 #if (!TCFG_USB_DM_MULTIPLEX_WITH_SD_DAT0 && TCFG_SD0_ENABLE)\
      ||(TCFG_SD0_ENABLE && TCFG_USB_DM_MULTIPLEX_WITH_SD_DAT0 && TCFG_DM_MULTIPLEX_WITH_SD_PORT != 0)
@@ -290,7 +309,8 @@ void usb_start(const usb_dev usbfd)
 #endif
 
 #if TCFG_USB_SLAVE_CDC_ENABLE
-    cdc_set_wakeup_handler(usb_cdc_wakeup);
+    cdc_set_wakeup_handler(0, usb_cdc_wakeup);
+    cdc_set_wakeup_handler(1, usb_cdc_wakeup);
 #endif
 
 #if TCFG_USB_CUSTOM_HID_ENABLE
@@ -354,7 +374,8 @@ void usb_cdc_background_run(const usb_dev usbfd)
 {
     g_printf("CDC is running in the background");
     usb_device_mode(usbfd, CDC_CLASS);
-    cdc_set_wakeup_handler(usb_cdc_wakeup);
+    cdc_set_wakeup_handler(0, usb_cdc_wakeup);
+    cdc_set_wakeup_handler(1, usb_cdc_wakeup);
 }
 
 int usb_cdc_background_standby(const usb_dev usbfd)

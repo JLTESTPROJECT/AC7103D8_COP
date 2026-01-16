@@ -7,7 +7,11 @@
 /* #define SPDIF_DEC_DATA_BUF_LEN  1024*4 */
 // SPDIF 一个包是192个，设置为768则是4个包的数据
 //16bit:x*2*2*2, 24bit:192*4*2*2
+#if defined(TCFG_VIRTUAL_SURROUND_EFF_MODULE_NODE_ENABLE) && TCFG_VIRTUAL_SURROUND_EFF_MODULE_NODE_ENABLE
+#define SPDIF_DATA_DMA_LEN     (192 * 2 * 2 * 2 * 2)
+#else
 #define SPDIF_DATA_DMA_LEN     (192 * 2 * 2 * 2)
+#endif
 #define SPDIF_INF_DMA_LEN	   (192 * 2 * 2 / 2)
 enum hdmi_det_mode_enum {
     HDMI_DET_UNUSED,
@@ -44,27 +48,25 @@ struct spdif_file_cfg *audio_spdif_file_get_cfg(void);
 int get_hdmi_cec_io(void);
 /* spdif_init
  * @description: 初始化spdif
- * @return：返回 struct spdif_file_hdl 结构体类型指针
  * @note: 无
  */
-void *spdif_init(void);
+void spdif_init(void);
 
 
 /* spdif_release
  * @description: 释放掉spdif_init 申请的内存
- * @param: 参数传入 spdif_file_hdl 结构体指针类型的参数
  * @return：无
  * @note: 无
  */
-void spdif_release(void *_hdl);
+void spdif_release();
 
 
 /* spdif_start
  * @description: 打开spdif，此时spdif 数据中断开始有数据输入
- * @return：返回0表示成功
+ * @return：无
  * @note:
  */
-int spdif_start(void);
+void spdif_start(void);
 
 
 /* spdif_stop
@@ -96,6 +98,12 @@ void spdif_hdmi_set_push_data_en(u8 en);
 /* 获取 spdif 输入源的IO */
 u8 get_spdif_source_io(void);
 
+/* spdif 数据清零设置函数 */
+void spdif_set_data_clean(u8 on);
+
+/* spdif 数据清零标志位获取函数 */
+u8 spdif_get_data_clean_flag(void);
+
 /* 当前HDMI是否插入(HDMI检测脚检测), 500ms更新值 */
 extern u8 hdmi_is_online(void);
 
@@ -103,7 +111,7 @@ extern u8 hdmi_is_online(void);
 extern int spdif_restart_by_taskq(void);
 
 /* 通过消息队列重启 spdif 数据流 */
-extern int spdif_open_player_by_taskq(void);
+extern int spdif_open_player_by_taskq(int delay_us);
 
 /* 获取 spdif 数据流是否处于打开状态 */
 extern bool spdif_player_runing(void);
@@ -116,6 +124,19 @@ extern void spdif_set_port_by_index(u8 index);
 
 //获取当前spdif source
 extern u8 spdif_get_cur_port_index();
+
+
+u8 is_spdif_file_stream_run(void);
+
+int get_spdif_driver_state(void);
+
+extern int spdif_open_le_audio_by_taskq(void);
+extern int spdif_le_audio_music_stop_by_taskq(void);
+extern int spdif_first_in_flag;
+
+void spdif_stream_start(void);
+void spdif_stream_stop(void);
+void spdif_stream_run_open_player(void);
 
 #endif
 

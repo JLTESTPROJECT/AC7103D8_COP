@@ -44,6 +44,9 @@ void board_power_init()
     //没开启充电时,关闭漏电寄存器(约2uA)
     CHG_VILOOP_EN(0);
     CHG_VILOOP2_EN(0);
+    //关闭VMAX,PB5作为IO使用
+    CHG_EXT_MODE(0);
+    CHG_EXT_EN(0);
 #endif
 
     key_wakeup_init();

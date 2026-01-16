@@ -184,7 +184,7 @@ extern void reset_PK_cb_register(void (*reset_pk)(u32 *));
 extern void reset_PK_cb_register_ext(void (*reset_pk)(u32 *, u16));
 extern void att_server_flow_enable(u8 enable);
 extern void le_device_db_init(void);
-extern bool bt_get_remote_test_flag();
+// extern bool bt_get_remote_test_flag();
 extern void transport_spp_disconnect(void);
 extern int transport_spp_flow_enable(u8 en);
 extern void transport_spp_flow_cfg(void);
@@ -212,5 +212,12 @@ enum {
 
 //初始化配置蓝牙发射功率最大值范围,解析详见 btcontroller_modules.h
 void bt_max_pwr_set(u8 pwr, u8 pg_pwr, u8 iq_pwr, u8 ble_pwr);
+
+/*-------------------
+蓝牙发射功率档位参考值(unit: dBm):
+br29 pwr rang(0~5): -15.7,  -9.7,   -3.6,   -0.1,   3.2,    8.5
+br52 pwr rang(0~4): -4.2,   0.25,   4.14,   7.32,   11.79
+br56 pwr rang(0~4): -6,     -2,     2,      6,      10
+-----------------------*/
 
 #endif

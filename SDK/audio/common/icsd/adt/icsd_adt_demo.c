@@ -47,7 +47,6 @@ void icsd_WDT_output_demo(u8 wind_lvl)
     if (wind_lvl) {
         printf("--------------------------------WDT OUTPUT:%d---------------------\n", wind_lvl);
     }
-    audio_acoustic_detector_output_hdl(0, wind_lvl, 0);
 }
 
 void icsd_AVC_output_demo(__adt_avc_output *_output)
@@ -62,6 +61,8 @@ void icsd_adt_avc_config_update_demo()
     __avc_config config;
     config.alpha_db = 0.990;
     config.db_cali = 13;
+    config.sc_cali = 1.3;
+    config.flen    = 16;
     icsd_adt_avc_config_update(&config);
 }
 
@@ -117,11 +118,43 @@ void icsd_ancdma_4ch_46k_debug()
 
 void icsd_anc_46kout_demo()
 {
+    if (ANC46K_CTL) {
 #if ICSD_ANCDMA_4CH_46K_DEBUG_EN
-    icsd_ancdma_4ch_46k_debug();
+        icsd_ancdma_4ch_46k_debug();
 #else
-    ANC46K_CTL->loop_remain -= 512;
+
+#if 0
+        static int cnt = 300;
+        static int cnt2 = 1000;
+        if (cnt2) {
+            cnt2--;
+        } else {
+            if (cnt) {
+                cnt--;
+                printf("46kout remain:%d  %d\n", ANC46K_CTL->loop_remain, cnt);
+                icsd_adt_anc46k_outen_set(1);
+            } else {
+                icsd_adt_anc46k_outen_set(0);
+            }
+        }
 #endif
+
+        int export_points = 256;
+        int export_len = export_points * 2;
+        extern int aec_uart_fill_v2(u8 ch, void *buf, u16 size);
+        extern void aec_uart_write_v2(void);
+        if (ANC46K_CTL->out_en) {
+            aec_uart_fill_v2(0, &ANC46K_CTL->ch0_dptr[ANC46K_CTL->rptr], export_len);
+            aec_uart_fill_v2(1, &ANC46K_CTL->ch1_dptr[ANC46K_CTL->rptr], export_len);
+            aec_uart_fill_v2(2, &ANC46K_CTL->ch3_dptr[ANC46K_CTL->rptr], export_len);
+            aec_uart_write_v2();
+        }
+        ANC46K_CTL->rptr += export_points;
+        if (ANC46K_CTL->rptr >= ANC46K_CTL->loop_len) {
+            ANC46K_CTL->rptr = 0;
+        }
+#endif
+    }
 }
 
 #if 0
@@ -138,7 +171,7 @@ void icsd_adt_rtanc_demo(void *param)
     icsd_acoustic_detector_open();
     extern void icsd_adt_anc_part1_start();
     icsd_adt_anc_part1_start();
-    icsd_acoustic_detector_resume(RESUME_ANCMODE, ADT_ANC_ON);
+    audio_icsd_adt_algom_resume(ANC_ON);
 }
 #endif
 

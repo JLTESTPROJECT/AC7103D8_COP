@@ -3,13 +3,11 @@
 
 
 #define NODE_UUID_SOURCE            0x1100
-#define NODE_UUID_DEMUXER           0x1200
 #define NODE_UUID_DECODER           0x1A85
 #define NODE_UUID_ENCODER           0x0A2C
 
 #define NODE_UUID_TONE              0x768A
 #define NODE_UUID_RING              0xCADC
-#define NODE_UUID_FILEPLAY          0XF03B
 #define NODE_UUID_KEY_TONE          0x8346
 #define NODE_UUID_EQ                0x737B
 #define NODE_UUID_SRC               0x1ECD
@@ -25,7 +23,6 @@
 #define NODE_UUID_ESCO_TX           0x849A
 #define NODE_UUID_BT_AUDIO_SYNC     0xA576
 #define NODE_UUID_VOLUME_CTRLER     0x74E3
-#define NODE_UUID_MULTIPLEX         0x2C15
 #define NODE_UUID_UART_DUMP         0xE76E
 #define NODE_UUID_MUTE              0xD5E0
 #define NODE_UUID_PLC               0xED7F
@@ -39,8 +36,12 @@
 #define NODE_UUID_CVP_DMS_HYBRID_DNS            0X5DF0
 #define NODE_UUID_CVP_DMS_AWN_DNS               0XF0C3
 #define NODE_UUID_CVP_DEVELOP		0X76EF
+#define NODE_UUID_CVP_V3			0X5FF6
+#define NODE_UUID_CVP_SMS_VF		0X299E
 #define NODE_UUID_AI_TX		      	0xDFDA
+#define NODE_UUID_AI_RX		      	0xDF98
 #define NODE_UUID_NOISE_SUPPRESSOR 	0x3BC9
+#define NODE_UUID_NOISE_SUPPRESSOR_LITE 0XFFF7
 #define NODE_UUID_SURROUND_DEMO		0x3F20
 #define NODE_UUID_AUTOMUTE          0X86B9
 #define NODE_UUID_LINEIN            0X0624
@@ -57,7 +58,6 @@
 #define NODE_UUID_LE_AUDIO_PCM      0xC4B7
 #define NODE_UUID_LE_AUDIO_TX       0xDEF2
 #define NODE_UUID_LE_AUDIO_RX       0xDEB0
-#define NODE_UUID_LE_AUDIO_PCM      0xC4B7
 #define NODE_UUID_LE_AUDIO_SOURCE   0x2D57
 #define NODE_UUID_LE_AUDIO_SINK     0x2DFB
 #define NODE_UUID_CAPTURE_SYNC      0xFF09
@@ -67,6 +67,7 @@
 #define NODE_UUID_LOCAL_TWS_SINK  	0x7303
 #define NODE_UUID_TDM_TX            0xB455
 #define NODE_UUID_TDM_RX            0xB413
+#define NODE_UUID_VIRTUAL_UDISK    	0x17AB
 
 /*通话CVP子模块UUID*/
 #define NODE_UUID_AEC				0xA9CE
@@ -141,6 +142,7 @@
 #define NODE_UUID_PINGPONG_PCM_DELAY       0xF936//pingpong延时
 #define NODE_UUID_THREE_D                  0x8c21 //three d
 #define NODE_UUID_LLNS                     0x9FE //低延时降噪
+#define NODE_UUID_LLNS_DNS                 0x1CA2 //低延时降噪(神经网络)
 #define NODE_UUID_FADE                     0x1BF5//淡入
 
 #define NODE_UUID_SOURCE_DEV0              0x8FC4//自定义源节点0
@@ -194,7 +196,19 @@
 #define NODE_UUID_DISTORTION_CLIPPING      0x97AA
 #define NODE_UUID_FREQUENCY_COMPRESSOR     0xBFE4
 #define NODE_UUID_SPATIAL_ADV              0xA64E//空间音频封装
+#define NODE_UUID_HOWLING_AHS              0x872A//神经网络啸叫抑制 part1
+#define NODE_UUID_HOWLING_AHS_POST         0X197D//神经网络啸叫抑制 part2
 #define NODE_UUID_LHDC_X                   0x65C5//LHDC-X空间音效
 #define NODE_UUID_VIRTUAL_BASS_PRO         0x02E6//虚拟低音pro算法内部集成，封装节点换成普通节点
+#define NODE_UUID_VOCAL_TRACK_SEPARATION_6TO2  0xB816//声道拆分6转2
+#define NODE_UUID_VOCAL_TRACK_SEPARATION_8TO2  0x3198//声道拆分8转2
+#define NODE_UUID_NF_SUPPRESSOR            0x9F3F
+#define NODE_UUID_VIRTUAL_SURROUND_HP      0XDCD4//虚拟环绕音（耳机适用）
+#define NODE_UUID_AVC                      0xD2BF//音量自适应
+#define NODE_UUID_AUDIO_DEBUG              0x96DE
+
+#define NODE_UUID_VIBRATO                  0x40DC//人声高音颤音
+#define NODE_UUID_HARMONY                  0xAE43//谐波
+#define NODE_UUID_TREMOLO                  0XFB27
 
 #endif

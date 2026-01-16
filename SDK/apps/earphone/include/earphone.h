@@ -73,35 +73,6 @@
 #define SYS_EVENT_REMAP(a) 				        0
 #define EARPHONE_STATE_SNIFF(a)
 #define EARPHONE_STATE_ROLE_SWITCH(a)
-
-#elif TCFG_WIRELESS_MIC_ENABLE
-#define EARPHONE_STATE_INIT()                   do { } while(0)
-#define EARPHONE_STATE_SET_PAGE_SCAN_ENABLE()   do { } while(0)
-#define EARPHONE_STATE_GET_CONNECT_MAC_ADDR()   do { } while(0)
-#define EARPHONE_STATE_CANCEL_PAGE_SCAN()       do { } while(0)
-#define EARPHONE_STATE_ENTER_SOFT_POWEROFF()    do { } while(0)
-#define EARPHONE_STATE_TWS_INIT(a)              do { } while(0)
-#define EARPHONE_STATE_TWS_CONNECTED(a, b)      do { } while(0)
-#define SYS_EVENT_HANDLER_SPECIFIC(a)           do { } while(0)
-#define TWS_EVENT_MASSAGE_HANDLER(a)            0
-#define SYS_EVENT_REMAP(a) 				        0
-#define EARPHONE_STATE_SNIFF(a)
-#define EARPHONE_STATE_ROLE_SWITCH(a)
-
-#elif TCFG_WIRELESS_MIC_ENABLE
-#define EARPHONE_STATE_INIT()                   do { } while(0)
-#define EARPHONE_STATE_SET_PAGE_SCAN_ENABLE()   do { } while(0)
-#define EARPHONE_STATE_GET_CONNECT_MAC_ADDR()   do { } while(0)
-#define EARPHONE_STATE_CANCEL_PAGE_SCAN()       do { } while(0)
-#define EARPHONE_STATE_ENTER_SOFT_POWEROFF()    do { } while(0)
-#define EARPHONE_STATE_TWS_INIT(a)              do { } while(0)
-#define EARPHONE_STATE_TWS_CONNECTED(a, b)      do { } while(0)
-#define SYS_EVENT_HANDLER_SPECIFIC(a)           do { } while(0)
-#define TWS_EVENT_MASSAGE_HANDLER(a)            0
-#define SYS_EVENT_REMAP(a) 				        0
-#define EARPHONE_STATE_SNIFF(a)
-#define EARPHONE_STATE_ROLE_SWITCH(a)
-
 #else
 #define EARPHONE_STATE_INIT()                   do { } while(0)
 #define EARPHONE_STATE_SET_PAGE_SCAN_ENABLE()   do { } while(0)
@@ -128,11 +99,6 @@
 #define EARPHONE_STATE_ENTER_SOFT_POWEROFF()    do { } while(0)
 #define EARPHONE_STATE_TWS_INIT(a)              do { } while(0)
 #define EARPHONE_STATE_TWS_CONNECTED(a, b)      do { } while(0)
-#define SYS_EVENT_HANDLER_SPECIFIC(a)           do { } while(0)
-#define TWS_EVENT_MASSAGE_HANDLER(a)            0
-#define SYS_EVENT_REMAP(a) 				        0
-#define EARPHONE_STATE_SNIFF(a)
-#define EARPHONE_STATE_ROLE_SWITCH(a)
 #endif
 
 
@@ -152,20 +118,23 @@ typedef enum {
     CIG_EVENT_OPID_PAUSE        = 0x46,
     CIG_EVENT_OPID_NEXT         = 0x4B,
     CIG_EVENT_OPID_PREV         = 0x4C,
+    CIG_EVENT_OPID_REQ_REMOVE_CIS   = 0x4D,
+    CIG_EVENT_OPID_REQ_CREAT_CIS   = 0x4E,
 } CIG_EVENT_CMD_TYPE;
 // 检查是否已经开始退出蓝牙模式
-extern bool bt_mode_is_try_exit();
+bool bt_mode_is_try_exit();
 
-extern u8 bt_app_exit_check(void);
+u8 bt_app_exit_check(void);
 
 
-extern void bt_mode_app_msg_handler(int *msg);
+void bt_mode_app_msg_handler(int *msg);
 
-extern const struct key_remap_table *get_key_remap_table();
+const struct key_remap_table *get_key_remap_table();
 
 struct app_mode *app_enter_bt_mode(int arg);
 
 void bt_get_btstack_device(u8 *addr_a, void **device_a, void **device_b);
+void bt_get_btstack_device3(u8 *addr_a, void **device_a, void **device_b, void **device_c);
 
 bool bt_in_phone_call_state(void *device);
 
@@ -193,5 +162,7 @@ void bt_init_ok_search_index(void);
 void bt_fast_test_api(void);
 
 int bt_key_msg_remap(int *msg);
+
+void bt_discovery_and_connectable_using_loca_mac_addr(u8 inquiry_scan_en, u8 page_scan_en);
 
 #endif

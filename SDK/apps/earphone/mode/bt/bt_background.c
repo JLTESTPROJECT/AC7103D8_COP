@@ -17,6 +17,7 @@
 #include "tws_a2dp_play.h"
 #include "app_tone.h"
 #include "classic/tws_api.h"
+#include "dual_conn.h"
 
 #if (TCFG_BT_BACKGROUND_ENABLE)
 
@@ -28,7 +29,6 @@
 #include "debug.h"
 
 #define TWS_FUNC_ID_BACKGROUND_SYNC    TWS_FUNC_ID('B', 'A', 'C', 'K')
-extern bool check_page_mode_active(void);
 /*----------------------------------------------------------------------------*/
 /**@brief  蓝牙后台模式初始化
    @param
@@ -47,6 +47,11 @@ void bt_background_init(int (*hci_handler)(struct bt_event *), int (*status_hand
 
 static void background_add_forward_msg(int msg_from, int *msg)
 {
+#if TCFG_USER_TWS_ENABLE
+    if (tws_api_get_role() == TWS_ROLE_SLAVE) {
+        return ;
+    }
+#endif
     struct forward_msg *_forward_msg = zalloc(sizeof(struct forward_msg));
     if (_forward_msg) {
         _forward_msg->msg_from = msg_from;
@@ -110,6 +115,17 @@ void bt_background_suspend()
     __this->exiting = 0;
 #endif
 
+#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE && TCFG_BACKGROUND_WITHOUT_EDR_CONNECT
+    log_info("bt_background_suspend disable edr connect\n");
+    if (bt_get_total_connect_dev() > 0) {
+        bt_cmd_prepare(USER_CTRL_DISCONNECTION_HCI, 0, NULL);
+    } else {
+        bt_cmd_prepare(USER_CTRL_WRITE_SCAN_DISABLE, 0, NULL);
+        bt_cmd_prepare(USER_CTRL_WRITE_CONN_DISABLE, 0, NULL);
+        bt_cmd_prepare(USER_CTRL_PAGE_CANCEL, 0, NULL);
+    }
+#endif
+
     sys_auto_shut_down_disable();
 
     btctrler_suspend(suepend_rx_bulk);
@@ -138,6 +154,10 @@ void bt_background_resume(void)
     btstack_resume();
     btctrler_resume();
 
+#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE && TCFG_BACKGROUND_WITHOUT_EDR_CONNECT
+    app_send_message(APP_MSG_BT_PAGE_DEVICE, 0);
+#endif
+
     void *devices[2];
     if (btstack_get_conn_devices(devices, 2) < 1) {          //无设备连接才打开自动关机
         sys_auto_shut_down_enable();
@@ -148,6 +168,11 @@ void bt_background_resume(void)
         log_info("bt_background_goback_with_phone\n");
         background_goback_with_phone();
     }
+#if TCFG_USER_TWS_ENABLE
+    if (tws_api_get_role() == TWS_ROLE_SLAVE) {
+        return ;
+    }
+#endif
     /*除切模式触发的后台返回的消息需要重新处理*/
     if (g_bt_hdl.background.backmode != BACKGROUND_GOBACK_WITH_MODE_SWITCH) {
         struct forward_msg *p, *n;
@@ -224,6 +249,7 @@ static int bt_background_btstack_event_filter(struct bt_event *event)
     // 需要切换蓝牙的命令
     case BT_STATUS_FIRST_DISCONNECT:
     case BT_STATUS_SECOND_DISCONNECT:
+    case BT_STATUS_THIRD_DISCONNECT:
         //关机导致的断开不可以回去蓝牙，否则后台关机会有问题
         if (app_var.goto_poweroff_flag) {
             break;
@@ -234,7 +260,7 @@ static int bt_background_btstack_event_filter(struct bt_event *event)
             printf("close_bt_hw_in_background not go back\n");
             break;
         }
-#if TCFG_BT_BACKGROUND_GOBACK
+#if TCFG_BT_BACKGROUND_GOBACK && (TCFG_BACKGROUND_WITHOUT_EDR_CONNECT == 0)
 #if !USER_SUPPORT_DUAL_A2DP_SOURCE
         ret = BACKGROUND_SWITCH_TO_BT;
 #endif
@@ -242,6 +268,8 @@ static int bt_background_btstack_event_filter(struct bt_event *event)
         //判断断开的是sink设备，默认切换蓝牙
         if (event->value) {
             ret = BACKGROUND_SWITCH_TO_BT;
+        } else {
+            ret = BACKGROUND_EVENT_ORIGINAL_DEAL;
         }
         if (ret == 0) {
 #if TCFG_USER_TWS_ENABLE
@@ -259,6 +287,7 @@ static int bt_background_btstack_event_filter(struct bt_event *event)
 
     case BT_STATUS_SECOND_CONNECTED:
     case BT_STATUS_FIRST_CONNECTED:
+    case BT_STATUS_THIRD_CONNECTED:
 #if TCFG_BT_BACKGROUND_GOBACK
 #if !USER_SUPPORT_DUAL_A2DP_SOURCE
         if (!check_page_mode_active()) {        //如果是回连过程中不返回
@@ -270,6 +299,11 @@ static int bt_background_btstack_event_filter(struct bt_event *event)
 #else
         ret = BACKGROUND_EVENT_ORIGINAL_DEAL;
         /* bt_status_connect_background(&event->u.bt); */
+#endif
+#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE && TCFG_BACKGROUND_WITHOUT_EDR_CONNECT
+        printf("bt_background USER_CTRL_DISCONNECTION_HCI\n");
+        //在蓝牙模式回连过程切到别的模式后台连接上要主动断开
+        bt_cmd_prepare(USER_CTRL_DISCONNECTION_HCI, 0, NULL);
 #endif
         break;
 

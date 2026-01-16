@@ -7,7 +7,7 @@
 #include "fix_iir_filter_api.h"
 #include "audio_hw_crossover.h"
 #include "virtual_bass_classic_api.h"
-#include "asm/hw_eq.h"
+#include "hw_eq.h"
 
 extern const int virtual_bass_pro_soft_crossover;
 
@@ -44,13 +44,6 @@ struct virtual_bass_classic_func {
     int(*init)(void *WorkBuf, struct virtual_bass_class_param *param);
     int(*update)(void *WorkBuf, struct virtual_bass_class_param *param);
     int(*run)(void *WorkBuf, int *tmpbuf, void *in, void *out, int per_channel_npoint);
-};
-
-struct hard_eq_func {
-    void *(*open)(void *coeff, unsigned char nsection, unsigned int sample_rate, unsigned int ch_num, unsigned int in_mode, unsigned int out_mode);
-    void(*run)(void *hdl, void *indata, void *outdata, unsigned int indata_len);
-    void(*update)(void *hdl, void *coeff);
-    void(*close)(void *hdl);
 };
 
 struct crossover_func {

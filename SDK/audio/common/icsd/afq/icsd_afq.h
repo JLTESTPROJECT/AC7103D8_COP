@@ -18,12 +18,13 @@
 #define AFQ_SUSPENDED            BIT(1)
 #define AFQ_PART1_END            BIT(2)
 
-extern int (*afq_printf)(const char *format, ...);
-#if 1
+#if AFQ_PRINTF_EN
 #define _afq_printf printf                  //打开自适应ANC参数调试信息
 #else
 #define _afq_printf icsd_printf_off
 #endif
+extern int (*afq_printf)(const char *format, ...);
+
 
 struct icsd_afq_libfmt {
     int lib_alloc_size; //算法ram需求大小
@@ -81,4 +82,5 @@ void icsd_afq_anctask_handler(void *param, int *msg);
 
 void icsd_afq_dsf8_data_debug(u8 belong, s16 *dsf_out_ch0, s16 *dsf_out_ch1, s16 *dsf_out_ch2, s16 *dsf_out_ch3);
 
+extern char lib_afq_version[];
 #endif

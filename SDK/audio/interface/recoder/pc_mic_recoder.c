@@ -16,10 +16,7 @@
 #include "audio_cvp.h"
 #include "pc_spk_player.h"
 #include "app_config.h"
-
-#if TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN
-#include "icsd_adt_app.h"
-#endif /*TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN*/
+#include "audio_anc_includes.h"
 
 #define LOG_TAG_CONST       USB
 #define LOG_TAG             "[pcmic]"
@@ -44,9 +41,6 @@ pc_mic_state_t g_pc_mic_state;
 
 struct pc_mic_recoder {
     struct jlstream *stream;
-#if TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN
-    u8 icsd_adt_state;
-#endif
 };
 static struct pc_mic_recoder *g_pc_mic_recoder = NULL;
 
@@ -101,6 +95,10 @@ static void pc_mic_recoder_callback(void *private_data, int event)
 
 int pc_mic_recoder_open(void)
 {
+    /*领夹mic 功能不需要打开recoder 的音频流,由switch节点打开*/
+#if (defined(WIRELESS_MIC_PRODUCT_MODE) && (WIRELESS_MIC_PRODUCT_MODE == ADAPTER_2T1R_MODE || WIRELESS_MIC_PRODUCT_MODE ==WIRELES_MIC_1TNR_MODE))
+    return -EFAULT;
+#endif
     os_mutex_pend(&mic_rec_mutex, 0);
     struct pc_mic_recoder *recoder = NULL;
     u16 source_uuid;
@@ -123,16 +121,17 @@ int pc_mic_recoder_open(void)
     source_uuid = NODE_UUID_ADC;
 
     if (!recoder->stream) {
+        recoder->stream = jlstream_pipeline_parse(uuid, NODE_UUID_IIS0_RX);
+        source_uuid = NODE_UUID_IIS0_RX;
+    }
+    if (!recoder->stream) {
         goto __exit0;
     }
 
 #if TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN
-    /*通话前关闭adt*/
-    recoder->icsd_adt_state = audio_icsd_adt_is_running();
-    if (recoder->icsd_adt_state) {
-        audio_icsd_adt_close(0, 1);
-    }
-#endif /*TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN*/
+    audio_icsd_adt_scene_set(ADT_SCENE_PC_MIC, 1);
+    audio_icsd_adt_reset(ADT_SCENE_PC_MIC);
+#endif
 
     //设置ADC的中断点数
     int err = jlstream_node_ioctl(recoder->stream, NODE_UUID_SOURCE, NODE_IOC_SET_PRIV_FMT, AUDIO_ADC_IRQ_POINTS);
@@ -172,6 +171,12 @@ __exit1:
     jlstream_release(recoder->stream);
 __exit0:
     free(recoder);
+
+#if TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN
+    audio_icsd_adt_scene_set(ADT_SCENE_PC_MIC, 0);
+    audio_icsd_adt_reset(ADT_SCENE_PC_MIC);
+#endif
+
     os_mutex_post(&mic_rec_mutex);
     return -ENOMEM;
 }
@@ -179,6 +184,10 @@ __exit0:
 
 void pc_mic_recoder_close(void)
 {
+    /*领夹mic 功能不需要打开recoder 的音频流,由switch节点打开*/
+#if (defined(WIRELESS_MIC_PRODUCT_MODE) && (WIRELESS_MIC_PRODUCT_MODE == ADAPTER_2T1R_MODE || WIRELESS_MIC_PRODUCT_MODE ==WIRELES_MIC_1TNR_MODE))
+    return;
+#endif
     os_mutex_pend(&mic_rec_mutex, 0);
     struct pc_mic_recoder *recoder = g_pc_mic_recoder;
 
@@ -186,9 +195,6 @@ void pc_mic_recoder_close(void)
         os_mutex_post(&mic_rec_mutex);
         return;
     }
-#if TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN
-    u8 icsd_adt_state = recoder->icsd_adt_state;
-#endif /*TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN*/
 
     if (recoder->stream) {
         jlstream_stop(recoder->stream, 0);
@@ -199,10 +205,9 @@ void pc_mic_recoder_close(void)
     g_pc_mic_recoder = NULL;
     pcm_mic_recoder_check = 0;
 #if TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN
-    if (icsd_adt_state) {
-        audio_icsd_adt_open(0);
-    }
-#endif /*TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN*/
+    audio_icsd_adt_scene_set(ADT_SCENE_PC_MIC, 0);
+    audio_icsd_adt_reset(ADT_SCENE_PC_MIC);
+#endif
 
     jlstream_event_notify(STREAM_EVENT_CLOSE_RECODER, (int)"pc_mic");
     os_mutex_post(&mic_rec_mutex);
@@ -265,6 +270,10 @@ int pc_mic_recoder_restart_by_taskq(void)
 
 static void pc_mic_set_volume(int mic_vol)
 {
+    /*领夹mic 功能不需要打开recoder 的音频流,由switch节点打开*/
+#if (defined(WIRELESS_MIC_PRODUCT_MODE) && (WIRELESS_MIC_PRODUCT_MODE == ADAPTER_2T1R_MODE || WIRELESS_MIC_PRODUCT_MODE ==WIRELES_MIC_1TNR_MODE))
+    return;
+#endif
     pcmic_volume_wait_set_flag = 0;
     if (app_get_current_mode()->name == APP_MODE_PC) {
         s16 volume = (u16)mic_vol;

@@ -19,7 +19,6 @@ struct data_export_cfg_t {
 } __attribute__((packed));
 
 struct data_export_node_hdl {
-    char name[16];
     void *effect_dev1;
     u32 sample_rate;
     u8 ch_num;
@@ -105,8 +104,6 @@ static int data_export_adapter_bind(struct stream_node *node, u16 uuid)
 /*打开改节点输入接口*/
 static void data_export_ioc_open_iport(struct stream_iport *iport)
 {
-    printf("data_export_ioc_open_iport");
-    iport->handle_frame = data_export_handle_frame;				//注册输出回调
 }
 
 
@@ -196,11 +193,11 @@ static void data_export_adapter_release(struct stream_node *node)
 
 /*节点adapter 注意需要在sdk_used_list声明，否则会被优化*/
 REGISTER_STREAM_NODE_ADAPTER(data_export_node_adapter) = {
-    .name       = "data_export",
     .uuid       = NODE_UUID_DATA_EXPORT,
     .bind       = data_export_adapter_bind,
     .ioctl      = data_export_adapter_ioctl,
     .release    = data_export_adapter_release,
+    .handle_frame = data_export_handle_frame,				//注册输出回调
     .hdl_size   = sizeof(struct data_export_node_hdl),
 };
 
@@ -210,3 +207,8 @@ REGISTER_STREAM_NODE_ADAPTER(data_export_node_adapter) = {
 
 #endif
 
+__attribute__((used))
+int data_export_version_1_0_0(void)
+{
+    return 0x100;
+}

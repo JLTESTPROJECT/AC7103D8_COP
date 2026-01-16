@@ -24,6 +24,7 @@ struct lp_ws_t {
     u8  osc_change_mode;
 };
 
+u8 lmp_get_rssi_end_per_for_edr_address(u8 *edr_address, u8 *per, s8 *phone_rssi, s8 *tws_rssi);
 void lmp_private_a2dp_start(void *_conn);
 
 void lmp_private_a2dp_stop(void *_conn, u8 suspend);
@@ -116,6 +117,7 @@ int lmp_hci_reset();
 
 int lmp_hci_write_scan_enable(u8 enable);
 int lmp_hci_write_quick_scan_enable(u8 enable);
+int lmp_hci_write_quick_page_enable(u8 enable);
 
 void lmp_hci_write_class_of_device(int dev_class);
 
@@ -230,11 +232,11 @@ void lmp_hci_set_role_switch_supported(bool enable);
 void lmp_hci_tx_channel_chassification(u8 *map);
 
 
-extern int lmp_speak_mic_send_internal(void *priv, u8 *data, int len);
+int lmp_speak_mic_send_internal(void *priv, u8 *data, int len);
 
 u8 *get_tws_internal_addr(int channel);
 
-extern int lmp_private_esco_suspend_resume(int flag);;
+int lmp_private_esco_suspend_resume(int flag);;
 
 void user_set_tws_box_mode(u8 mode);
 
@@ -245,17 +247,17 @@ void bt_set_tx_power(u8 txpower);
 void bredr_bulk_change(u8 mode);
 
 
-extern u8 get_bredr_link_state();
+u8 get_bredr_link_state();
 
-extern u32 get_bt_slot_time(u8 type, u32 time, int *ret_time, int (*local_us_time)(void));
-extern u32 get_sync_rec_instant_us_time();
-extern u8 tws_remote_state_check(void);
-extern void tws_remote_state_clear(void);
-extern void user_set_tws_box_mode(u8 mode);
+u32 get_bt_slot_time(u8 type, u32 time, int *ret_time, int (*local_us_time)(void));
+u32 get_sync_rec_instant_us_time();
+u8 tws_remote_state_check(void);
+void tws_remote_state_clear(void);
+void user_set_tws_box_mode(u8 mode);
 
 
-extern void bredr_fcc_init(u8 mode, u8 fre);
-extern void bredr_set_dut_enble(u8 en, u8 phone);
+void bredr_fcc_init(u8 mode, u8 fre);
+void bredr_set_dut_enble(u8 en, u8 phone);
 
 
 
@@ -284,15 +286,15 @@ void link_fix_txrx_disable();
 void link_fix_rx_update_result(struct link_fix_rx_result *result);
 void link_fix_rx_dump_result();
 void bt_lmp_store_16(uint8_t *buffer, uint16_t pos, uint16_t value);
-extern u8 *get_audio_share_master_addr();
-extern u8 *get_audio_share_slave_addr();
-extern bool is_master_device_tws_share_conn(u8 *addr);
-extern bool is_slave_device_tws_share_conn(u8 *addr);
-extern void lmp_private_close_share_sbc_channel(u8 *addr);
-extern void *lmp_private_open_share_sbc_channel(u8 *addr, u16 channel_remote_cid, u8 codec_type, u16 simple);
-extern void set_donlge_quick_sniff_run_slot(int quick_sniff_run_slot);
-extern bool is_priority_device_tws_share_conn(u8 *addr);
-extern bool is_master_device_tws_share_conn_tx(u8 *addr);
+u8 *get_audio_share_master_addr();
+u8 *get_audio_share_slave_addr();
+bool is_master_device_tws_share_conn(u8 *addr);
+bool is_slave_device_tws_share_conn(u8 *addr);
+void lmp_private_close_share_sbc_channel(u8 *addr);
+void *lmp_private_open_share_sbc_channel(u8 *addr, u16 channel_remote_cid, u8 codec_type, u16 simple);
+void set_donlge_quick_sniff_run_slot(int quick_sniff_run_slot);
+bool is_priority_device_tws_share_conn(u8 *addr);
+bool is_master_device_tws_share_conn_tx(u8 *addr);
 
 void lp_winsize_init(const struct lp_ws_t *lp);
 
@@ -308,4 +310,17 @@ int check_a2dp_source_send_packet_limit_cnt(u8 *addr, u8 dump_limit);
 
 u8 lmp_get_rssi_end_per_for_edr_address(u8 *edr_address, u8 *per, s8 *phone_rssi, s8 *tws_rssi);
 u8 lmp_get_conn_num(void);
+u8 bt_trim_status_get();
+
+void lmp_hci_send_share_user_date(u8 *date, u8 len, u32 func_id);
+
+u8 lmp_get_esco_conn_statu(void);
+
+void dut_idle_run_slot(u16 slot);
+
+void set_le_audio_unicast_witch_phone_play_mix(u8 en);
+
+void bt_set_rxtx_status_io(u32 tx_pin, u32 rx_pin);
+void set_local_tws_3m_type_support(u8 enable);
+
 #endif

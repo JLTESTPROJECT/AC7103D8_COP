@@ -1,4 +1,6 @@
 #include "typedef.h"
+#include "fs/sdfile.h"
+#include "cpu/periph/crc.h"
 
 #define SN_DATA_OFFSET             (64 + 16)
 #define SN_DATA_MAX_SIZE           (132 - 4)
@@ -9,9 +11,6 @@ struct flash_sn {
     u8 data[0];
 };
 
-extern u32 sdfile_get_disk_capacity(void);
-extern u32 sdfile_flash_addr2cpu_addr(u32 offset);
-extern u16 CRC16(const void *ptr, u32 len);
 
 int flash_get_sn_data(u8 *sn_data)
 {

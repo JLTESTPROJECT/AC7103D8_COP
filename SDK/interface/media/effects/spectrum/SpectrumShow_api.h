@@ -13,7 +13,7 @@
 
 #else
 #define AT_SPECTRUMSHOW(x)           __attribute__((section(#x)))
-#define AT_SPECTRUMSHOW_CODE         AT_SPECTRUMSHOW(.specshow.text.cache.L1)
+#define AT_SPECTRUMSHOW_CODE         AT_SPECTRUMSHOW(.specshow.text.cache.L2.code)
 #define AT_SPECTRUMSHOW_CONST        AT_SPECTRUMSHOW(.specshow.text.cache.L2.const)
 #define AT_SPECTRUMSHOW_SPARSE_CODE  AT_SPECTRUMSHOW(.specshow.text)
 #define AT_SPECTRUMSHOW_SPARSE_CONST AT_SPECTRUMSHOW(.specshow.text.const)
@@ -26,13 +26,17 @@ typedef struct _SpectrumShowParam {
     int channel;
     int mode;//模式，双声道起作用，0 计算的是第一声道的频谱值，//1计算的是第二声道频谱值，2为第一声道与第二声道相加除2的频谱值
     af_DataType pcm_info;
+    // 新添加参数
+    int fmax_in;
+    int fmin_in;
 } SpectrumShowParam;
 
 int getSpectrumShowBuf();
 int SpectrumShowInit(void *workBuf, SpectrumShowParam *param);
-int SpectrumShowRun(void *workBuf, short *in, int len);
+int SpectrumShowRun(void *workBuf, void *in, int len);
 int getSpectrumNum(void *workBuf);
 float *getCentreFreq(void *workBuf);
 short *getSpectrumValue(void *workBuf);
 
+int SpectrumShow_version_1_0_0();
 #endif // !SPECTRUMSHOW_API_H

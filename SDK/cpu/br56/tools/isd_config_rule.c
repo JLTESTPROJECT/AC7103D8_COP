@@ -98,16 +98,17 @@
 #endif
 
 [EXTRA_CFG_PARAM]
-OTP_CFG_SIZE = 256
+OTP_CFG_SIZE = 256;
+
 #if CONFIG_DOUBLE_BANK_ENABLE
-               BR22_TWS_DB = YES;	//dual bank flash framework enable
+BR22_TWS_DB = YES;	//dual bank flash framework enable
 FLASH_SIZE = CONFIG_FLASH_SIZE;		//flash_size cfg
 BR22_TWS_VERSION = 0; //default fw version
 #if CONFIG_DB_UPDATE_DATA_GENERATE_EN
 DB_UPDATE_DATA = YES; //generate db_update_data.bin
 #endif
 #else
-               NEW_FLASH_FS = YES;	//enable single bank flash framework
+NEW_FLASH_FS = YES;	//enable single bank flash framework
 #endif 				//CONFIG_DOUBLE_BANK_ENABLE
 
 FORCE_4K_ALIGN = YES; // force aligin with 4k bytes
@@ -168,9 +169,11 @@ UTBD = CONFIG_UBOOT_DEBUG_BAUD_RATE; //uboot串口波特率
 #endif
 
 //外部FLASH 硬件连接配置
-#ifdef CONFIG_EXTERN_FLASH_SIZE
-EX_FLASH = PC03_1A_PC08;	//CS_pin / spi (0/1/2) /port(A/B) / power_io
-EX_FLASH_IO = 2_PC01_PC02_PC04_PC05_PC00;	//data_width / CLK_pin / DO_pin / DI_pin / D2_pin / D3_pin   当data_width为4的时候，D2_pin和D3_pin才有效
+#if TCFG_NORFLASH_DEV_ENABLE
+//EX_FLASH = PC03_1A_PC08;	//CS_pin / spi (0/1/2) /port(A/B) / power_io
+//EX_FLASH_IO = 2_PC01_PC02_PC04_PC05_PC00;	//data_width / CLK_pin / DO_pin / DI_pin / D2_pin / D3_pin   当data_width为4的时候，D2_pin和D3_pin才有效
+EX_FLASH = PA06_1A_PA03;
+EX_FLASH_IO = 2_PA04_PA05_PC00_NULL_NULL;
 #endif
 /* #0:disable */
 /* #1:PA9 PA10  */
@@ -385,6 +388,7 @@ CAT2(TONE_FILE_RESERVED_AREA_CONFIG_NAME, ADR) = AUTO;
 CAT2(TONE_FILE_RESERVED_AREA_CONFIG_NAME, LEN) = TONE_FILE_RESERVED_AREA_CONFIG_SIZE;
 CAT2(TONE_FILE_RESERVED_AREA_CONFIG_NAME, OPT) = TONE_FILE_RESERVED_AREA_CONFIG_OPT;
 #endif
+
 /*
  ****************************************************************************
  *								ANC配置区
@@ -481,6 +485,30 @@ ANCIF1_OPT = CONFIG_ANCIF1_OPT;
 /*******************非用户配置区**********************/
 #endif/*CONFIG_ANC_ENABLE*/
 
+#if CONFIG_FINDMY_INFO_ENABLE
+[RESERVED_EXPAND_CONFIG]
+#if (CONFIG_FLASH_SIZE == 0x100000)
+#define CONFIG_FINDMY_INFO_ADDR                 0xFC000 //config user space
+
+#elif (CONFIG_FLASH_SIZE == 0x200000)
+#define CONFIG_FINDMY_INFO_ADDR                 0x1FC000 //config user space
+
+#elif (CONFIG_FLASH_SIZE == 0x400000)
+#define CONFIG_FINDMY_INFO_ADDR                 0x3FC000 //config user space
+#endif
+
+#define CONFIG_FINDMY_INFO_LEN	                0x2000  //need 8K
+#define CONFIG_FINDMY_INFO_OPT	                1
+FINDMY_ADR = CONFIG_FINDMY_INFO_ADDR;
+FINDMY_LEN = CONFIG_FINDMY_INFO_LEN;
+FINDMY_OPT = CONFIG_FINDMY_INFO_OPT;
+#endif
+
+#if CONFIG_FINDMY_INFO_ENABLE
+[FW_ADDITIONAL]
+FILE_LIST = (file = file_authrunFindmy.tkn: type = 0xec);
+#endif
+
 [BURNER_PASSTHROUGH_CFG]
 FLASH_WRITE_PROTECT = YES;
 
@@ -488,4 +516,15 @@ FLASH_WRITE_PROTECT = YES;
 SIZE = CONFIG_BURNER_INFO_SIZE;
 
 
+#if TCFG_DUAL_BANK_ENABLE
+#if TCFG_UPDATE_COMPRESS
+[COMPRESS_BACKUP]
+AREA_SIZE = 0;
+BLOCK_SIZE = 65536;
+#elif TCFG_UPDATE_UPDIFF
+[COMPRESS_BACKUP]
+AREA_SIZE = 256K;
+DIFF_UPGRADE = YES;
+#endif
+#endif
 

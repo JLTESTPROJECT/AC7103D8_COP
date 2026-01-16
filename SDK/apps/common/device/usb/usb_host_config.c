@@ -214,6 +214,7 @@ void usb_host_free(usb_dev usb_id)
     if (host_var[usb_id]) {
         memset(host_var[usb_id]->usb_h_interrupt_rx, 0, sizeof(usb_h_interrupt) * MAX_HOST_EP_RX);
         memset(host_var[usb_id]->usb_h_interrupt_tx, 0, sizeof(usb_h_interrupt) * MAX_HOST_EP_TX);
+        host_var[usb_id] = NULL;
     }
     OS_EXIT_CRITICAL();
 }

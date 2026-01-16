@@ -34,9 +34,19 @@
 #define DMS_HYBRID  	3	//talk mic + fb mic 风噪处理
 #define DMS_AWN  		4	//talk mic + ff mic 风噪处理
 
-/*develop cvp select*/
-#define CVP_CFG_USER_DEFINED	1	//用户自定义开发算法
-#define CVP_CFG_AIS_3MIC		2	//思必驰3mic算法
+/*Develop cvp Config
+ * 高位：算法原厂
+ * 低位：算法类型
+ */
+#define CVP_CFG_USER_DEFINED			1	//用户自定义开发算法
+#define CVP_CFG_AIS_3MIC				2	//思必驰3mic算法
+#define CVP_CFG_ELEVOC_1MIC_VPU			((1UL << 20) | (1UL << 0))	//大象声科Elevoc：1mic+VPU
+#define CVP_CFG_ELEVOC_2MIC_VPU			((1UL << 20) | (1UL << 1))	//大象声科Elevoc：2mic+VPU
+#define CVP_CFG_ELEVOC_2MIC_VPU_CLIP	((1UL << 20) | (1UL << 2))	//大象声科Elevoc：2mic+VPU（耳夹形态FreeClip）
+#define CVP_CFG_ELEVOC_3MIC_VPU			((1UL << 20) | (1UL << 3))	//大象声科Elevoc：3mic+VPU
+
+//CVP ALGO BITMAP ENABLE
+#define CVP_ELEVOC_ALGO_BITMAP			(1UL << 20)	//大象声科Elevoc算法使能映射
 
 /*SMS DNS版本定义*/
 #define SMS_DNS_V100        0xC1
@@ -80,4 +90,17 @@
 #define ANS_V100	0xA1
 #define ANS_V200	0xA2
 
+/*
+ *******************************************************************
+ *						NN Table Bit Definitions
+ *******************************************************************
+ */
+// LLNS bit : 0 ~ 8
+#define NN_TABLE_LLNS_SR32K           BIT(0)
+#define NN_TABLE_LLNS_SR48K           BIT(1)
+
+// CVP V3 table bit : 9 ~ 31
+#define NN_TABLE_CVP_R3				  BIT(9)
+#define NN_TABLE_CVP_2MIC_CLIP    	  BIT(12)
+#define NN_TABLE_CVP_DEFAULT      	  NN_TABLE_CVP_R3
 #endif/*_AUDIO_CVP_DEF_H_*/

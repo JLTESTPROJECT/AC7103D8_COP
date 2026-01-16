@@ -9,6 +9,7 @@
 #include "rcsp_event.h"
 #include "rcsp_extra_flash_cmd.h"
 #include "sensor_log_notify.h"
+#include "rcsp_translator.h"
 
 ///>>>>>>>>>>>>>收到APP发来不需要响应的命令处理
 
@@ -28,21 +29,23 @@
 void rcsp_cmd_recieve_no_respone(void *priv, u8 OpCode, u8 *data, u16 len, u16 ble_con_handle, u8 *spp_remote_addr)
 {
     rcsp_printf("cmd_recieve_no_respone, %x\n", OpCode);
-    switch (OpCode) {
-    default:
 #if JL_RCSP_EXTRA_FLASH_OPT
-        if (0 == JL_rcsp_extra_flash_cmd_no_resp(priv, OpCode, data, len)) {
-            break;
-        }
+    if (0 == JL_rcsp_extra_flash_cmd_no_resp(priv, OpCode, data, len)) {
+        return;
+    }
+#endif
+#if RCSP_ADV_TRANSLATOR
+    if (0 == JL_rcsp_translator_functions(priv, OpCode, 0, data, len, ble_con_handle, spp_remote_addr)) {
+        return;
+    }
 #endif
 #if JL_RCSP_SENSORS_DATA_OPT
-        if (0 == JL_rcsp_sensors_log_notify(priv, OpCode, data, len)) {
-            break;
-        }
-#endif
-        break;
+    if (0 == JL_rcsp_sensors_log_notify(priv, OpCode, data, len)) {
+        return;
     }
+#endif
 }
 #endif//RCSP_MODE
+
 
 

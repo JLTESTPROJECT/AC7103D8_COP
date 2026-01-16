@@ -8,10 +8,21 @@ objs += \
       $(ROOT)/audio/framework/plugs/source/a2dp_streamctrl.o \
       $(ROOT)/audio/framework/plugs/source/esco_file.o \
       $(ROOT)/audio/framework/plugs/source/adc_file.o \
-	  $(ROOT)/audio/framework/plugs/source/multi_ch_adc_file.o \
       $(ROOT)/audio/framework/nodes/esco_tx_node.o \
       $(ROOT)/audio/framework/nodes/plc_node.o \
       $(ROOT)/audio/framework/nodes/volume_node.o \
+      $(ROOT)/audio/framework/node_list.o \
+
+objs += \
+	  $(ROOT)/audio/framework/nodes/audio_debug_node.o
+
+
+
+objs += \
+      $(ROOT)/audio/framework/nodes/virtual_udisk_node.o
+
+objs += \
+      $(ROOT)/audio/framework/nodes/avc_node.o
 
 objs += \
       $(ROOT)/audio/framework/nodes/ns_node.o
@@ -76,10 +87,20 @@ objs += \
       $(ROOT)/audio/framework/nodes/uart_node.o
 
 objs += \
+      $(ROOT)/audio/framework/nodes/cvp_v3_node.o
+
+objs += \
+      $(ROOT)/audio/framework/nodes/cvp_sms_vf_node.o
+
+objs += \
       $(ROOT)/audio/framework/nodes/dns_node.o
 
 objs += \
       $(ROOT)/audio/framework/nodes/ai_tx_node.o
+
+objs += \
+	  $(ROOT)/audio/interface/player/ai_rx_player.o \
+      $(ROOT)/audio/framework/plugs/source/ai_rx_file.o
 
 objs += \
       $(ROOT)/audio/framework/nodes/data_export_node.o
@@ -119,14 +140,10 @@ objs += \
 	  $(ROOT)/audio/common/audio_dvol.o \
 	  $(ROOT)/audio/common/audio_general.o \
 	  $(ROOT)/audio/common/audio_build_needed.o \
-	  $(ROOT)/audio/common/online_debug/aud_data_export.o \
-	  $(ROOT)/audio/common/online_debug/audio_online_debug.o \
-	  $(ROOT)/audio/common/online_debug/audio_capture.o \
 	  $(ROOT)/audio/common/audio_plc.o \
 	  $(ROOT)/audio/common/audio_noise_gate.o \
 	  $(ROOT)/audio/common/audio_ns.o \
 	  $(ROOT)/audio/common/audio_utils.o \
-	  $(ROOT)/audio/common/audio_export_demo.o \
 	  $(ROOT)/audio/common/amplitude_statistic.o \
 	  $(ROOT)/audio/common/frame_length_adaptive.o \
 	  $(ROOT)/audio/common/bt_audio_energy_detection.o \
@@ -138,6 +155,12 @@ objs += \
 	  $(ROOT)/audio/common/pcm_data/sine_pcm.o \
 
 objs += \
+	  $(ROOT)/audio/common/audio_export_demo.o \
+	  $(ROOT)/audio/common/online_debug/audio_capture.o \
+	  $(ROOT)/audio/common/online_debug/aud_data_export.o \
+	  $(ROOT)/audio/common/online_debug/audio_online_debug.o
+
+objs += \
 	  $(ROOT)/audio/common/audio_iis_lrclk_capture.o
 
 objs += \
@@ -147,17 +170,25 @@ objs += \
 	  $(ROOT)/audio/common/uartPcmSender.o
 
 objs += \
+	  $(ROOT)/audio/common/demo/audio_demo.o
+objs += \
 	  $(ROOT)/audio/common/demo/codec_demo/audio_enc_file_demo.o \
 	  $(ROOT)/audio/common/demo/codec_demo/audio_file_dec_demo.o \
 	  $(ROOT)/audio/common/demo/codec_demo/audio_frame_codec_demo.o \
-	  $(ROOT)/audio/common/demo/audio_eq_demo.o \
 	  $(ROOT)/audio/common/demo/codec_demo/audio_msbc_hw_codec_demo.o \
 	  $(ROOT)/audio/common/demo/codec_demo/audio_msbc_sw_codec_demo.o \
 	  $(ROOT)/audio/common/demo/codec_demo/audio_sbc_codec_demo.o \
-	  $(ROOT)/audio/common/demo/audio_alink_demo.o \
 	  $(ROOT)/audio/common/demo/codec_demo/audio_speex_codec_demo.o \
 	  $(ROOT)/audio/common/demo/codec_demo/audio_opus_codec_demo.o \
+	  $(ROOT)/audio/common/demo/audio_alink_demo.o \
+	  $(ROOT)/audio/common/demo/audio_eq_demo.o \
 
+
+#if EXPORT_PLATFORM_AUDIO_HW_VAD_ENABLE
+objs += \
+	  $(ROOT)/audio/common/demo/audio_vad_demo.o
+
+#endif
 
 #if EXPORT_PLATFORM_HW_MATH_VERSION == 2
 objs += \
@@ -173,6 +204,9 @@ objs += \
 
 
 objs += \
+	  $(ROOT)/audio/interface/player/iis_player.o
+
+objs += \
 	  $(ROOT)/audio/interface/player/tone_player.o \
 	  $(ROOT)/audio/interface/player/ring_player.o \
 	  $(ROOT)/audio/interface/player/a2dp_player.o \
@@ -180,21 +214,42 @@ objs += \
 	  $(ROOT)/audio/interface/player/key_tone_player.o \
 	  $(ROOT)/audio/interface/player/dev_flow_player.o \
 	  $(ROOT)/audio/interface/player/adda_loop_player.o \
-	  $(ROOT)/audio/interface/player/linein_player.o \
+
+objs += \
+	  $(ROOT)/audio/interface/player/linein_player.o
+
+objs += \
+	  $(ROOT)/audio/interface/player/loudspeaker_iis_player.o \
+	  $(ROOT)/audio/interface/player/loudspeaker_mic_player.o
+
+objs += \
+	  $(ROOT)/audio/interface/player/mic_player.o
 
 objs += \
 	  $(ROOT)/audio/interface/recoder/esco_recoder.o \
-	  $(ROOT)/audio/interface/recoder/ai_voice_recoder.o \
 	  $(ROOT)/audio/interface/recoder/dev_flow_recoder.o \
+
+objs += \
+	  $(ROOT)/audio/interface/recoder/ai_voice_recoder.o
+
+objs += \
+	  $(ROOT)/audio/interface/user_defined/audio_dsp_low_latency_player.o \
+	  $(ROOT)/audio/interface/user_defined/env_noise_recoder.o
 
 #if EXPORT_LE_AUDIO_SUPPORT
 objs += \
-	$(ROOT)/audio/interface/player/le_audio_player.o \
+	$(ROOT)/audio/interface/player/le_audio_player.o
+
+objs += \
+	$(ROOT)/audio/interface/player/soundbox_le_audio_player.o
+
+objs += \
 	$(ROOT)/audio/framework/nodes/le_audio_source.o \
 	$(ROOT)/audio/framework/plugs/source/le_audio_file.o \
 	$(ROOT)/audio/le_audio/le_audio_stream.o
 objs += \
-	  $(ROOT)/audio/interface/recoder/le_audio_recorder.o
+	  $(ROOT)/audio/interface/recoder/le_audio_recorder.o \
+	  $(ROOT)/audio/interface/recoder/le_audio_mix_mic_recorder.o
 #endif
 
 #if EXPORT_PLATFORM_AUDIO_MIDI_ENABLE
@@ -208,32 +263,43 @@ objs += \
 
 objs += \
       $(ROOT)/audio/effect/eq_config.o \
-	  $(ROOT)/audio/effect/spk_eq.o \
-	  $(ROOT)/audio/effect/audio_voice_changer_api.o \
-	  $(ROOT)/audio/effect/esco_ul_voice_changer.o \
-	  $(ROOT)/audio/effect/bass_treble.o \
 	  $(ROOT)/audio/effect/audio_dc_offset_remove.o \
 	  $(ROOT)/audio/effect/effects_adj.o \
 	  $(ROOT)/audio/effect/effects_dev.o \
 	  $(ROOT)/audio/effect/effects_default_param.o \
 	  $(ROOT)/audio/effect/node_param_update.o \
-	  $(ROOT)/audio/effect/scene_update.o \
+
+objs += \
+	  $(ROOT)/audio/effect/spk_eq.o
+
+
+objs += \
+	  $(ROOT)/audio/effect/esco_ul_voice_changer.o
+
+objs += \
+	  $(ROOT)/audio/effect/bass_treble.o
+
+objs += \
+	  $(ROOT)/audio/effect/audio_voice_changer_api.o
+
+objs += \
+	  $(ROOT)/audio/effect/scene_update.o
 
 #if EXPORT_PLATFORM_ICSD_ENABLE
+objs += \
+	$(ROOT)/audio/common/icsd/adt/icsd_adt_alg.o \
+	$(ROOT)/audio/common/icsd/common_v2/icsd_common_v2.o \
+	$(ROOT)/audio/common/icsd/avc/icsd_avc_config.o \
+
+
 objs += \
 	$(ROOT)/audio/common/icsd/adt/icsd_adt.o \
 	$(ROOT)/audio/common/icsd/adt/icsd_adt_app.o \
 	$(ROOT)/audio/common/icsd/adt/icsd_adt_config.o \
-	$(ROOT)/audio/common/icsd/adt/icsd_adt_alg.o \
 	$(ROOT)/audio/common/icsd/adt/icsd_adt_demo.o \
-	$(ROOT)/audio/common/icsd/anc/icsd_anc_app.o \
-	$(ROOT)/audio/common/icsd/anc/icsd_anc_board.o \
-	$(ROOT)/audio/common/icsd/anc/icsd_anc_data.o \
-	$(ROOT)/audio/common/icsd/anc/icsd_anc_interactive.o \
 	$(ROOT)/audio/common/icsd/common/icsd_common.o \
 	$(ROOT)/audio/common/icsd/dot/icsd_dot_app.o \
 	$(ROOT)/audio/common/icsd/dot/icsd_dot.o \
-	$(ROOT)/audio/common/icsd/common_v2/icsd_common_v2.o \
 	$(ROOT)/audio/common/icsd/common_v2/icsd_common_v2_app.o \
 	$(ROOT)/audio/common/icsd/anc_v2/icsd_anc_v2.o \
 	$(ROOT)/audio/common/icsd/anc_v2/icsd_anc_v2_app.o \
@@ -261,7 +327,6 @@ objs += \
 	$(ROOT)/audio/common/icsd/wind/icsd_wind_config.o \
 	$(ROOT)/audio/common/icsd/wind/icsd_wind_app.o \
 	$(ROOT)/audio/common/icsd/wind/cvp_wind_app.o \
-	$(ROOT)/audio/common/icsd/avc/icsd_avc_config.o \
 	$(ROOT)/audio/common/icsd/avc/icsd_avc_app.o \
 	$(ROOT)/audio/common/icsd/env_noise_det/icsd_env_noise_det_app.o \
 	$(ROOT)/audio/common/icsd/adjdcc/icsd_adjdcc_config.o \
@@ -270,6 +335,9 @@ objs += \
 
 #endif
 
+objs += \
+    $(ROOT)/audio/anc/audio_anc_lvl_sync.o
+
 #if EXPORT_PLATFORM_ANC_ENABLE
 objs += \
 	  $(ROOT)/audio/anc/audio_anc_fade_ctr.o \
@@ -277,6 +345,13 @@ objs += \
 	  $(ROOT)/audio/anc/audio_anc_debug_tool.o \
 	  $(ROOT)/audio/anc/audio_anc_mult_scene.o \
 	  $(ROOT)/audio/anc/audio_anc_common.o \
+	  $(ROOT)/audio/anc/anc_memory.o \
+	  $(ROOT)/audio/anc/audio_anc_develop.o \
+	  $(ROOT)/audio/anc/audio_anc_hw_src.o \
+	  $(ROOT)/audio/anc/audio_anc_manager.o \
+	  $(ROOT)/audio/anc/audio_anc.o \
+	  $(ROOT)/audio/anc/icsd_anc_user.o \
+	  $(ROOT)/audio/anc/anc_pdm_mic_hw.o \
 
 #endif
 
@@ -318,31 +393,59 @@ objs += \
 objs += \
 	$(ROOT)/audio/effect/somatosensory/audio_somatosensory.o \
 
+objs += \
+	$(ROOT)/audio/effect/spatial_effect/spatial_effect_imu.o \
+	$(ROOT)/audio/effect/spatial_effect/spatial_imu_trim.o \
+	$(ROOT)/audio/common/online_debug/aud_spatial_effect_dut.o \
+
 #endif
 
 objs += \
 	  $(ROOT)/audio/CVP/audio_aec.o \
 	  $(ROOT)/audio/CVP/audio_cvp.o \
 	  $(ROOT)/audio/CVP/audio_cvp_dms.o \
-	  $(ROOT)/audio/CVP/audio_cvp_3mic.o \
 	  $(ROOT)/audio/CVP/audio_cvp_online.o \
-	  $(ROOT)/audio/CVP/audio_cvp_demo.o \
-	  $(ROOT)/audio/CVP/audio_cvp_develop.o \
-	  $(ROOT)/audio/CVP/audio_cvp_sync.o \
-	  $(ROOT)/audio/CVP/audio_cvp_ais_3mic.o \
 	  $(ROOT)/audio/CVP/audio_cvp_ref_task.o \
 	  $(ROOT)/audio/CVP/audio_cvp_config.o \
+
+
+objs += \
+	  $(ROOT)/audio/CVP/audio_cvp_elevoc.o
+
+objs += \
+	  $(ROOT)/audio/CVP/audio_cvp_sync.o
+
+objs += \
+	  $(ROOT)/audio/CVP/audio_cvp_develop.o
+
+objs += \
+	  $(ROOT)/audio/CVP/audio_cvp_v3.o
+
+objs += \
+	  $(ROOT)/audio/CVP/audio_cvp_sms_vf.o
+
+objs += \
+  $(ROOT)/audio/CVP/audio_cvp_demo.o
+
+objs += \
+	  $(ROOT)/audio/CVP/audio_cvp_3mic.o
+
+objs += \
+	  $(ROOT)/audio/CVP/audio_cvp_ais_3mic.o
 
 objs += \
 	  $(ROOT)/audio/interface/player/tws_tone_player.o
 
 #if EXPORT_PLATFORM_AUDIO_ALINK_ENABLE
 objs += \
-	  $(ROOT)/audio/framework/nodes/iis_node.o \
+	  $(ROOT)/audio/framework/nodes/iis_node.o
+
+objs += \
 	  $(ROOT)/audio/framework/plugs/source/iis_file.o
 
 objs += \
-	  $(ROOT)/audio/framework/nodes/multi_ch_iis_node.o \
+	  $(ROOT)/audio/framework/nodes/multi_ch_iis_node.o
+objs += \
 	  $(ROOT)/audio/framework/plugs/source/multi_ch_iis_file.o
 
 #endif
@@ -447,8 +550,26 @@ objs += \
 
 
 objs += \
+	$(ROOT)/apps/common/lib_version/version_check.o \
 	$(ROOT)/apps/common/config/bt_profile_config.o \
 
+objs += \
+    $(ROOT)/apps/common/lib_log_config/btctrler_log_config.o \
+    $(ROOT)/apps/common/lib_log_config/btstack_log_config.o \
+    $(ROOT)/apps/common/lib_log_config/driver_log_config.o \
+    $(ROOT)/apps/common/lib_log_config/media_log_config.o \
+    $(ROOT)/apps/common/lib_log_config/net_log_config.o \
+    $(ROOT)/apps/common/lib_log_config/system_log_config.o \
+    $(ROOT)/apps/common/lib_log_config/update_log_config.o \
+
+objs += \
+	$(ROOT)/apps/common/debug/debug.o
+
+objs += \
+	$(ROOT)/apps/common/debug/debug_uart_config.o
+
+objs += \
+	$(ROOT)/apps/common/debug/debug_lite.o
 
 objs += \
 	$(ROOT)/apps/common/config/new_cfg_tool.o \
@@ -474,6 +595,8 @@ objs += \
 	$(ROOT)/apps/common/fat_nor/cfg_private.o
 
 
+objs += \
+    $(ROOT)/apps/common/debug/memory_debug.o
 
 #ifdef TCFG_DEBUG_DLOG_ENABLE
 objs += \
@@ -485,14 +608,33 @@ objs += \
 
 objs += \
 	$(ROOT)/apps/common/update/update.o \
-	$(ROOT)/apps/common/update/testbox_update.o \
+
+objs += \
+	$(ROOT)/apps/common/update/testbox_update.o
+
+objs += \
 	$(ROOT)/apps/common/update/testbox_uart_update.o
+
+#if VFS_ENABLE
+objs += \
+	$(ROOT)/apps/common/dev_manager/dev_update.o
+#endif
 
 objs += \
 	$(ROOT)/apps/common/update/update_tws.o
 
 objs += \
 	$(ROOT)/apps/common/update/update_tws_new.o
+
+objs += \
+$(ROOT)/apps/common/update/user_file_download/user_file_download.o
+objs += \
+$(ROOT)/apps/common/update/user_file_download/reserve_file_download.o
+objs += \
+$(ROOT)/apps/common/update/user_file_download/user_file_update_tws.o
+
+objs += \
+	$(ROOT)/apps/common/update/update_tws_new_less.o
 
 #ifdef CONFIG_UPDATE_MUTIL_CPU_UART
 objs += \
@@ -506,8 +648,8 @@ objs += \
 	$(ROOT)/apps/common/update/uart_update_master.o
 #endif
 
-
-
+objs += \
+    $(ROOT)/apps/common/device/storage_device/norflash/norflash.o
 
 
 
@@ -519,7 +661,7 @@ objs += \
 
 
 
-#if defined CONFIG_SOUNDBOX_CASE || defined CONFIG_DONGLE_CASE
+#if defined CONFIG_SOUNDBOX_CASE_ENABLE || defined CONFIG_DONGLE_CASE_ENABLE
 objs += \
 	$(ROOT)/apps/common/ui/led7/led7_ui_api.o
 
@@ -553,7 +695,31 @@ objs += \
 
 
 
+
 objs += \
+    $(ROOT)/apps/common/ai_audio/ai_audio_common.o \
+
+
+objs += \
+    $(ROOT)/apps/common/ai_audio/ai_player.o \
+
+
+objs += \
+    $(ROOT)/apps/common/ai_audio/ai_recorder.o \
+
+
+objs += \
+    $(ROOT)/apps/common/ai_audio/ai_translator.o \
+
+
+
+
+objs += \
+    $(ROOT)/apps/common/third_party_profile/common/3th_profile_api.o
+
+
+objs += \
+	$(ROOT)/apps/common/third_party_profile/multi_protocol_main.o \
 	$(ROOT)/apps/common/third_party_profile/multi_protocol_common.o \
 	$(ROOT)/apps/common/third_party_profile/multi_protocol_event.o \
 
@@ -579,6 +745,14 @@ objs += \
 objs += \
     $(ROOT)/apps/common/third_party_profile/custom_protocol_demo/custom_protocol.o
 
+objs += \
+    $(ROOT)/apps/common/third_party_profile/hid_iso/hid_iso.o
+
+objs += \
+    $(ROOT)/apps/common/third_party_profile/app_ble_ancs_ams/app_ble_ancs_ams.o
+
+objs += \
+    $(ROOT)/apps/common/third_party_profile/multi_ble_client/ble_multi_client.o
 
 objs += \
     $(ROOT)/apps/common/third_party_profile/swift_pair/swift_pair_protocol.o
@@ -659,6 +833,10 @@ objs += \
 	$(ROOT)/apps/common/third_party_profile/tuya_protocol/tuya_protocol.o \
 	$(ROOT)/apps/common/third_party_profile/tuya_protocol/tuya_event.o \
 
+objs += \
+    $(ROOT)/apps/common/cJSON/cJSON.o \
+
+
 
 
 objs += \
@@ -668,9 +846,19 @@ objs += \
 objs += \
 	$(ROOT)/apps/common/third_party_profile/common/mic_rec.o
 
+objs += \
+	$(ROOT)/apps/common/third_party_profile/common/3th_profile_api.o
 
 objs += \
 	$(ROOT)/apps/common/third_party_profile/common/custom_cfg.o
+
+
+objs += \
+    $(ROOT)/apps/common/third_party_profile/bt_fmy/ble_fmy.o \
+    $(ROOT)/apps/common/third_party_profile/bt_fmy/ble_fmy_fmna.o \
+    $(ROOT)/apps/common/third_party_profile/bt_fmy/ble_fmy_ota.o \
+    $(ROOT)/apps/common/third_party_profile/bt_fmy/ble_fmy_modet.o
+
 
 objs += \
     $(ROOT)/apps/common/third_party_profile/realme_protocol/realme_config.o \
@@ -678,11 +866,17 @@ objs += \
     $(ROOT)/apps/common/third_party_profile/realme_protocol/realme_protocol.o \
 
 
+
+
+
+
+
 objs += \
     $(ROOT)/apps/common/third_party_profile/jieli/rcsp/adv/ble_rcsp_adv.o \
 	$(ROOT)/apps/common/third_party_profile/jieli/rcsp/ble_rcsp_client.o \
 	$(ROOT)/apps/common/third_party_profile/jieli/rcsp/ble_rcsp_multi_common.o \
 	$(ROOT)/apps/common/third_party_profile/jieli/rcsp/ble_rcsp_server.o \
+
 
 objs += \
 	$(ROOT)/apps/common/third_party_profile/jieli/rcsp/client/rcsp_c_cmd_recieve.o \
@@ -730,6 +924,19 @@ objs += \
 	$(ROOT)/apps/common/third_party_profile/jieli/rcsp/server/functions/device_info/rcsp_device_feature.o \
 	$(ROOT)/apps/common/third_party_profile/jieli/rcsp/server/functions/device_info/rcsp_device_status.o \
 
+
+
+objs += \
+	$(ROOT)/apps/common/third_party_profile/jieli/rcsp/server/functions/rcsp_auracast/rcsp_auracast.o \
+
+objs += \
+	$(ROOT)/apps/common/third_party_profile/jieli/rcsp/server/functions/rcsp_auracast/rcsp_auracast_sink.o \
+
+
+objs += \
+	$(ROOT)/apps/common/third_party_profile/jieli/rcsp/server/functions/rcsp_auracast/rcsp_auracast_source.o \
+
+
 objs += \
 	$(ROOT)/apps/common/third_party_profile/jieli/rcsp/server/functions/external_flash/rcsp_extra_flash_cmd.o \
 	$(ROOT)/apps/common/third_party_profile/jieli/rcsp/server/functions/external_flash/rcsp_extra_flash_opt.o
@@ -744,7 +951,9 @@ objs += \
 
 objs += \
 	$(ROOT)/apps/common/third_party_profile/jieli/rcsp/server/functions/file_transfer/file_delete.o \
-	$(ROOT)/apps/common/third_party_profile/jieli/rcsp/server/functions/file_transfer/file_trans_back.o \
+	$(ROOT)/apps/common/third_party_profile/jieli/rcsp/server/functions/file_transfer/file_trans_back.o
+
+objs += \
 	$(ROOT)/apps/common/third_party_profile/jieli/rcsp/server/functions/file_transfer/file_transfer.o \
     $(ROOT)/apps/common/third_party_profile/jieli/rcsp/server/functions/file_transfer/file_transfer_sync.o
 
@@ -831,7 +1040,7 @@ objs += \
 
 
 objs += \
-	$(ROOT)/apps/common/third_party_profile/jieli/rcsp/server/functions/rcsp_switch_device.o \
+	$(ROOT)/apps/common/third_party_profile/jieli/rcsp/server/functions/rcsp_switch_device.o
 
 objs += \
 	$(ROOT)/apps/common/third_party_profile/jieli/rcsp/server/functions/rcsp_update/rcsp_ch_loader_download.o \
@@ -843,6 +1052,12 @@ objs += \
 
 objs += \
 	$(ROOT)/apps/common/third_party_profile/jieli/rcsp/server/functions/sensors/nfc_data_opt.o
+
+objs += \
+    $(ROOT)/apps/common/third_party_profile/jieli/rcsp/server/functions/sensors/ear_sports_data_opt.o
+objs += \
+    $(ROOT)/apps/common/third_party_profile/jieli/rcsp/server/functions/sensors/health_long_detect.o \
+    $(ROOT)/apps/common/third_party_profile/jieli/rcsp/server/functions/sensors/ear_sport_info_opt.o
 
 objs += \
 	$(ROOT)/apps/common/third_party_profile/jieli/rcsp/server/functions/sensors/sensor_log_notify.o \
@@ -872,6 +1087,8 @@ objs += \
 	$(ROOT)/apps/common/third_party_profile/jieli/rcsp/server/functions/sensors/sport_info_sync.o \
 	$(ROOT)/apps/common/third_party_profile/jieli/rcsp/server/functions/sensors/sport_info_vm.o
 
+objs += \
+	$(ROOT)/apps/common/third_party_profile/jieli/rcsp/server/functions/translator/rcsp_translator.o
 
 objs += \
 	$(ROOT)/apps/common/third_party_profile/jieli/rcsp/server/rcsp_cmd_recieve.o \
@@ -891,6 +1108,11 @@ objs += \
 
 
 
+
+
+
+
+
 objs += \
 	$(ROOT)/apps/common/third_party_profile/jieli/trans_data_demo/le_trans_data.o \
 	$(ROOT)/apps/common/third_party_profile/jieli/trans_data_demo/spp_trans_data.o
@@ -901,11 +1123,7 @@ objs += \
 	$(ROOT)/apps/common/third_party_profile/jieli/online_db/online_db_deal.o
 
 objs += \
-    $(ROOT)/apps/common/third_party_profile/auracast_app/auracast_app_protocol.o \
-    $(ROOT)/apps/common/third_party_profile/auracast_app/auracast_app_ble.o \
-    $(ROOT)/apps/common/third_party_profile/auracast_app/auracast_app_gatt_over_edr.o \
-    $(ROOT)/apps/common/third_party_profile/auracast_app/auracast_app_source_api.o \
-    $(ROOT)/apps/common/third_party_profile/auracast_app/auracast_app_sink_api.o \
+    $(ROOT)/apps/common/third_party_profile/multi_ble_client/ble_multi_client.o \
 
 
 #if EXPORT_FNMA_ENABLE
@@ -923,7 +1141,7 @@ objs += \
     $(ROOT)/apps/common/third_party_profile/dma_protocol/dma_use_lib/dma_spp_port.o \
     $(ROOT)/apps/common/third_party_profile/dma_protocol/dma_use_lib/platform_template.o \
     $(ROOT)/apps/common/third_party_profile/dma_protocol/dma_protocol.o \
-
+	$(ROOT)/apps/common/third_party_profile/interface/app_protocol_dma.o
 
 objs += \
     $(ROOT)/apps/common/third_party_profile/ximalaya_protocol/xmly_protocol.o \
@@ -933,9 +1151,29 @@ objs += \
 
 
 
+objs += \
+    $(ROOT)/apps/common/third_party_profile/jieli/jl_earbox/sbox_core_config.o \
+    $(ROOT)/apps/common/third_party_profile/jieli/jl_earbox/sbox_protocol.o \
+    $(ROOT)/apps/common/third_party_profile/jieli/jl_earbox/sbox_user_app.o \
+    $(ROOT)/apps/common/third_party_profile/jieli/jl_earbox/sbox_uart_app.o \
+    $(ROOT)/apps/common/third_party_profile/jieli/jl_earbox/sbox_eq_switch.o \
+    $(ROOT)/apps/common/third_party_profile/jieli/jl_earbox/user_video_ctr.o \
+    $(ROOT)/apps/common/third_party_profile/jieli/jl_earbox/edr_hid_user.o \
+    $(ROOT)/apps/common/third_party_profile/jieli/jl_earbox/sbox_connect_emitter.o \
 
 
-#ifdef CONFIG_SOUNDBOX_CASE
+
+
+
+objs += \
+	$(ROOT)/apps/common/jldtp/uart_transport.o \
+	$(ROOT)/apps/common/jldtp/jldtp_manager.o \
+
+
+
+
+
+#ifdef CONFIG_SOUNDBOX_CASE_ENABLE
 objs += \
     $(ROOT)/apps/common/iap/iAP_chip.o \
     $(ROOT)/apps/common/iap/iAP_des.o \
@@ -992,7 +1230,20 @@ objs += \
 
 #endif
 
+objs += \
+	$(ROOT)/apps/common/device/storage_device/norflash/norflash_sfc.o
 
+objs += \
+	$(ROOT)/apps/common/device/storage_device/nandflash/ftl_device.o \
+	$(ROOT)/apps/common/device/storage_device/nandflash/nandflash.o
+
+
+
+
+
+
+objs += \
+	$(ROOT)/apps/common/device/sensor/app_sensor.o
 
 objs += \
 	$(ROOT)/apps/common/device/sensor/ntc/ntc_det.o
@@ -1078,6 +1329,10 @@ objs += \
 	$(ROOT)/apps/common/device/usb/device/msd_upgrade.o \
 
 objs += \
+	$(ROOT)/apps/common/device/usb/device/iap.o \
+
+
+objs += \
 	$(ROOT)/apps/common/device/usb/device/mtp.o \
 
 
@@ -1155,6 +1410,11 @@ objs += \
 
 
 objs += \
+    $(ROOT)/apps/common/device/usb/host/hub.o \
+
+
+
+objs += \
     $(ROOT)/apps/common/device/usb/demo/host/udisk_block_test.o
 
 
@@ -1168,6 +1428,7 @@ objs += \
 	  $(ROOT)/cpu/components/iic_api.o \
 	  $(ROOT)/cpu/components/ir_encoder.o \
 	  $(ROOT)/cpu/components/ir_decoder.o \
+	  $(ROOT)/cpu/components/led_spi.o \
 	  $(ROOT)/cpu/components/rdec_soft.o \
 
 objs += \
@@ -1205,12 +1466,16 @@ objs += \
 	  $(ROOT)/audio/cpu/br56/audio_setup.o \
 	  $(ROOT)/audio/cpu/br56/audio_mic_capless.o \
   	  $(ROOT)/audio/cpu/br56/audio_config.o \
-      $(ROOT)/audio/cpu/br56/audio_anc.o \
-	  $(ROOT)/audio/cpu/br56/icsd_anc_user.o \
 	  $(ROOT)/audio/cpu/br56/audio_configs_dump.o \
 
 objs += \
 	  $(ROOT)/audio/cpu/br56/audio_dai/audio_pdm.o \
+
+#if EXPORT_PLATFORM_ANC_ENABLE
+objs += \
+      $(ROOT)/audio/cpu/br56/audio_anc_platform.o
+
+#endif
 
 objs += \
 	  $(ROOT)/audio/cpu/br56/audio_accelerator/hw_fft.o \
@@ -1234,6 +1499,7 @@ objs += \
 objs += \
 	  $(ROOT)/cpu/br56/setup.o \
 	  $(ROOT)/cpu/br56/overlay_code.o \
+	  $(ROOT)/cpu/br56/rf_api.o \
 
 objs += \
       $(ROOT)/cpu/br56/charge/charge_ocp.o
@@ -1258,7 +1524,7 @@ objs += \
 
 
 objs += \
-	  $(ROOT)/cpu/br56/periph/led/pwm_led.o
+	  $(ROOT)/cpu/components/pwm_led_v2.o
 
 objs += \
 		$(ROOT)/cpu/br56/power/power_port.o \
@@ -1272,19 +1538,27 @@ objs += \
       $(ROOT)/cpu/br56/ui_driver/ui_common.o
 
 
+
 objs += \
 	$(ROOT)/apps/common/dev_manager/dev_reg.o \
-	$(ROOT)/apps/common/dev_manager/dev_update.o \
+	$(ROOT)/apps/earphone/mode/common/dev_status.o \
+
+
+objs += \
 	$(ROOT)/apps/common/music/breakpoint.o \
 	$(ROOT)/apps/common/music/music_decrypt.o \
 	$(ROOT)/apps/common/music/music_id3.o \
 	$(ROOT)/apps/common/music/music_player.o \
 	$(ROOT)/apps/common/file_operate/file_manager.o \
-	$(ROOT)/apps/earphone/mode/common/dev_status.o \
 	$(ROOT)/apps/earphone/mode/music/music.o \
 	$(ROOT)/apps/earphone/mode/music/music_key_msg_table.o \
 	$(ROOT)/apps/earphone/mode/music/music_app_msg_handler.o \
 
+
+objs += \
+    $(ROOT)/apps/earphone/mode/local_tws/local_tws.o \
+    $(ROOT)/apps/earphone/mode/local_tws/sink.o \
+    $(ROOT)/apps/earphone/mode/local_tws/sink_key_msg_table.o
 
 objs += \
 	$(ROOT)/apps/earphone/mode/linein/linein.o \
@@ -1295,4 +1569,142 @@ objs += \
 objs += \
 	$(ROOT)/apps/earphone/mode/pc/pc.o \
 	$(ROOT)/apps/earphone/mode/pc/pc_key_msg_table.o \
+
+
+objs += \
+	$(ROOT)/apps/earphone/audio/mix_record_api.o \
+
+
+objs += \
+	$(ROOT)/apps/earphone/mode/bt/le_audio/le_audio_common.o \
+
+
+objs += \
+	$(ROOT)/apps/earphone/mode/bt/le_audio/cig/app_le_connected.o \
+	$(ROOT)/apps/earphone/mode/bt/le_audio/cig/le_connected.o \
+	$(ROOT)/apps/earphone/mode/bt/le_audio/cig/le_connected_config.o \
+
+
+objs += \
+	$(ROOT)/apps/earphone/mode/bt/le_audio/big/app_le_auracast.o \
+	$(ROOT)/apps/earphone/mode/bt/le_audio/big/le_broadcast.o \
+	$(ROOT)/apps/earphone/mode/bt/le_audio/big/le_broadcast_config.o \
+
+
+objs += \
+	$(ROOT)/apps/common/device/sensor/gSensor/gSensor_manage.o \
+
+objs += \
+	$(ROOT)/apps/common/device/sensor/gSensor/SC7A20.o \
+
+MASK_LIBS+= \
+	$(ROOT)/apps/common/device/sensor/gSensor/sensor_algorithm_jl_motion.a \
+
+
+objs += \
+	$(ROOT)/apps/common/device/sensor/gSensor/stk832x.o \
+
+objs += \
+	$(ROOT)/apps/common/device/sensor/gSensor/bma580.o \
+
+
+objs += \
+	$(ROOT)/apps/common/device/sensor/hr_sensor/hrSensor_manage.o \
+
+objs += \
+	$(ROOT)/apps/common/device/sensor/hr_sensor/hx3918/hx3918.o \
+	$(ROOT)/apps/common/device/sensor/hr_sensor/hx3918/hx3918_check_touch.o \
+	$(ROOT)/apps/common/device/sensor/hr_sensor/hx3918/hx3918_hrs_agc.o \
+	$(ROOT)/apps/common/device/sensor/hr_sensor/hx3918/hx3918_hrv_agc.o \
+	$(ROOT)/apps/common/device/sensor/hr_sensor/hx3918/hx3918_spo2_agc.o \
+	$(ROOT)/apps/common/device/sensor/hr_sensor/hx3918/hx3918_factory_test.o \
+
+MASK_LIBS+= \
+   $(ROOT)/apps/common/device/sensor/hr_sensor/hx3918/CodeBlocks_3605_spo2_20241021_v2.2.a \
+   $(ROOT)/apps/common/device/sensor/hr_sensor/hx3918/CodeBlocks_3918_hrs_bp_20250324_v2.2.a \
+   $(ROOT)/apps/common/device/sensor/hr_sensor/hx3918/CodeBlocks_3918_hrv_20241026_v2.2.a \
+
+
+objs += \
+	$(ROOT)/apps/common/device/sensor/hr_sensor/hx3011/hx3011.o \
+	$(ROOT)/apps/common/device/sensor/hr_sensor/hx3011/hx3011_check_touch.o \
+	$(ROOT)/apps/common/device/sensor/hr_sensor/hx3011/hx3011_hrs_agc.o \
+	$(ROOT)/apps/common/device/sensor/hr_sensor/hx3011/hx3011_spo2_agc.o \
+	$(ROOT)/apps/common/device/sensor/hr_sensor/hx3011/hx3011_factory_test.o \
+
+MASK_LIBS+= \
+   $(ROOT)/apps/common/device/sensor/hr_sensor/hx3011/CodeBlocks_3011_hrs_spo2_20250606_v2.2.a \
+
+
+
+
+objs += \
+	$(ROOT)/apps/earphone/test/rssi.o
+
+objs += \
+	$(ROOT)/apps/earphone/mode/bt/bt_call_kws_handler.o
+
+objs += \
+	$(ROOT)/apps/earphone/mode/bt/kws_voice_event_deal.o
+
+
+objs += \
+    $(ROOT)/apps/earphone/battery/battery_product_manage.o
+
+objs += \
+	$(ROOT)/apps/earphone/battery/charge_clibration.o
+
+objs += \
+	$(ROOT)/apps/earphone/ble/bt_ble.o \
+	$(ROOT)/apps/earphone/ble/ble_adv.o
+
+
+objs += \
+	$(ROOT)/apps/earphone/demo/debug_record_demo.o
+
+objs += \
+	$(ROOT)/apps/earphone/demo/pbg_demo.o
+
+objs += \
+	$(ROOT)/apps/earphone/demo/trans_data_demo.o
+
+objs += \
+	$(ROOT)/apps/earphone/demo/read_sn_demo.o
+
+objs += \
+	$(ROOT)/apps/earphone/demo/att_over_edr_demo.o
+
+
+objs += \
+	$(ROOT)/apps/earphone/mode/bt/bt_net_event.o
+
+objs += \
+	$(ROOT)/apps/earphone/mode/bt/poweroff.o \
+	$(ROOT)/apps/earphone/mode/bt/dual_conn.o \
+	$(ROOT)/apps/earphone/mode/bt/phone_call.o \
+	$(ROOT)/apps/earphone/mode/bt/a2dp_play.o
+
+objs += \
+	$(ROOT)/apps/earphone/mode/bt/tws_dual_share.o
+
+objs += \
+	$(ROOT)/apps/earphone/mode/bt/tws_pair_by_chip_conn.o
+
+
+objs += \
+	$(ROOT)/apps/earphone/tools/app_ancbox.o
+
+objs += \
+	$(ROOT)/apps/earphone/tools/app_anctool.o
+
+objs += \
+	$(ROOT)/apps/earphone/tools/app_testbox.o
+
+objs += \
+	$(ROOT)/apps/earphone/tools/app_key_dut.o
+
+objs += \
+	$(ROOT)/apps/earphone/ui/led/led_config.o \
+	$(ROOT)/apps/earphone/ui/led/led_ui_msg_handler.o
+
 

@@ -17,9 +17,7 @@
 #include "clock_manager/clock_manager.h"
 #include "scene_switch.h"
 #include "mic_effect.h"
-#if TCFG_LOCAL_TWS_ENABLE
 #include "local_tws.h"
-#endif
 #include "rcsp_device_status.h"
 #include "rcsp_music_func.h"
 #include "rcsp_config.h"
@@ -236,7 +234,7 @@ int music_app_msg_handler(int *msg)
             breakpoint_vm_write(music_hdl.breakpoint, dev_manager_get_logo(music_hdl.player_hd->dev));
         }
 #if (TCFG_MUSIC_DEVICE_TONE_EN)
-#if TCFG_LOCAL_TWS_ENABLE
+#if TCFG_USER_TWS_ENABLE && TCFG_LOCAL_TWS_ENABLE
         const char *file_name = get_music_tone_name_by_logo(logo);
         if (file_name != NULL) {
             if (local_tws_enter_mode(file_name, (void *)logo) == 0) {

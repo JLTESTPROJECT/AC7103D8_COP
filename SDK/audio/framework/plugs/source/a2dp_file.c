@@ -18,8 +18,10 @@
 #include "effects/effects_adj.h"
 #include "app_config.h"
 #include "media/codec/sbc_codec.h"
+#include "debug/audio_debug.h"
 
 #define A2DP_TIMESTAMP_ENABLE       1
+#define A2DP_STREAM_FORMAT_CHECK_DEBUG_ENABLE	0
 
 struct a2dp_file_params {
     u8 edr_to_local_time;
@@ -78,6 +80,7 @@ extern const int CONFIG_BTCTLER_TWS_ENABLE;
 extern const int CONFIG_DONGLE_SPEAK_ENABLE;
 extern const int CONFIG_A2DP_MAX_BUF_SIZE;
 
+extern u32 bt_audio_conn_clock_time(void *addr);
 extern int a2dp_get_packet_pcm_frames(struct a2dp_file_hdl *hdl, u8 *data, int len);
 static int a2dp_stream_ts_enable_detect(struct a2dp_file_hdl *hdl, u8 *packet, int *drop);
 static void a2dp_frame_pack_timestamp(struct a2dp_file_hdl *hdl, struct stream_frame *frame, u8 *data, int pcm_frames);
@@ -101,6 +104,11 @@ static u8 a2dp_low_latency = 0;
 void a2dp_file_low_latency_enable(u8 enable)
 {
     a2dp_low_latency = enable;
+}
+
+u8 a2dp_file_get_low_latency_status(void)
+{
+    return a2dp_low_latency;
 }
 
 static void abandon_a2dp_data(void *p)
@@ -297,7 +305,7 @@ static const u32 aac_sample_rates[] = {
 };
 
 static const u16 sbc_sample_rates[] = {16000, 32000, 44100, 48000};
-
+static const char *sbc_channel_mode[] = {"Mono", "DualChannel", "Stereo", "JointStereo"};
 static const u32 ldac_sample_rates[] = {44100, 48000, 88200, 96000};
 
 __A2DP_DEC_BANK_CODE
@@ -374,7 +382,10 @@ __again:
         a2dp_media_free_packet(hdl->file, packet);
         goto __again;
     }
-    /*put_buf(packet, head_len + 8);*/
+#if A2DP_STREAM_FORMAT_CHECK_DEBUG_ENABLE
+    printf("a2dp fmt check,head_len=%d", head_len);
+    put_buf(packet, head_len + 8);
+#endif
     u8 *frame = packet + head_len;
     if (frame[0] == 0x47) {    				//常见mux aac格式
 #if (defined(TCFG_BT_SUPPORT_AAC) && TCFG_BT_SUPPORT_AAC)
@@ -382,11 +393,25 @@ __again:
         /* u8 ch = ((frame[5] & 0x3) << 2) | ((frame[6] & 0xC0) >> 6); */
         fmt->channel_mode = AUDIO_CH_LR;
         fmt->sample_rate  = aac_sample_rates[sr];
+        printf("AAC param,Fs=%d,ChannelMode:0x%x", fmt->sample_rate, fmt->channel_mode);
+#if A2DP_STREAM_FORMAT_CHECK_DEBUG_ENABLE
+        if (strcmp(code_type, "AAC")) {
+            printf("a2dp codec format error,code_type:%s,header flag:0x%x", code_type, frame[0]);
+            put_buf(packet, head_len + 8);
+        }
+#endif
     } else if (frame[0] == 0x20) {			//特殊LATM aac格式
         u8 sr = ((frame[2] & 0x7) << 1) | ((frame[3] & 0x80) >> 7);
         /* u8 ch = ((frame[3] & 0x78) >> 3) ; */
         fmt->channel_mode = AUDIO_CH_LR;
         fmt->sample_rate = aac_sample_rates[sr];
+        printf("LATM AAC param,Fs=%d,ChannelMode:0x%x", fmt->sample_rate, fmt->channel_mode);
+#if A2DP_STREAM_FORMAT_CHECK_DEBUG_ENABLE
+        if (strcmp(code_type, "AAC")) {
+            printf("a2dp codec format error,code_type:%s,header flag:0x%x", code_type, frame[0]);
+            put_buf(packet, head_len + 8);
+        }
+#endif
 #endif
     } else if (frame[0] == 0x9C) {          //sbc 格式
         /*
@@ -409,6 +434,13 @@ __again:
             fmt->channel_mode = AUDIO_CH_LR;
         }
         fmt->sample_rate  = sbc_sample_rates[sr];
+        printf("SBC param,Fs=%d,ChannelMode[%s]:0x%x", fmt->sample_rate, sbc_channel_mode[ch], fmt->channel_mode);
+#if A2DP_STREAM_FORMAT_CHECK_DEBUG_ENABLE
+        if (strcmp(code_type, "SBC")) {
+            printf("a2dp codec format error,code_type:%s,header flag:0x%x", code_type, frame[0]);
+            put_buf(packet, head_len + 8);
+        }
+#endif
 #if (defined(TCFG_BT_SUPPORT_LDAC) && TCFG_BT_SUPPORT_LDAC)
     } else if (frame[1] == 0xAA) {
         u8 sr = (frame[2] >> (8 - 3)) & 0x7;
@@ -421,6 +453,10 @@ __again:
         printf("LDAC param : sr:%d, sample_rate : %d  chconfig_id : %d\n", sr, fmt->sample_rate, chconfig_id);
 #endif
     } else {
+#if A2DP_STREAM_FORMAT_CHECK_DEBUG_ENABLE
+        printf("a2dp codec format error:unknown");
+        put_buf(packet, head_len + 8);
+#endif
         /*
          * 小米8手机先播sbc,暂停后切成AAC格式点播放,有时第一包数据还是sbc格式
          * 导致这里获取头信息错误
@@ -676,7 +712,7 @@ static u32 a2dp_stream_update_base_time(struct a2dp_file_hdl *hdl)
         distance_time = 100;
     }
     /*printf("distance time : %d, %d, %d\n", hdl->delay_time, a2dp_media_get_remain_play_time(hdl->file, 1), distance_time);*/
-    return bt_audio_reference_clock_time(0) + msecs_to_bt_time(distance_time);
+    return bt_audio_conn_clock_time(hdl->bt_addr) + msecs_to_bt_time(distance_time);
 }
 
 
@@ -695,13 +731,13 @@ void a2dp_ts_handle_create(struct a2dp_file_hdl *hdl)
     }
 
     hdl->base_time = a2dp_stream_update_base_time(hdl);
-    int check_diff = hdl->base_time - bt_audio_reference_clock_time(0);
+    int check_diff = hdl->base_time - bt_audio_conn_clock_time(hdl->bt_addr);
     if (check_diff < 0) {
         printf("a2dp base_time is outdated: %d ms\n", (int)(check_diff * 0.625f));
     } else {
         printf("a2dp features play time: after %d ms\n", (int)(check_diff * 0.625f));
     }
-    printf("a2dp timestamp base time : %d, %d\n", hdl->base_time, bt_audio_reference_clock_time(0));
+    printf("a2dp timestamp base time : %d, %d\n", hdl->base_time, bt_audio_conn_clock_time(hdl->bt_addr));
     hdl->ts_handle = a2dp_audio_timestamp_create(hdl->sample_rate, hdl->base_time, TIMESTAMP_US_DENOMINATOR);
     if (hdl->edr_to_local_time) {
         bt_edr_conn_system_clock_init(hdl->bt_addr, TIMESTAMP_US_DENOMINATOR);
@@ -730,6 +766,23 @@ void a2dp_ts_handle_release(struct a2dp_file_hdl *hdl)
 #endif
 }
 
+#if AUD_BT_DELAY_INFO_DUMP_ENABLE
+static u32 frame_delay_debug;
+static u32 delay_time_debug;
+static int d_sample_rate_debug;
+static void a2dp_delay_mark(u32 frame_delay, u32 delay_time, int d_sample_rate)
+{
+    frame_delay_debug = frame_delay;
+    delay_time_debug = delay_time;
+    d_sample_rate_debug = d_sample_rate;
+}
+
+void a2dp_delay_dump()
+{
+    printf("latency=[cur dly:%dms tar dly:%dms d_sample:%d]\n", frame_delay_debug, delay_time_debug, d_sample_rate_debug);
+}
+#endif
+
 static void a2dp_frame_pack_timestamp(struct a2dp_file_hdl *hdl, struct stream_frame *frame, u8 *data, int pcm_frames)
 {
     if (CONFIG_DONGLE_SPEAK_ENABLE) {
@@ -737,7 +790,7 @@ static void a2dp_frame_pack_timestamp(struct a2dp_file_hdl *hdl, struct stream_f
             u32 ts = RB32(data);
             frame->timestamp    = ts + hdl->jl_dongle_latency * 1000 * 32;
             frame->flags        |= (FRAME_FLAG_TIMESTAMP_ENABLE | FRAME_FLAG_UPDATE_TIMESTAMP);
-            /* printf("ts : %u, %u,  %u\n",ts,frame->timestamp, bt_audio_reference_clock_time(0)); */
+            /* printf("ts : %u, %u,  %u\n",ts,frame->timestamp, bt_audio_conn_clock_time(hdl->bt_addr)); */
             return;
         }
     }
@@ -768,6 +821,17 @@ static void a2dp_frame_pack_timestamp(struct a2dp_file_hdl *hdl, struct stream_f
     }
     frame->timestamp = timestamp;
     frame->d_sample_rate = sample_rate - hdl->sample_rate;
+
+#if AUD_BT_DELAY_INFO_DUMP_ENABLE
+    a2dp_delay_mark(frame_delay, delay_time, frame->d_sample_rate);
+#endif
+    /* static u32 cnt = 0; */
+    /* if (cnt == 10 || cnt == 0) { */
+    /* cnt = 0; */
+    /* printf("latency=[cur dly:%dms tar dly:%dms d_sample:%d]\n", frame_delay, delay_time, frame->d_sample_rate); */
+    /* } */
+    /* cnt++; */
+
     /*printf("drift : %d\n", frame->d_sample_rate);*/
     /*printf("-%u, %u, %u-\n", timestamp, bt_edr_conn_master_to_local_time(hdl->bt_addr, timestamp), local_time);*/
     hdl->dts += pcm_frames;
@@ -905,6 +969,7 @@ static int a2dp_ioctl(void *_hdl, int cmd, int arg)
         break;
     case NODE_IOC_GET_FMT:
         err = a2dp_ioc_get_fmt(hdl, (struct stream_fmt *)arg);
+        stream_node_ioctl(hdl->node, NODE_UUID_BT_AUDIO_SYNC, NODE_IOC_SET_SYNC_NETWORK, hdl->edr_to_local_time ? AUDIO_NETWORK_LOCAL : AUDIO_NETWORK_BT2_1);
         break;
     case NODE_IOC_GET_FMT_EX:
         err = a2dp_ioc_get_fmt_ex(hdl, (struct stream_fmt_ex *)arg);
@@ -934,7 +999,7 @@ static void a2dp_release(void *_hdl)
     free(hdl);
 }
 
-
+#if TCFG_BT_SUPPORT_A2DP
 REGISTER_SOURCE_NODE_PLUG(a2dp_file_plug) = {
     .uuid       = NODE_UUID_A2DP_RX,
     .frame_size = 1024,
@@ -943,6 +1008,7 @@ REGISTER_SOURCE_NODE_PLUG(a2dp_file_plug) = {
     .ioctl      = a2dp_ioctl,
     .release    = a2dp_release,
 };
+#endif
 
 
 

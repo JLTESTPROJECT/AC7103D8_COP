@@ -208,7 +208,7 @@ static void dev_update_param_private_handle(UPDATA_PARM *p)
     // cppcheck-suppress unreadVariable
     u16 up_type = p->parm_type;
 
-#ifdef CONFIG_SD_UPDATE_ENABLE
+#if (defined CONFIG_SD_UPDATE_ENABLE) && (TCFG_SD0_ENABLE || TCFG_SD1_ENABLE)
     if ((up_type == SD0_UPDATA) || (up_type == SD1_UPDATA)) {
         int sd_start = (u32)p->parm_priv;
         void *sd = NULL;
@@ -219,15 +219,15 @@ static void dev_update_param_private_handle(UPDATA_PARM *p)
             memset((void *)sd_start, 0, UPDATE_PRIV_PARAM_LEN);
         }
 
-        char io_port_stirng[4 * 3 + 1] = {0};
+        char io_port_stirng[5 * 3 + 1] = {0};
         sprintf(&io_port_stirng[0], "P%c%02d", TCFG_SD0_PORT_CLK / 16 + 'A', TCFG_SD0_PORT_CLK % 16);
-        sprintf(&io_port_stirng[4], "P%c%02d", TCFG_SD0_PORT_CMD / 16 + 'A', TCFG_SD0_PORT_CMD % 16);
-        sprintf(&io_port_stirng[8], "P%c%02d", TCFG_SD0_PORT_DA0 / 16 + 'A', TCFG_SD0_PORT_DA0 % 16);
+        sprintf(&io_port_stirng[5], "P%c%02d", TCFG_SD0_PORT_CMD / 16 + 'A', TCFG_SD0_PORT_CMD % 16);
+        sprintf(&io_port_stirng[10], "P%c%02d", TCFG_SD0_PORT_DA0 / 16 + 'A', TCFG_SD0_PORT_DA0 % 16);
         update_param_ext_fill(p, EXT_SD_IO_INFO, (u8 *)io_port_stirng, sizeof(io_port_stirng));
     }
 #endif
 
-#ifdef CONFIG_USB_UPDATE_ENABLE
+#if (defined CONFIG_USB_UPDATE_ENABLE) && TCFG_UDISK_ENABLE
     if (up_type == USB_UPDATA) {
         printf("usb updata ");
         UPDATE_UDISK *usb_start = (UPDATE_UDISK *)p->parm_priv;
@@ -310,6 +310,7 @@ u16 dev_update_check(char *logo)
             return UPDATA_PARM_ERR;
         }
 
+#if 0
         //最新设备升级只支持fat32(省flash空间)，此处截断
         struct vfs_partition *part = fget_partition((const char *)dev_manager_get_root_path(dev));
         if (part) {
@@ -322,6 +323,7 @@ u16 dev_update_check(char *logo)
             printf(">>>[test]:dev part err!!!\n");
             return UPDATA_PARM_ERR;
         }
+#endif
 
         //<尝试按照路径打开升级文件
         char *updata_file = (char *)updata_file_name;

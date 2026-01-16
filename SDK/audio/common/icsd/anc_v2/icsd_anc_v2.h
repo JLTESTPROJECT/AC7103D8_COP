@@ -49,7 +49,7 @@ extern int anc_v2_printf_off(const char *format, ...);
 #define TWS_STA_SIBLING_CONNECTED   0x00000002//tws已连接
 #define ANC_V2_DMA_DOUBLE_LEN         (512*4) //DMA一次拿多少数据
 #define ANC_V2_DOUBLE_TRAIN_LEN        512    //拿够多少数进行一次part1
-#define ANC_V2_DMA_DOUBLE_CNT       32 //32
+#define ANC_V2_DMA_DOUBLE_CNT       32 //产测需要改成64，确保一致性问题
 #define ICSD_ANC_RESOURCE_STAT      0
 
 #define HEADSET_TONES_MODE          1
@@ -121,15 +121,22 @@ struct icsd_anc_v2_libfmt {
 };
 
 struct icsd_anc_v2_infmt {
+    u8     specific_en;
+    s8 tool_ffgain_sign;
+    s8 tool_fbgain_sign;
     void *alloc_ptr;    //外部申请的ram地址
     float ff_gain;
     float fb_gain;
-    s8 tool_ffgain_sign;
-    s8 tool_fbgain_sign;
     float *target_out_l;
     float *target_out_r;
     float *ff_fgq_l;
     float *ff_fgq_r;
+    float *specific_szl;
+    float *specific_pzl;
+    float *specific_targetl;
+    float *specific_szr;
+    float *specific_pzr;
+    float *specific_targetr;
 };
 
 enum {
@@ -244,6 +251,8 @@ void icsd_anc_v2_mode_init();
 //DEBUG 函数
 void icsd_anc_v2_time_data_debug();
 extern const u8 EAR_ADAPTIVE_MODE_SIGN_TRIM_VEL;
+extern u8 const ICSD_SPECIFIC_EN;
 
 
+extern char lib_ancv2_version[];
 #endif/*_SD_ANC_LIB_V2_H*/

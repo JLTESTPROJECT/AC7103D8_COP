@@ -10,6 +10,8 @@
 #include "app_config.h"
 #include "asm/power_interface.h"
 #include "system/init.h"
+#include "power/power_manage.h"
+#include "system/init.h"
 
 
 #if TCFG_ADKEY_ENABLE
@@ -52,7 +54,6 @@ int adkey_init(void)
     if (!__this) {
         return -EINVAL;
     }
-
 
     if (!__this->enable) {
         return KEY_NOT_SUPPORT;
@@ -167,6 +168,34 @@ REGISTER_KEY_OPS(adkey) = {
     .get_value        = ad_get_key_value,
     .key_init         = adkey_init,
 };
+
+static u8 adkey_sleep_enter(void)
+{
+    //进入低功耗打开唤醒
+    p33_io_wakeup_enable(__this->adkey_pin, 1);
+    return 0;
+}
+
+static u8 adkey_sleep_exit(void)
+{
+    //退出低功耗打开唤醒
+    p33_io_wakeup_enable(__this->adkey_pin, 0);
+    return 0;
+}
+
+SLEEP_TARGET_REGISTER(adkey_pdown_tag) = {
+    .name = "adkey",
+    .enter = adkey_sleep_enter,
+    .exit = adkey_sleep_exit,
+};
+
+static void adkey_soff_enter(void)
+{
+    //软关机前打开唤醒使能
+    p33_io_wakeup_enable(__this->adkey_pin, 1);
+}
+
+platform_uninitcall(adkey_soff_enter);
 #endif  /* #if TCFG_ADKEY_ENABLE */
 
 

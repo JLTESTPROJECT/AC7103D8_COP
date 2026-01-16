@@ -129,7 +129,11 @@ int usb_adb_parser(struct usb_host_device *host_dev, u8 interface_num, const u8 
         adb_bulk_ep_in_buf = usb_h_alloc_ep_buffer(usb_id, adb.host_epin | USB_DIR_IN, 64 * 2);
     }
 #ifdef USB_HW_20
+#if USB_HUB
+    usb_hub_rxreg_set(usb_id, adb.host_epin, adb.target_epin, &(host_dev->private_data.hub_info));
+#else
     usb_write_rxfuncaddr(usb_id, adb.host_epin, host_dev->private_data.devnum);
+#endif
 #endif
     usb_h_ep_config(usb_id, adb.host_epin | USB_DIR_IN, USB_ENDPOINT_XFER_BULK, 0, 0, adb_bulk_ep_in_buf, 64);
 
@@ -138,7 +142,11 @@ int usb_adb_parser(struct usb_host_device *host_dev, u8 interface_num, const u8 
         adb_bulk_ep_out_buf = usb_h_alloc_ep_buffer(usb_id, adb.host_epout | USB_DIR_OUT, 64);
     }
 #ifdef USB_HW_20
+#if USB_HUB
+    usb_hub_txreg_set(usb_id, adb.host_epout, adb.target_ep_epout, &(host_dev->private_data.hub_info));
+#else
     usb_write_txfuncaddr(usb_id, adb.host_epout, host_dev->private_data.devnum);
+#endif
 #endif
     usb_h_ep_config(usb_id, adb.host_epout | USB_DIR_OUT, USB_ENDPOINT_XFER_BULK, 0, 0, adb_bulk_ep_out_buf, 64);
 

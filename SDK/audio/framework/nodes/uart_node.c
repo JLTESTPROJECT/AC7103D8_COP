@@ -52,7 +52,6 @@ static int uart_node_bind(struct stream_node *node, u16 uuid)
 
 static void uart_node_open_iport(struct stream_iport *iport)
 {
-    iport->handle_frame = uart_node_handle_frame;
 }
 
 static void uart_ioc_start(struct uart_node_hdl *hdl, struct stream_node *node)
@@ -114,11 +113,11 @@ static void uart_node_release(struct stream_node *node)
 
 
 REGISTER_STREAM_NODE_ADAPTER(uart_node_adapter) = {
-    .name       = "uart_dump",
     .uuid       = NODE_UUID_UART_DUMP,
     .bind       = uart_node_bind,
     .ioctl      = uart_node_ioctl,
     .release    = uart_node_release,
+    .handle_frame = uart_node_handle_frame,
     .hdl_size   = sizeof(struct uart_node_hdl),
 };
 

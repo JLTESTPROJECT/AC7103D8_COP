@@ -5,8 +5,10 @@
 #pragma code_seg(".driver.text")
 #endif
 #include "app_msg.h"
+#include "app_config.h"
 #include "system/event.h"
 #include "usb/usb_task.h"
+#include "battery_manager.h"
 
 void sdx_dev_event_to_user(u32 arg, u8 sdx_status, u8 sdx_index)
 {
@@ -53,3 +55,17 @@ void usb_driver_event_from_otg(u32 from, u32 event, void *arg)
 }
 
 
+
+void batmgr_send_msg(enum battery_msg _msg, int arg)
+{
+    int msg[2];
+
+    msg[0] = _msg;
+    msg[1] = arg;
+    os_taskq_post_type("app_core", MSG_FROM_BATTERY, 2, msg);
+}
+
+void charge_event_to_user(u8 event)
+{
+    batmgr_send_msg(event, 0);
+}

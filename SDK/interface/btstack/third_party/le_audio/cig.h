@@ -39,6 +39,8 @@ typedef enum {
     CIG_EVENT_PHONE_DISCONNECT,
     CIG_EVENT_JL_DONGLE_CONNECT,
     CIG_EVENT_JL_DONGLE_DISCONNECT,
+
+    CIG_EVENT_ACL_DATA_LENGTH_UPDATE,
 } CIG_EVENT;
 
 /* CIG handles. */
@@ -54,6 +56,8 @@ typedef struct {
     uint8_t         flush_timeout_P_to_C;
     uint16_t        reserved;
     uint32_t        isoIntervalUs;
+    uint16_t        BN_C_To_P;
+    uint16_t        BN_P_To_C;
 } cig_hdl_t;
 
 /* CIG ISO stream parameter. */
@@ -100,6 +104,11 @@ typedef struct {
     const cig_callback_t  *cb;            // Callback of CIG.
     bool                  pair_en;        // Enable pair mode.
     uint8_t               cig_hdl;        // CIG handle.
+
+    uint32_t             pair_public_code;  //公共配对码
+    uint32_t             pair_bind_code;    //要绑定的私有配对码
+    uint16_t             pair_sw_time;      //公共配对码和私有配对码scan切换周期
+    s8                   pair_rssi;         //配对功能允许的有效rssi范围
 
     union {
         // for central

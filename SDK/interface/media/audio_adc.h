@@ -9,6 +9,12 @@
 #include "asm/adc.h"
 #include "media_config.h"
 
+#ifndef AUDIO_ADC_LPADC_NUM
+#define AUDIO_ADC_LPADC_NUM      0
+#endif
+
+//ADC模拟增益档位对应的dB table表
+extern const s8 audio_adc_gain_dB_table[];
 /*
 *********************************************************************
 *                  Audio ADC Initialize
@@ -81,6 +87,18 @@ int audio_adc_mic_open(struct adc_mic_ch *mic, u32 ch_map, struct audio_adc_hdl 
 *********************************************************************
 */
 int audio_adc_mic_set_gain(struct adc_mic_ch *mic, u32 ch_map, int gain);
+
+/*
+*********************************************************************
+*                  Audio ADC Mic Digital Gain
+* Description: 设置mic数字增益
+* Arguments  : 数字增益
+* Return	 : none
+* Note(s)    : 单位dB，可配范围参考可视化工具(不同系列范围不同):
+*              "音频配置->ADC配置->数字增益"
+*********************************************************************
+*/
+void audio_adc_set_digital_gain(float gain_dB);
 
 /*
 *********************************************************************
@@ -191,6 +209,7 @@ int audio_adc_mic_set_buffs(struct adc_mic_ch *mic, s16 *bufs, u16 buf_size, u8 
 int audio_adc_mic_start(struct adc_mic_ch *mic);
 
 int audio_adc_mic_close(struct adc_mic_ch *mic);
+int audio_adc_mic_ch_close(struct adc_mic_ch *mic, u8 adc_ch);
 
 int audio_adc_linein_set_sample_rate(struct adc_linein_ch *linein, int sample_rate);
 int audio_adc_linein_set_buffs(struct adc_linein_ch *linein, s16 *bufs, u16 buf_size, u8 buf_num);

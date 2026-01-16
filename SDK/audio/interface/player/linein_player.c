@@ -13,6 +13,7 @@
 #if AUDIO_EQ_LINK_VOLUME
 #include "effects/eq_config.h"
 #endif
+#include "audio_effect_demo.h"
 struct linein_player {
     struct jlstream *stream;
     s8 linein_pitch_mode;
@@ -31,6 +32,9 @@ static void linein_player_callback(void *private_data, int event)
 #if AUDIO_VBASS_LINK_VOLUME
         vbass_link_volume();
 #endif
+#if AUDIO_AUTODUCK_LINK_VOLUME
+        autoduck_link_volume();
+#endif
 #if AUDIO_EQ_LINK_VOLUME
         eq_link_volume();
 #endif
@@ -42,6 +46,18 @@ int linein_player_open()
 {
     int err;
     struct linein_player *player;
+#if TCFG_LOCAL_TWS_ENABLE
+    struct local_tws_stream_params *local_tws_fmt = {0};
+
+    struct stream_enc_fmt fmt = {
+        .channel = LOCAL_TWS_CODEC_CHANNEL,
+        .bit_width = LOCAL_TWS_CODEC_BIT_WIDTH,
+        .frame_dms = LOCAL_TWS_CODEC_FRAME_LEN,
+        .sample_rate = LOCAL_TWS_CODEC_SAMPLERATE,
+        .bit_rate = LOCAL_TWS_CODEC_BIT_RATE,
+        .coding_type = LOCAL_TWS_CODEC_TYPE,
+    };
+#endif
     if (g_linein_player) {
         return 0;
     }
@@ -77,7 +93,7 @@ int linein_player_open()
     jlstream_set_callback(player->stream, player->stream, linein_player_callback);
     jlstream_set_scene(player->stream, STREAM_SCENE_LINEIN);
 
-#if TCFG_VIRTUAL_SURROUND_PRO_MODULE_NODE_ENABLE
+#if defined(TCFG_VIRTUAL_SURROUND_EFF_MODULE_NODE_ENABLE) && TCFG_VIRTUAL_SURROUND_EFF_MODULE_NODE_ENABLE
     //解码帧长短得情况下，使用三线程推数
     jlstream_add_thread(player->stream, "media0");
     jlstream_add_thread(player->stream, "media1");
@@ -86,7 +102,14 @@ int linein_player_open()
 #endif
 #endif
 
+#if TCFG_LOCAL_TWS_ENABLE
+    err = jlstream_ioctl(player->stream, NODE_IOC_SET_ENC_FMT, (int)&fmt);
+    if (err == 0) {
+        err = jlstream_start(player->stream);
+    }
+#else
     err = jlstream_start(player->stream);
+#endif
     if (err) {
         goto __exit1;
     }
@@ -183,3 +206,31 @@ void linein_file_pitch_mode_init(enum _pitch_level pitch_mode)
         player->linein_pitch_mode = pitch_mode;
     }
 }
+
+void linein_app_mute_en(int en)
+{
+    if (g_linein_player && g_linein_player->stream) {
+        jlstream_node_ioctl(g_linein_player->stream, NODE_UUID_SOURCE, NODE_IOC_SOURCE_MUTE_EN, en);
+    } else {
+        void *stream = get_le_audio_linein_recorder_stream();
+        if (stream) {
+            jlstream_node_ioctl(stream, NODE_UUID_SOURCE, NODE_IOC_SOURCE_MUTE_EN, en);
+        }
+    }
+}
+
+int get_linein_app_mute_en(void)
+{
+    int ret = 0;
+    if (g_linein_player && g_linein_player->stream) {
+        ret = jlstream_node_ioctl(g_linein_player->stream, NODE_UUID_SOURCE, NODE_IOC_GET_SOURCE_MUTE_EN, 0);
+    } else {
+        void *stream = get_le_audio_linein_recorder_stream();
+        if (stream) {
+            ret = jlstream_node_ioctl(stream, NODE_UUID_SOURCE, NODE_IOC_GET_SOURCE_MUTE_EN, 0);
+        }
+    }
+    return ret;
+}
+
+

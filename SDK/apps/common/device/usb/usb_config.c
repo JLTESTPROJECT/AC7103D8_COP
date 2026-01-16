@@ -199,10 +199,11 @@ void usb_isr(const usb_dev usb_id)
     }
     if (intr_usb & INTRUSB_RESET_BABBLE) {
         log_error("usb reset");
+        usb_reset_host_type(usb_id);
         usb_reset_interface(usb_device);
-
-        log_info("USB_PLL_AUTO_TRIM RUN\n");
-#if USB_PLL_TRIM_EN
+#if TCFG_FUSB_PLL_TRIM
+        log_info("FUSB_PLL_AUTO_TRIM RUN\n");
+        /* fusb_pll_trim(USB_TRIM_HAND, 10); */
         usb_pll_trim_init(USB_TRIM_AUTO, 5, 80);
 #endif
 
@@ -210,7 +211,6 @@ void usb_isr(const usb_dev usb_id)
         u32 reg = usb_read_power(usb_id);
         usb_write_power(usb_id, (reg | INTRUSB_SUSPEND | INTRUSB_RESUME));//enable suspend resume
 #endif
-        usb_reset_host_type(usb_id);
     }
 
     if (intr_usb & INTRUSB_RESUME) {

@@ -59,6 +59,8 @@ struct music_player {
     FILE		 			*lrc_file;//当前播放文件句柄
     void 					*priv;//music回调函数，私有参数
     struct __player_parm 	parm;//回调及参数配置
+    void                    *le_audio;//广播音箱的句柄
+    struct stream_enc_fmt fmt;//广播音箱的编码格式
 };
 
 

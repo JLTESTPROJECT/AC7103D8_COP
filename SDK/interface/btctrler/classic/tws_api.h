@@ -294,11 +294,15 @@ int tws_api_wait_pair_when_phone_connect(int timeout_ms);
 void tws_api_set_quick_rxtx_time(u16 time_msec);
 
 void tws_api_cancel_search_sibling(void);
-extern u32 tws_conn_get_mclkn(u32 *timebase);
-extern int bredr_clkn2offset(int clkn_begin, int clkn_end);
+u32 tws_conn_get_mclkn(u32 *timebase);
+int bredr_clkn2offset(int clkn_begin, int clkn_end);
 
 u32 bt_audio_reference_clock_time(u8 network);
 
 void tws_traffic_statistics(int reset);
+
+int tws_api_pure_monitor_enable(bool enable);
+
+void tws_api_cancel_all(void);
 
 #endif

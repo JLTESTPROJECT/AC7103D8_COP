@@ -11,7 +11,7 @@
 #include "resfile.h"
 #include "sdfile.h"
 
-#if ((THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN | GFPS_EN | MMA_EN | FMNA_EN |  TUYA_DEMO_EN | REALME_EN | SWIFT_PAIR_EN | DMA_EN | ONLINE_DEBUG_EN | CUSTOM_DEMO_EN | XIMALAYA_EN | AURACAST_APP_EN)) || \
+#if ((THIRD_PARTY_PROTOCOLS_SEL & (RCSP_MODE_EN | GFPS_EN | MMA_EN | FMNA_EN |  TUYA_DEMO_EN | REALME_EN | SWIFT_PAIR_EN | DMA_EN | ONLINE_DEBUG_EN | CUSTOM_DEMO_EN | XIMALAYA_EN | JL_SBOX_EN | HID_ISO_EN)) || \
 		((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN | LE_AUDIO_AURACAST_SINK_EN | LE_AUDIO_JL_AURACAST_SINK_EN | LE_AUDIO_AURACAST_SOURCE_EN | LE_AUDIO_JL_AURACAST_SOURCE_EN)))) && \
 		!TCFG_THIRD_PARTY_PROTOCOLS_SIMPLIFIED
 
@@ -141,6 +141,7 @@ u32 multi_protocol_read_cfg_file(void *buf, u16 len, char *path)
     rlen = resfile_read(fp, buf, len);
     if (rlen <= 0) {
         printf("read_cfg_file:fread err!\n");
+        resfile_close(fp);
         return FALSE;
     }
 
@@ -265,6 +266,7 @@ int multi_protocol_license2flash(const u8 *data, u16 len)
 /*******************************************************
                三元组记录相关接口 end
 *******************************************************/
+
 
 #endif
 

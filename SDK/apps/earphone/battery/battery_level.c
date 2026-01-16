@@ -19,6 +19,10 @@
 #include "bt_tws.h"
 #include "idle.h"
 
+#if TCFG_BATTERY_PRODUCT_MANAGE_ENABLE
+#include "battery_product_manage.h"
+#endif
+
 #if RCSP_ADV_EN
 #include "ble_rcsp_adv.h"
 #endif
@@ -53,7 +57,7 @@ static u8 tws_sibling_bat_level = 0xff;
 static u8 tws_sibling_bat_percent_level = 0xff;
 static u8 cur_bat_st = VBAT_NORMAL;
 static u8 battery_curve_max;
-static const struct battery_curve *battery_curve_p = NULL;
+static struct battery_curve *battery_curve_p = NULL;
 #if(TCFG_SYS_LVD_EN == 1)
 static int lowpower_timer = 0;
 #endif
@@ -217,7 +221,7 @@ APP_MSG_HANDLER(bat_level_msg_entry) = {
     .handler    = app_power_event_handler,
 };
 
-static u16 get_vbat_voltage(void)
+u16 get_vbat_voltage(void)
 {
     u16 now_voltage = gpadc_battery_get_voltage();
 #if TCFG_REFERENCE_V_ENABLE
@@ -338,7 +342,7 @@ void vbat_check_slow(void *priv)
 
 void vbat_curve_init(const struct battery_curve *curve_table, int table_size)
 {
-    battery_curve_p = curve_table;
+    battery_curve_p = (struct battery_curve *)curve_table;
     battery_curve_max = table_size;
 
     //初始化相关变量
@@ -439,7 +443,12 @@ void vbat_check(void *priv)
         }
     }
     cur_battery_level = battery_value_to_phone_level();
-
+#if TCFG_BATTERY_PRODUCT_MANAGE_ENABLE
+    //电量管控状态下电量为实时查表获取的电量
+    if (battery_manage_is_batt_volt_ctrl()) {
+        cur_battery_percent = tmp_percent;
+    }
+#endif
     /*log_info("cur_voltage: %d mV, tmp_percent: %d, cur_percent: %d, cur_level: %d\n",
              cur_battery_voltage, tmp_percent, cur_battery_percent, cur_battery_level);*/
 

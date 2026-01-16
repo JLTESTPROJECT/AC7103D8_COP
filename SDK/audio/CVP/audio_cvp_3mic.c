@@ -37,13 +37,10 @@
 #include "fs/sdfile.h"
 #include "online_db_deal.h"
 #include "spp_user.h"
+#include "audio_anc_includes.h"
 #if TCFG_AUDIO_DUT_ENABLE
 //#include "audio_dut_control.h"
 #endif/*TCFG_AUDIO_DUT_ENABLE*/
-#if ((defined TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN) && TCFG_AUDIO_ANC_ACOUSTIC_DETECTOR_EN && \
-        TCFG_AUDIO_ANC_ENABLE && TCFG_AUDIO_ANC_WIND_NOISE_DET_ENABLE)
-#include "icsd_adt_app.h"
-#endif
 
 #if !defined(TCFG_CVP_DEVELOP_ENABLE) || (TCFG_CVP_DEVELOP_ENABLE == 0)
 
@@ -221,6 +218,12 @@ static int audio_aec_probe(short *talk_mic, short *talk_ref_mic, short *talk_fb_
 #if CVP_LOUDNESS_TRACE_ENABLE
     loudness_meter_short(&mic_loudness, talk_mic, len >> 1);
 #endif/*CVP_LOUDNESS_TRACE_ENABLE*/
+    if (cvp_tms->inbuf_clear_cnt) {
+        cvp_tms->inbuf_clear_cnt--;
+        memset(talk_mic, 0, len);
+        memset(talk_ref_mic, 0, len);
+        memset(talk_fb_mic, 0, len);
+    }
     return 0;
 }
 
@@ -256,7 +259,7 @@ static int audio_aec_post(s16 *data, u16 len)
             cvp_tms->spp_cnt = 0;
             memset(cvp_tms->spp_tmpbuf, 0x20, sizeof(cvp_tms->spp_tmpbuf));
             jlsp_tms_get_wind_detect_info(&cvp_tms->wd_flag, &cvp_tms->wd_val, &cvp_tms->wd_lev);
-            sprintf(cvp_tms->spp_tmpbuf, "falg:%d, val:%d, lev:%d", cvp_tms->wd_flag, cvp_tms->wd_val, cvp_tms->wd_lev);
+            sprintf(cvp_tms->spp_tmpbuf, "flag:%d, val:%d, lev:%d", cvp_tms->wd_flag, cvp_tms->wd_val, cvp_tms->wd_lev);
             cvp_tms->spp_opt->send_data(NULL, cvp_tms->spp_tmpbuf, sizeof(cvp_tms->spp_tmpbuf));
             printf("wd_flag:%d, wd_val:%d, wd_lev:%d", cvp_tms->wd_flag, cvp_tms->wd_val, cvp_tms->wd_lev);
         }
@@ -667,7 +670,7 @@ int audio_aec_open(struct audio_aec_init_param_t *init_param, s16 enablebit, int
 #if TCFG_AEC_SIMPLEX
     aec_param->wn_en = 1;
     aec_param->EnableBit = AEC_MODE_SIMPLEX;
-    if (sr == 8000) {
+    if (sample_rate == 8000) {
         aec_param->SimplexTail = aec_param->SimplexTail / 2;
     }
 #else
@@ -884,7 +887,8 @@ u8 audio_aec_status(void)
 void audio_aec_inbuf(s16 *buf, u16 len)
 {
     if (len != 512) {
-        printf("[error] aec point fault\n"); //aec一帧长度需要256 points,需修改文件(esco_recorder.c/pc_mic_recorder.c)的ADC中断点数
+        //aec一帧长度需要256 points,需修改文件(esco_recorder.c/pc_mic_recorder.c)的ADC中断点数
+        ASSERT(0, "CVP frame size unsupport %d samples,only support 256 samples\n", len >> 1);
 
     }
 
@@ -893,10 +897,6 @@ void audio_aec_inbuf(s16 *buf, u16 len)
             memset(buf, 0, len);
         }
 #if CVP_TOGGLE
-        if (cvp_tms->inbuf_clear_cnt) {
-            cvp_tms->inbuf_clear_cnt--;
-            memset(buf, 0, len);
-        }
         int ret = aec_tms_fill_in_data(buf, len);
         if (ret == -1) {
         } else if (ret == -2) {

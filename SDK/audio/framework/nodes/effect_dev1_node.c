@@ -35,6 +35,8 @@
 #define CHANNEL_ADAPTER_AUTO   0 //自动协商,通常用于无声道数转换的场景,结果随数据流配置自动适配
 #define CHANNEL_ADAPTER_2TO4   1 //立体声转4声道协商使能,支持2to4,结果随数据流配置自动适配
 #define CHANNEL_ADAPTER_1TO2   2 //单声道转立体声协商使能,支持1to2,结果随数据流配置自动适配
+#define CHANNEL_ADAPTER_2TO6   3 //立体声转6声道协商使能,支持2to6,结果随数据流配置自动适配
+#define CHANNEL_ADAPTER_2TO8   4 //立体声转8声道协商使能,支持2to8,结果随数据流配置自动适配
 #define CHANNEL_ADAPTER_TYPE   CHANNEL_ADAPTER_AUTO //默认无声道转换
 
 struct effect_dev1_node_hdl {
@@ -67,10 +69,29 @@ static void audio_effect_dev1_init(struct effect_dev1_node_hdl *hdl)
  * */
 static void audio_effect_dev1_run(struct effect_dev1_node_hdl *hdl,  s16 *indata, s16 *outdata, u32 indata_len)
 {
+#if EFFECT_DEV_MULTI_TASK_ENABLE
+    effect_dev_process1(outdata, indata_len);
+#endif
 #if 0
     //test 2to4
     if (hdl->dev.bit_width && ((hdl->dev.out_ch_num == 4) && (hdl->dev.in_ch_num == 2))) {
         pcm_dual_to_qual_with_slience_32bit(outdata, indata, indata_len, 0);
+    }
+    //test 2to6
+    if (((hdl->dev.out_ch_num == 6) && (hdl->dev.in_ch_num == 2))) {
+        if (!hdl->dev.bit_width) {
+            pcm_dual_to_six(outdata, indata, indata_len);
+        } else {
+            pcm_dual_to_six_32bit(outdata, indata, indata_len);
+        }
+    }
+    //test 2to8
+    if (((hdl->dev.out_ch_num == 8) && (hdl->dev.in_ch_num == 2))) {
+        if (!hdl->dev.bit_width) {
+            pcm_dual_to_eight(outdata, indata, indata_len);
+        } else {
+            pcm_dual_to_eight_32bit(outdata, indata, indata_len);
+        }
     }
 #endif
     //do something
@@ -122,7 +143,6 @@ static int effect_dev1_adapter_bind(struct stream_node *node, u16 uuid)
 /*打开改节点输入接口*/
 static void effect_dev1_ioc_open_iport(struct stream_iport *iport)
 {
-    iport->handle_frame = effect_dev1_handle_frame;				//注册输出回调
 }
 
 /*节点参数协商*/
@@ -151,6 +171,20 @@ static int effect_dev1_ioc_negotiate(struct stream_iport *iport)
     if (hdl->dev.out_ch_num == 2) {
         if (hdl->dev.in_ch_num != 1) {
             in_fmt->channel_mode = AUDIO_CH_MIX;
+            ret = NEGO_STA_CONTINUE;
+        }
+    }
+#elif (CHANNEL_ADAPTER_TYPE == CHANNEL_ADAPTER_2TO6)
+    if (hdl->dev.out_ch_num == 6) {
+        if (hdl->dev.in_ch_num != 2) {
+            in_fmt->channel_mode = AUDIO_CH_LR;
+            ret = NEGO_STA_CONTINUE;
+        }
+    }
+#elif (CHANNEL_ADAPTER_TYPE == CHANNEL_ADAPTER_2TO8)
+    if (hdl->dev.out_ch_num == 8) {
+        if (hdl->dev.in_ch_num != 2) {
+            in_fmt->channel_mode = AUDIO_CH_LR;
             ret = NEGO_STA_CONTINUE;
         }
     }
@@ -266,12 +300,6 @@ static int effect_dev1_adapter_ioctl(struct stream_iport *iport, int cmd, int ar
     case NODE_IOC_STOP:
         effect_dev1_ioc_stop(hdl);
         break;
-    case NODE_IOC_NAME_MATCH:
-        if (!strcmp((const char *)arg, hdl->name)) {
-            ret = 1;
-        }
-        break;
-
     case NODE_IOC_SET_PARAM:
         ret = effect_ioc_update_parm(hdl, arg);
         break;
@@ -287,14 +315,14 @@ static void effect_dev1_adapter_release(struct stream_node *node)
 
 /*节点adapter 注意需要在sdk_used_list声明，否则会被优化*/
 REGISTER_STREAM_NODE_ADAPTER(effect_dev1_node_adapter) = {
-    .name       = "effect_dev1",
     .uuid       = NODE_UUID_EFFECT_DEV1,
     .bind       = effect_dev1_adapter_bind,
     .ioctl      = effect_dev1_adapter_ioctl,
     .release    = effect_dev1_adapter_release,
+    .handle_frame = effect_dev1_handle_frame,				//注册输出回调
     .hdl_size   = sizeof(struct effect_dev1_node_hdl),
 #if (CHANNEL_ADAPTER_TYPE != CHANNEL_ADAPTER_AUTO)
-    .ability_channel_out = 0x80 | 1 | 2 | 4,
+    .ability_channel_out = 0x80 | 1 | 2 | 4 | 6 | 8,
     .ability_channel_convert = 1,
 #endif
 

@@ -7,8 +7,9 @@
 #include "system/includes.h"
 #include "btstack/a2dp_media_codec.h"
 #include "bt_audio_energy_detection.h"
-#include "app_config.h"
 #include "tech_lib/bt_audio_energy_det_api.h"
+#include "lib_media_config.h"
+#include "app_config.h"
 
 /*data[0]:0x9c data[1]和data[2]: 用于获取编码信息和计算帧长 */
 #define SBC_CHECK_FRAME_INFO_DATA_LEN  3
@@ -20,6 +21,9 @@ int sbc_energy_detect(u8 *packet, u16 size)
     int ret;
     u8 *beg;
 
+    if (packet == NULL) {
+        return 0;
+    }
     length = a2dp_media_get_rtp_header_len(A2DP_CODEC_SBC, packet, size);
     beg = packet + length;
     if ((*beg != 0x9c) || ((size - length) < SBC_CHECK_FRAME_INFO_DATA_LEN)) {
@@ -50,6 +54,9 @@ static int aac_energy_detect(u8 *packet, u16 size)
     u32 ret = 0;
     int err;
     u8 *beg;
+    if (packet == NULL) {
+        return 0;
+    }
 
     rtp_length = a2dp_media_get_rtp_header_len(A2DP_CODEC_MPEG24, packet, size);
     beg = packet + rtp_length;
@@ -75,6 +82,9 @@ static int ldac_energy_detect(u8 *packet, u16 size)
     int err;
     u8 *beg;
 
+    if (packet == NULL) {
+        return 0;
+    }
     rtp_length = a2dp_media_get_rtp_header_len(A2DP_CODEC_LDAC, packet, size);
     beg = packet + rtp_length;
     frame_len = size - rtp_length;
@@ -96,17 +106,17 @@ int bt_audio_energy_detect_run(u8 codec_type, void *packet, u16 frame_len)
 #ifdef CONFIG_FPGA_ENABLE
     return 0;
 #else
-    if (codec_type == A2DP_CODEC_SBC) {
-#if TCFG_A2DP_SBC_SILENCE_DETECT_ENABLE
+    if (packet == NULL) {
+        return 0;
+    }
+    if (codec_type == A2DP_CODEC_SBC && CONFIG_A2DP_SBC_SILENCE_DETECT_ENABLE) {
         return sbc_energy_detect(packet, frame_len);
-#endif
-
-    } else if (codec_type == A2DP_CODEC_MPEG24) {
-#if TCFG_A2DP_AAC_SILENCE_DETECT_ENABLE
+    } else if (codec_type == A2DP_CODEC_MPEG24 && CONFIG_A2DP_AAC_SILENCE_DETECT_ENABLE) {
+#if TCFG_BT_SUPPORT_AAC
         return aac_energy_detect(packet, frame_len);
 #endif
-    } else if (codec_type == A2DP_CODEC_LDAC) {
-#if TCFG_A2DP_LDAC_SILENCE_DETECT_ENABLE
+    } else if (codec_type == A2DP_CODEC_LDAC && CONFIG_A2DP_LDAC_SILENCE_DETECT_ENABLE) {
+#if TCFG_BT_SUPPORT_LDAC
         return ldac_energy_detect(packet, frame_len);
 #endif
     } else {
@@ -121,12 +131,12 @@ void bt_audio_energy_detect_close(u8 codec_type)
 #ifdef CONFIG_FPGA_ENABLE
     return ;
 #else
-    if (codec_type == A2DP_CODEC_MPEG24) {
-#if TCFG_A2DP_AAC_SILENCE_DETECT_ENABLE
+    if (codec_type == A2DP_CODEC_MPEG24 && CONFIG_A2DP_AAC_SILENCE_DETECT_ENABLE) {
+#if TCFG_BT_SUPPORT_AAC
         aac_decoder_energy_detect_close();
 #endif
-    } else if (codec_type == A2DP_CODEC_LDAC) {
-#if TCFG_A2DP_LDAC_SILENCE_DETECT_ENABLE
+    } else if (codec_type == A2DP_CODEC_LDAC && CONFIG_A2DP_LDAC_SILENCE_DETECT_ENABLE) {
+#if TCFG_BT_SUPPORT_LDAC
         ldac_decoder_energy_detect_close();
 #endif
     }

@@ -22,7 +22,9 @@
 #ifndef TCFG_UPDATE_UPDIFF
 #define TCFG_UPDATE_UPDIFF					    0
 #endif
+
 #define CONFIG_DOUBLE_BANK_LESS               ((TCFG_UPDATE_UPDIFF||TCFG_UPDATE_COMPRESS)&&TCFG_DUAL_BANK_ENABLE) //双备份结构，但appcore1区域可以更小
+
 
 #define CONFIG_UPDATE_JUMP_TO_MASK              0   	//配置升级到loader的方式0为直接reset,1为跳转(适用于芯片电源由IO口KEEP住的方案,需要注意检查跳转前是否将使用DMA的硬件模块全部关闭)
 

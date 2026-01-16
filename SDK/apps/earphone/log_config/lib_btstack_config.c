@@ -102,7 +102,7 @@ u8 rcsp_allow_ble_spp_connect_simultaneously = 0;			// 1t1时，是否允许ble�
 #endif
 
 //le 配置,可以优化代码和RAM
-#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN)))
+#if 1//((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN | LE_AUDIO_AURACAST_SINK_EN)))
 	const int config_le_hci_connection_num = 2;//支持同时连接个数
 	const int config_le_sm_support_enable = 1; //是否支持加密配对
 #else
@@ -124,30 +124,4 @@ const int config_le_gatt_client_num = 1;   //支持client角色个数
 #endif
 
 
-// *INDENT-ON*
-
-const char log_tag_const_v_APP_BLE = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_i_APP_BLE = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_d_APP_BLE = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_w_APP_BLE = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_e_APP_BLE = CONFIG_DEBUG_LIB(1);
-
-const char log_tag_const_v_APP_SPP = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_i_APP_SPP = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_d_APP_SPP = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_w_APP_SPP = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_e_APP_SPP = CONFIG_DEBUG_LIB(1);
-
-
-const char log_tag_const_v_SPP = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_i_SPP = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_d_SPP = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_w_SPP = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_e_SPP = CONFIG_DEBUG_LIB(1);
-
-const char log_tag_const_v_AVCTP = CONFIG_DEBUG_LIB(0);
-const char log_tag_const_i_AVCTP = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_d_AVCTP = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_w_AVCTP = CONFIG_DEBUG_LIB(1);
-const char log_tag_const_e_AVCTP = CONFIG_DEBUG_LIB(1);
 
