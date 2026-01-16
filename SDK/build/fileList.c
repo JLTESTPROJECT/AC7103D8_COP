@@ -1681,7 +1681,13 @@ objs += \
 objs += \
 	$(ROOT)/apps/earphone/mode/bt/poweroff.o \
 	$(ROOT)/apps/earphone/mode/bt/dual_conn.o \
-	$(ROOT)/apps/earphone/mode/bt/phone_call.o \
+	$(ROOT)/apps/earphone/mode/bt/phone_call.o
+
+objs += \
+	$(ROOT)/apps/earphone/mode/bt/dual_phone_call.o \
+	$(ROOT)/apps/earphone/mode/bt/dual_a2dp_play.o
+
+objs += \
 	$(ROOT)/apps/earphone/mode/bt/a2dp_play.o
 
 objs += \

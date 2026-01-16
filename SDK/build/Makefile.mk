@@ -35,8 +35,6 @@ c_SRC_FILES := \
 	apps/earphone/mode/bt/bt_key_msg_table.c \
 	apps/earphone/mode/bt/bt_slience_detect.c \
 	apps/earphone/mode/bt/bt_tws.c \
-	apps/earphone/mode/bt/dual_a2dp_play.c \
-	apps/earphone/mode/bt/dual_phone_call.c \
 	apps/earphone/mode/bt/earphone.c \
 	apps/earphone/mode/bt/low_latency.c \
 	apps/earphone/mode/bt/sniff.c \

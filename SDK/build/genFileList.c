@@ -2341,7 +2341,17 @@ c_SRC_FILES += \
 c_SRC_FILES += \
 	apps/earphone/mode/bt/poweroff.c \
 	apps/earphone/mode/bt/dual_conn.c \
-	apps/earphone/mode/bt/phone_call.c \
+	apps/earphone/mode/bt/phone_call.c
+#endif
+
+#if TCFG_BT_DUAL_CONN_ENABLE
+c_SRC_FILES += \
+	apps/earphone/mode/bt/dual_phone_call.c \
+	apps/earphone/mode/bt/dual_a2dp_play.c
+#endif
+
+#if TCFG_BT_DUAL_CONN_ENABLE == 0
+c_SRC_FILES += \
 	apps/earphone/mode/bt/a2dp_play.c
 #endif
 
