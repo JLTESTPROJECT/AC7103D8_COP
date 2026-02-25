@@ -98,6 +98,7 @@ extern const  int  silk_fsN_enable ;
 extern const  int  silk_fsW_enable ;
 extern const int LC3_PLC_EN ;
 extern const char config_lib_lc3_enc_ltpf_idx_enable ;
+extern const char config_lib_lc3_dec_post_filter_enable ;
 extern const int LC3_PLC_FADE_OUT_START_POINT ;
 extern const int LC3_PLC_FADE_OUT_POINTS ;
 extern const int LC3_PLC_FADE_IN_POINTS ;

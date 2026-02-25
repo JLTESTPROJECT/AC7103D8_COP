@@ -175,7 +175,7 @@ void rcsp_init(void)
     if (__this) {
         return;
     }
-    rcsp_printf("%s", __FUNCTION__);
+    rcsp_printf("%s, RCSP_CHANNEL_SEL:%d", __FUNCTION__, RCSP_CHANNEL_SEL);
 
     //set_jl_mtu_resv();
     ///设置rcsp最大发送buf， 即MTU
@@ -217,7 +217,7 @@ void rcsp_init(void)
     if (err) {
         rcsp_printf("rcsp create fail %x\n", err);
     }
-#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN)) && (RCSP_UPDATE_EN))
+#if ((TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_UNICAST_SINK_EN) && (RCSP_UPDATE_EN))
     rcsp_cis_update_init();
 #endif
 }

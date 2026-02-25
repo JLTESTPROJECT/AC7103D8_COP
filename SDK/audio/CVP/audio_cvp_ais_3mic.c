@@ -125,11 +125,7 @@ static cbuffer_t *aec_ref_cbuf = NULL;
 
 extern void aec_code_movable_load(void);
 extern void aec_code_movable_unload(void);
-
-__attribute__((weak))u32 usb_mic_is_running()
-{
-    return 0;
-}
+extern u32 usb_mic_is_running();
 
 void audio_aec_ref_start(u8 en)
 {

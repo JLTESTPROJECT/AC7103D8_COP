@@ -128,7 +128,7 @@ void bt_background_suspend()
 
     sys_auto_shut_down_disable();
 
-    btctrler_suspend(suepend_rx_bulk);
+    // btctrler_suspend(suepend_rx_bulk);	// 蓝牙后台阻止蓝牙进低功耗
     btstack_suspend();
 
     /*关掉解码, 打开能量检测，处理暂停之后又播歌的情况，能跳回蓝牙模式*/

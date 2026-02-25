@@ -136,13 +136,13 @@ static u8 g_cig_hdl;        /*!< 用于cig_hdl获取 */
 static u8 connected_num;    /*!< 记录当前开启了多少个cig广播 */
 static u8 *transmit_buf;    /*!< 用于发送端发数 */
 static struct list_head connected_list_head = LIST_HEAD_INIT(connected_list_head);	// cig链表
-static struct list_head acl_data_recv_list_head = LIST_HEAD_INIT(acl_data_recv_list_head);
 static struct le_audio_mode_ops *le_audio_switch_ops = NULL; /*!< 广播音频和本地音频切换回调接口指针 */
 #if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_UNICAST_SINK_EN)
+static struct list_head acl_data_recv_list_head = LIST_HEAD_INIT(acl_data_recv_list_head);
 u8 cig_peripheral_support_lea_profile  = 1;			// 是否支持公有的cis协议
 u8 cig_peripheral_support_dongle = 1;
 u8 lea_cfg_only_dongle_support = 1;
-#elif (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_UNICAST_SINK_EN )
+#elif (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_UNICAST_SINK_EN)
 u8 cig_peripheral_support_lea_profile  = 1;			// 是否支持公有的cis协议
 u8 lea_cfg_only_dongle_support = 0;
 u8 cig_peripheral_support_dongle = 0;
@@ -478,7 +478,7 @@ __hid_skip:
 
 #if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_UNICAST_SINK_EN)
 /**
- * @brief 私有cis命令开启或者关闭解码器
+ * @brief 私有cis命令开启或者关闭编码器
  *
  * @param en 开启/关闭解码器
  * @param acl_hdl acl链路句柄
@@ -553,6 +553,40 @@ void connected_perip_connect_recoder(u8 en, u16 acl_hdl)
     }
     spin_unlock(&connected_lock);
     connected_mutex_post(&connected_mutex, __LINE__);
+}
+
+int connected_iso_recv_handle_register(void *priv, void (*recv_handle)(u16 conn_handle, const void *const buf, size_t length, void *priv))
+{
+    struct acl_recv_hdl *item = NULL;
+    if (recv_handle) {
+        item = zalloc(sizeof(struct acl_recv_hdl));
+        if (NULL == item) {
+            printf("err: %s alloc fail\n", __func__);
+            return -1;
+        }
+        item->recv_handle = recv_handle;
+        list_add_tail(&item->entry, &acl_data_recv_list_head);
+    }
+
+    /* rcsp_update_flag = 1; */
+    return 0;
+}
+
+static void connected_iso_recv_handle(u16 conn_handle, const void *const buf, size_t length, void *priv)
+{
+    struct acl_recv_hdl *item = NULL;
+
+    if (rcsp_update_flag) {
+        //set rcsp acl param
+        printf("Set rcsp acl param:0x%x", conn_handle);
+        set_aclMaxPduPToC_test(255);
+        ble_op_set_rxmaxbuf(conn_handle, 255);
+        rcsp_update_flag = 0;
+    }
+
+    list_for_each_entry(item, &acl_data_recv_list_head, entry) {
+        item->recv_handle(conn_handle, buf, length, priv);
+    }
 }
 #endif
 
@@ -816,40 +850,6 @@ static void connected_perip_event_callback(const CIG_EVENT event, void *priv)
     }
 }
 
-int connected_iso_recv_handle_register(void *priv, void (*recv_handle)(u16 conn_handle, const void *const buf, size_t length, void *priv))
-{
-    struct acl_recv_hdl *item = NULL;
-    if (recv_handle) {
-        item = zalloc(sizeof(struct acl_recv_hdl));
-        if (NULL == item) {
-            printf("err: %s alloc fail\n", __func__);
-            return -1;
-        }
-        item->recv_handle = recv_handle;
-        list_add_tail(&item->entry, &acl_data_recv_list_head);
-    }
-
-    /* rcsp_update_flag = 1; */
-    return 0;
-}
-
-static void connected_iso_recv_handle(u16 conn_handle, const void *const buf, size_t length, void *priv)
-{
-    struct acl_recv_hdl *item = NULL;
-
-    if (rcsp_update_flag) {
-        //set rcsp acl param
-        printf("Set rcsp acl param:0x%x", conn_handle);
-        set_aclMaxPduPToC_test(255);
-        ble_op_set_rxmaxbuf(conn_handle, 255);
-        rcsp_update_flag = 0;
-    }
-
-    list_for_each_entry(item, &acl_data_recv_list_head, entry) {
-        item->recv_handle(conn_handle, buf, length, priv);
-    }
-}
-
 #if UNICAST_SINK_CIS_LR_BUF_MAX_NUMS
 static void connected_reset_multi_cis_info(u8 index, JL_CIS_LR_BUF_LIST *list_buf)
 {
@@ -907,9 +907,11 @@ static void connected_iso_callback(const void *const buf, size_t length, void *p
     param = (cig_stream_param_t *)priv;
 
     if (param->acl_hdl) {
+#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_UNICAST_SINK_EN)
         //收取同步数据
         connected_iso_recv_handle(param->acl_hdl, buf, length, priv);
-        log_error("%s, %d\n", __FUNCTION__, __LINE__);
+#endif
+        /* log_error("%s, %d\n", __FUNCTION__, __LINE__); */
         return;
     }
 
@@ -1147,6 +1149,12 @@ int connected_perip_open(cig_parameter_t *params)
     return available_cig_hdl;
 }
 
+/**
+ * @brief 根据cig句柄回复上下行
+ *
+ * @param cig_hdl cig句柄
+ * @param cig_phone_call_play 是否需要恢复上行
+ */
 int cis_audio_player_resume(u8 cig_hdl, u8 cig_phone_call_play)
 {
     int ret = 0;
@@ -1206,9 +1214,11 @@ int cis_audio_player_resume(u8 cig_hdl, u8 cig_phone_call_play)
                 connected_mutex_pend(&connected_mutex, __LINE__);
                 le_audio_switch_ops->rx_le_audio_open(&connected_hdl->rx_player, &params);
 
+#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_UNICAST_SINK_EN)
                 if (cig_phone_call_play) {
                     connected_perip_connect_recoder(1, connected_hdl->cis_hdl_info[i].acl_hdl);
                 }
+#endif
                 connected_mutex_post(&connected_mutex, __LINE__);
             }
             ret = 1;
@@ -1217,6 +1227,11 @@ int cis_audio_player_resume(u8 cig_hdl, u8 cig_phone_call_play)
     return ret;
 }
 
+/**
+ * @brief 根据cig句柄关闭解码器
+ *
+ * @param cig_hdl cig句柄
+ */
 int cis_audio_player_close(u8 cig_hdl)
 {
     printf("cis_audio_player_close\n");

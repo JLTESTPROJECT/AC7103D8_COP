@@ -28,7 +28,7 @@
 #endif
 
 #if RCSP_ADV_EN || RCSP_BTMATE_EN || (RCSP_MODE || SMART_BOX_EN) || APP_PROTOCOL_READ_CFG_EN
-#include "app_config.h"
+#include "app_ble_spp_api.h"
 #include "fs.h"
 //#include "crc_api.h"
 //#include "syd_file.h"
@@ -1171,6 +1171,9 @@ extern u8 *ble_get_gatt_profile_data(u16 *len);
 extern const char *bt_get_local_name();
 extern u8 *get_last_device_connect_linkkey(u16 *len);
 extern u16 rebuild_adv_rcsp_info(u8 *adv_rsp_buf, u16 buf_size, u8 type, u8 *addr);
+#if !TCFG_THIRD_PARTY_PROTOCOLS_SIMPLIFIED
+extern void *rcsp_server_ble_hdl;
+#endif
 
 static u32 ex_cfg_fill_content(ex_cfg_t *user_ex_cfg, u8 *write_flag)
 {
@@ -1205,8 +1208,16 @@ static u32 ex_cfg_fill_content(ex_cfg_t *user_ex_cfg, u8 *write_flag)
     custom_cfg_item_write(CFG_ITEM_BLE_NAME, host_name, host_name_len);
 
     //CFG_ITEM_BLE_ADDR
+#if TCFG_THIRD_PARTY_PROTOCOLS_SIMPLIFIED
     le_controller_get_mac(addr);
-    printf("addr2 : \n");
+    printf("addr2 : %d\n", __LINE__);
+#else
+    u8 *ble_addr = app_ble_adv_addr_get(rcsp_server_ble_hdl);
+    if (ble_addr) {
+        memcpy(addr, ble_addr, 6);
+    }
+    printf("addr2 : %d\n", __LINE__);
+#endif
     put_buf(addr, 6);
     //CFG_ITEM_SCAN_RSP
     u16 len;

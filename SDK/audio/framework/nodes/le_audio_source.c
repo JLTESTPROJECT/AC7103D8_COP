@@ -234,19 +234,20 @@ static int le_audio_source_ioc_start(struct stream_iport *iport)
         return 0;
     }
 
-    if (!ctx->rx_stream) {
 #if LEA_LOCAL_SYNC_PLAY_EN
+    if (!ctx->rx_stream) {
         ctx->rx_stream = le_audio_stream_rx_open(ctx->le_audio, hdl->coding_type);
         le_audio_stream_rx_buf_init(ctx->le_audio, hdl->coding_type);
-#endif
         hdl->attribute = LE_AUDIO_LOCAL_SOURCE;
-    } else {//在被打的断恢复的时候，tx_stream/rx_stream没有释放,通过判断前节点是否是编码节点确定是tx/rx的音频流
-        if (iport->prev->node->uuid == NODE_UUID_ENCODER) {
-            hdl->attribute = LE_AUDIO_TX_SOURCE;
-        } else {
-            le_audio_stream_rx_buf_init(ctx->le_audio, hdl->coding_type);
-            hdl->attribute = LE_AUDIO_LOCAL_SOURCE;
-        }
+        return 0;
+    }
+#endif
+    //在被打的断恢复的时候，tx_stream/rx_stream没有释放,通过判断前节点是否是编码节点确定是tx/rx的音频流
+    if (iport->prev->node->uuid == NODE_UUID_ENCODER) {
+        hdl->attribute = LE_AUDIO_TX_SOURCE;
+    } else {
+        le_audio_stream_rx_buf_init(ctx->le_audio, hdl->coding_type);
+        hdl->attribute = LE_AUDIO_LOCAL_SOURCE;
     }
 
     return 0;

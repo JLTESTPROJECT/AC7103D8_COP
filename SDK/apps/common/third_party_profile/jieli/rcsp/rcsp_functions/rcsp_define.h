@@ -7,6 +7,11 @@
 #define RCSP_MODE_WATCH		            				(3)			// 适用于手表SDK
 #define RCSP_MODE_EARPHONE              				(4)			// 适用于耳机SDK
 
+// RCSP的连接方式
+#define RCSP_USE_BLE                    0
+#define RCSP_USE_SPP                    1
+#define RCSP_USE_GATT_OVER_EDR          2
+
 #define		RCSP_SDK_TYPE_AC690X						0x0
 #define		RCSP_SDK_TYPE_AC692X						0x1
 #define 	RCSP_SDK_TYPE_AC693X						0x2

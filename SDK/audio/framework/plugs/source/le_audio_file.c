@@ -35,7 +35,7 @@ struct le_audio_file_params {
     u8 ble_to_local_time;
 } __attribute__((packed));
 
-_WEAK_ const int CONFIG_LE_AUDIO_PLAY_LATENCY = 30000;
+_WEAK_ int CONFIG_LE_AUDIO_PLAY_LATENCY = 30000;
 
 static void abandon_le_audio_data(void *p)
 {

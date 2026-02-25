@@ -542,6 +542,12 @@ static int bt_connction_status_event_handler(struct bt_event *bt)
         // 未调通,会引起复位,临时注释
         /* arch_trim(); */
 #endif
+#if defined(TCFG_BT_OSC_OFFSET) && (TCFG_BT_OSC_OFFSET != 0)
+        if (bt_fre_offset_trim_flag_get() == 0) {
+            printf("TCFG_BT_OSC_OFFSET:%d\n", TCFG_BT_OSC_OFFSET);
+            bt_osc_offset_set(TCFG_BT_OSC_OFFSET);
+        }
+#endif
         /*
          * 蓝牙初始化完成
          */

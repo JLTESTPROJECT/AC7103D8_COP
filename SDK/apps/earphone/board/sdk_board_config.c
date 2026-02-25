@@ -250,7 +250,7 @@ int gpio_config_uninit()
 
 // *INDENT-OFF*
 #if TCFG_LP_TOUCH_KEY_ENABLE
-LPCTMU_PLATFORM_DATA_BEGIN(lpctmu_pdata)
+LPCTMU_PLATFORM_DATA_BEGIN(lpctmu_pdata) = {
 #if LPCTMU_ANA_CFG_ADAPTIVE
     .aim_vol_delta              = TCFG_LP_KEY_LIMIT_VOLTAGE_DELTA,
     .aim_charge_khz             = TCFG_LP_KEY_CHARGE_FREQ_KHz,
@@ -261,7 +261,7 @@ LPCTMU_PLATFORM_DATA_BEGIN(lpctmu_pdata)
 #endif
 LPCTMU_PLATFORM_DATA_END();
 
-LP_TOUCH_KEY_PLATFORM_DATA_BEGIN(lp_touch_key_pdata)
+LP_TOUCH_KEY_PLATFORM_DATA_BEGIN(lp_touch_key_pdata) = {
     .slide_mode_en              = TCFG_LP_KEY_SLIDE_ENABLE,
     .slide_mode_key_value       = TCFG_LP_KEY_SLIDE_VALUE,
     .charge_mode_keep_touch     = TCFG_LP_KEY_ENABLE_IN_CHARGE,

@@ -187,16 +187,16 @@ void free_mux(void *p)
 #endif
 }
 
-#if !defined(TCFG_CVP_DEVELOP_ENABLE) || (TCFG_CVP_DEVELOP_ENABLE == 0)
-#if (TCFG_AUDIO_DUAL_MIC_ENABLE == 0) && (TCFG_AUDIO_TRIPLE_MIC_ENABLE == 0)
-#include "audio_cvp_debug.c"
-
-extern int esco_player_runing();
 __attribute__((weak))u32 usb_mic_is_running()
 {
     return 0;
 }
 
+#if !defined(TCFG_CVP_DEVELOP_ENABLE) || (TCFG_CVP_DEVELOP_ENABLE == 0)
+#if (TCFG_AUDIO_DUAL_MIC_ENABLE == 0) && (TCFG_AUDIO_TRIPLE_MIC_ENABLE == 0)
+#include "audio_cvp_debug.c"
+
+extern int esco_player_runing();
 struct audio_cvp_sms {
     u8 start;				//aec模块状态
     u8 inbuf_clear_cnt;		//aec输入数据丢掉

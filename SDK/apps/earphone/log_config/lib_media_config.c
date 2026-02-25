@@ -472,6 +472,9 @@ const  int  silk_fsW_enable = 1;  //支持16-24k采样率
 const int LC3_PLC_EN = TCFG_LC3_PLC_TYPE; 	//plc类型配
 const char config_lib_lc3_enc_ltpf_idx_enable = ((LC3_PLC_EN == AUD_PLC_ADVANCED_MODE || LC3_PLC_EN == AUD_PLC_ULTRA_MODE) ? 1 : 0);
 
+// 在编码使能ltpf的前提下，LC3_PLC_ADVANCED_MODE/LC3_PLC_JL_ADVANCED_MODE模式使能该参数有助于提升丢帧时的修复效果，但会增加运算；
+const char config_lib_lc3_dec_post_filter_enable = 0;
+
 const int LC3_PLC_FADE_OUT_START_POINT = 480;   //丢包后维持音量的点数.
 const int LC3_PLC_FADE_OUT_POINTS = 1200;       //丢包维持指定点数后,淡出的速度,音量从满幅到0需要的点数.
 const int LC3_PLC_FADE_IN_POINTS = 1200;        //丢包后收到正确包淡入,淡入的速度,音量从0到满幅需要的点数.

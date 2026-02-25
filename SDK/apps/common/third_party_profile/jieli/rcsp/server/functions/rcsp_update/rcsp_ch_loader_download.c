@@ -562,7 +562,7 @@ void rcsp_update_loader_download_init(int update_type, void (*result_cbk)(void *
 #endif
 }
 
-#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN)))
+#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_UNICAST_SINK_EN)
 void cis_rcsp_recv_handle(u16 conn_handle, const void *const buf, size_t length, void *priv)
 {
     if (conn_handle) {

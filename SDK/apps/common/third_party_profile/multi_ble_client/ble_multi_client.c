@@ -2015,6 +2015,7 @@ void ble_multi_client_exit(void)
 
     for (int i = 0; i < SUPPORT_MAX_CLIENT; i++) {
         app_ble_hdl_free(le_multi_client_hdl[i]);
+        le_multi_client_hdl[i] = NULL;
     }
 }
 

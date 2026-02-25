@@ -165,4 +165,14 @@ int bt_key_msg_remap(int *msg);
 
 void bt_discovery_and_connectable_using_loca_mac_addr(u8 inquiry_scan_en, u8 page_scan_en);
 
+/**
+ * @brief :        bt_fre_offset_trim_flag_get
+ *
+ * @return :       The flag of frequency offset trim value stored in the BTIF area.
+ * 				   Note:This api is compatible with one-time trim procedures.
+ */
+/* *****************************************************************************/
+u8 bt_fre_offset_trim_flag_get(void);
+void bt_osc_offset_set(s32 offset);
+
 #endif

@@ -1,20 +1,20 @@
 project earphone_sdk/
-29f3c74e8de04f7a31d1b2db6a69f984e5cb1bbe
+4e2d01558fe51511de983a4a40b4fb40f253a7e8
 
 project earphone_sdk/apps/common/
-d8ddea1f89287a1650a24260911fd212a47b1045
+52a34c0bc2918b02fbd31c85f04e441233943af3
 
 project earphone_sdk/apps/common/device/
 e6f4bbe0cdcb0d25298c7608d2ea6e2b058bb73f
 
 project earphone_sdk/apps/earphone/
-90fe1238049adad88b27f10026504214439d284c
+ea61809d8a8ec4b188fc0ca367ed3291ba65e6b5
 
 project earphone_sdk/audio/
-128b5b5430b5ab6db69b70d9c7b62663299584d8
+604f25d9b4f005de28bc60a377084ec0754e83f0
 
 project earphone_sdk/cpu/
-b307e12aee89e684ed0d6d33f371066e4af03af8
+38bdfa2ca277b0610b855c2fe07ebb2d78e0f0af
 
 project earphone_sdk/interface/btctrler/
 faf424e9da6f41fcb4d0536d8b7f9cfd48a50386
@@ -26,13 +26,13 @@ project earphone_sdk/interface/driver/
 89a89676c85449daf63fba4a38e2c9e3c7a09e06
 
 project earphone_sdk/interface/media/
-c4af8d358d1bb18d4487e827f94b0943487f8b78
+49ebe2e01e02484d6f68bfa70ce6ca45c4b2fc32
 
 project earphone_sdk/interface/net/
 9c44ca3ed3ccab6bc955093f40326ad8c7032d47
 
 project earphone_sdk/interface/system/
-c42509ed2084e0053550418840b12588b1cdeb47
+75a34ad1fa2dd14567d84a6778b0a865e8d15abe
 
 project earphone_sdk/interface/update/
 a7284f6e10d8da6dd4bd19827a7679e690c6110c
@@ -41,25 +41,25 @@ project earphone_sdk/interface/utils/
 aaa61429b0303e29bdea9ed46d42010f533a35d5
 
 project earphone_sdk/lib/bt_protocol/
-298f1a864698f9978eafd7c9ebb51306d267a0bf
+315582d3d1b617c04af929bbe18451fb295d9b0c
 
 project earphone_sdk/lib/btctrler/
-c0cd6c331839e94d83c8aedffdf06c273040ee23
+298e5fb2eca5aeaee030c164604f333a3a79acb4
 
 project earphone_sdk/lib/driver/
-f95c1d791871aa921185dc6ada0c3f667fe391a3
+3f8739ddc42060b0d843c842d6370d7350d0734b
 
 project earphone_sdk/lib/interface/crypto_toolbox/
 0c0b7c430c2cad0079e876fb290a51a918efff87
 
 project earphone_sdk/lib/media/
-6c480cc50d9059a6e1bcde6a28f0fe4dc154eda7
+61b0d816496d9723850bc7dd73073116550a6c5e
 
 project earphone_sdk/lib/net/
 5befdc5b508d82573e948fe0b926bb1655ac1f91
 
 project earphone_sdk/lib/system/
-e86d1b8c69d9789b4d5b53acd472f08b011273df
+3967dcb00ae631d9dbda530d0ac87e47d2dee413
 
 project earphone_sdk/lib/update/
 f68e1fd86f509dc4398bee544636fc8bbf639775

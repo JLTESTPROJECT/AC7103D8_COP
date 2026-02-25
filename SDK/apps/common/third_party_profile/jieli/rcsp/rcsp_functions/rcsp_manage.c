@@ -61,7 +61,7 @@ u8 get_rcsp_connect_status(void)
     if (bt_rcsp_device_conn_num() > 0) {
         return 1;
     }
-#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN)))
+#if ((TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_UNICAST_SINK_EN) && (RCSP_UPDATE_EN))
     extern u16 cis_rcsp_update_flag(void);
     if (cis_rcsp_update_flag()) {
         return 1;

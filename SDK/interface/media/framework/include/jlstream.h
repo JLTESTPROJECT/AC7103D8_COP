@@ -390,6 +390,7 @@ struct stream_thread {
     OS_MUTEX mutex;
     struct jlstream *stream;
     struct stream_thread *next;
+    struct stream_node *wakeup_by_async_node;
 };
 
 struct stream_iport {

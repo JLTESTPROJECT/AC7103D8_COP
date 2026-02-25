@@ -315,12 +315,34 @@
 #define TCFG_REC_FILE_NAME_PREFIX	"aud_"			//录音文件前缀名
 #endif
 
+// ====================手机APP第三方协议连接方式===================
 #if !(THIRD_PARTY_PROTOCOLS_SEL & RCSP_MODE_EN)
+// 非RCSP协议优先BLE
 #define	   RCSP_MODE			     RCSP_MODE_OFF
 #define ATT_OVER_EDR_DEMO_EN          0 //enalbe gatt_over_edr_demo
+
 #else
+
+// RCSP协议的连接方式
+#ifdef RCSP_CHANNEL_SEL
+
+// 根据可视化工具界面进行配置
+#if (RCSP_CHANNEL_SEL == RCSP_USE_GATT_OVER_EDR)
 #define ATT_OVER_EDR_DEMO_EN          1 //enalbe gatt_over_edr_demo
+#else
+#define ATT_OVER_EDR_DEMO_EN          0 //enalbe gatt_over_edr_demo
 #endif
+
+#else
+
+// RCSP协议优先ATT OVER EDR
+#define ATT_OVER_EDR_DEMO_EN          1 //enalbe gatt_over_edr_demo
+#define RCSP_CHANNEL_SEL RCSP_USE_GATT_OVER_EDR // RCSP连接方式
+
+#endif
+
+#endif
+// ====================手机APP第三方协议连接方式===================
 
 #ifndef TCFG_USER_EDR_ENABLE
 #define TCFG_USER_EDR_ENABLE        0

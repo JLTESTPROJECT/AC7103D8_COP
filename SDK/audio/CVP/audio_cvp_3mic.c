@@ -125,11 +125,7 @@ const u8 CONST_JLSP_3MIC_MODE = JLSP_3MIC_MODE2;
 
 extern void aec_code_movable_load(void);
 extern void aec_code_movable_unload(void);
-
-__attribute__((weak))u32 usb_mic_is_running()
-{
-    return 0;
-}
+extern u32 usb_mic_is_running();
 
 struct audio_cvp_tms {
     volatile u8 start;				//aec模块状态

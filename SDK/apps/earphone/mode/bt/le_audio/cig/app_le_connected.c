@@ -1644,13 +1644,14 @@ static u16 ble_user_priv_cmd_handle(u16 handle, u8 *cmd, u8 len, u8 *rsp)
         break;
     case VENDOR_PRIV_ACL_MUSIC_VOLUME:
         log_info("Get master music vol:%d", cmd[1]);
-#if LE_AUDIO_JL_DONGLE_UNICAST_WITH_PHONE_CONN_CONFIG
-        if (a2dp_player_runing()) {
-            y_printf("a2dp_player_runing , do not set dongle vol\n");
-            break;
-        }
-#endif
-        set_music_device_volume(cmd[1]);
+        struct volume_cfg music_cfg;
+        music_cfg.bypass = VOLUME_NODE_CMD_SET_VOL;
+        //要注意原先dongle发下来的总等级，是0~127，要根据实际最高等级填入，
+        //下面是将127级转换成16级，这里的16，是MIC的音量控制器节点填入的等级
+        printf("cmd[1]:%d\n", cmd[1]);
+        music_cfg.cur_vol = cmd[1] * 16 / 127;    // mic实际音量登记 = dongle发下来的实际等级 * music音量总等级 / dongle发下来的总等级
+        int err1 = jlstream_set_node_param(NODE_UUID_VOLUME_CTRLER, "LEA_Media", (void *)&music_cfg, sizeof(struct volume_cfg));
+        printf(">>>lea music vol:%d, ret:%d", music_cfg.cur_vol, err1);
         break;
     case VENDOR_PRIV_ACL_MIC_VOLUME:
         log_info("Get master mic vol:%d", cmd[1]);
@@ -1681,7 +1682,11 @@ static u16 ble_user_priv_cmd_handle(u16 handle, u8 *cmd, u8 len, u8 *rsp)
  * */
 void le_audio_profile_init()
 {
+#if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_UNICAST_SINK_EN)
+    printf("JL le_audio_profile_init:%d\n", g_le_audio_hdl.le_audio_profile_ok);
+#else
     printf("le_audio_profile_init:%d\n", g_le_audio_hdl.le_audio_profile_ok);
+#endif
     if (get_bt_le_audio_config() && (g_le_audio_hdl.le_audio_profile_ok == 0)) {
 #if (TCFG_LE_AUDIO_RCSP_USE_SAME_ACL)
         le_audio_user_server_profile_init(rcsp_profile_data);

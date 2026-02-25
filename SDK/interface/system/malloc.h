@@ -139,6 +139,7 @@ u32 pmalloc_get_idle_ram(void);
 
 void memory_trace_dump();
 void memory_trace_reset();
+int memory_trace_dump_minimal();
 
 void mem_unfree_dump();
 

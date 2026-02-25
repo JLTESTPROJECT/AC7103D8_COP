@@ -95,6 +95,7 @@ const int CONFIG_CPU_UNMASK_IRQ_ENABLE = 1;
 //          通过void mem_unfree_dump()输出        //
 //================================================//
 const u32 CONFIG_HEAP_MEMORY_TRACE = 0;
+const u32 CONFIG_HEAP_MEMORY_MINIMAL_VALUE = 20 * 1024; // 剩余内存小于设定值时打印内存占用情况
 
 //================================================//
 //   timer_no_response打印对应任务堆栈            //

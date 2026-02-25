@@ -500,22 +500,14 @@ void rcsp_ble_adv_enable_with_con_dev()
     printf("%s, %s, %d, max:%d, conn_num:%d\n", __FILE__, __FUNCTION__, __LINE__, max_con_dev, conn_num);
 #if TCFG_USER_TWS_ENABLE
     if (TWS_ROLE_SLAVE != tws_api_get_role()) {
-#if TCFG_THIRD_PARTY_PROTOCOLS_SIMPLIFIED
         if (conn_num >= max_con_dev) {
-#else
-        if ((conn_num >= max_con_dev) && (bt_rcsp_edr_att_conn_num() == 0)) {
-#endif
             rcsp_bt_ble_adv_enable(0);
         } else {
             ble_module_enable(1);
         }
     }
 #else
-#if TCFG_THIRD_PARTY_PROTOCOLS_SIMPLIFIED
     if (conn_num >= max_con_dev) {
-#else
-    if ((conn_num >= max_con_dev) && (bt_rcsp_edr_att_conn_num() == 0)) {
-#endif
         rcsp_bt_ble_adv_enable(0);
     } else {
         ble_module_enable(1);

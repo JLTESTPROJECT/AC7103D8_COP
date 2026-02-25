@@ -19,6 +19,7 @@ extern const int SDFILE_VFS_REDUCE_ENABLE ;
 extern const int device_bulk_read_async_enable ;
 extern const int CONFIG_CPU_UNMASK_IRQ_ENABLE ;
 extern const u32 CONFIG_HEAP_MEMORY_TRACE ;
+extern const u32 CONFIG_HEAP_MEMORY_MINIMAL_VALUE ;
 extern const u32 CONFIG_TIMER_DUMP_TASK_STACK ;
 extern const int FATFS_WRITE ;
 extern const int FILT_0SIZE_ENABLE ;

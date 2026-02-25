@@ -827,6 +827,8 @@ static int dual_conn_btstack_event_handler(int *_event)
         puts("dual_conn BT_STATUS_INIT_OK");
 #if (TCFG_LE_AUDIO_APP_CONFIG & LE_AUDIO_JL_UNICAST_SINK_EN) && TCFG_JL_UNICAST_EDR_MODE_SWITCH_ENABLE
         if (jl_unicast_edr_mode_get() == JL_UNICAST_MODE_DEFAULT) {
+            INIT_LIST_HEAD(&g_dual_conn.page_head);
+            g_dual_conn.page_head_inited = 1;
             printf("cis mode, edr not page\n");
             break;
         } else {

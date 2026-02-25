@@ -30,6 +30,10 @@
 
 #include "audio_anc_includes.h"
 
+#if TCFG_MIC_EFFECT_ENABLE
+#include "mic_effect.h"
+#endif
+
 #if RCSP_MODE && RCSP_ADV_KEY_SET_ENABLE
 #include "adv_anc_voice_key.h"
 #endif
@@ -160,7 +164,7 @@ void app_common_key_msg_handler(int *msg)
         }
         break;
     case APP_MSG_SWITCH_MIC_EFFECT://混响音效场景切换
-        mic_effect_scene_switch();
+        /* mic_effect_scene_switch(); */
         break;
     case APP_MSG_MIC_VOL_UP:
         mic_effect_dvol_up();
