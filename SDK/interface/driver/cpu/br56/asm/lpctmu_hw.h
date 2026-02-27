@@ -127,7 +127,7 @@ struct lpctmu_config_data {
 
 
 #define LPCTMU_PLATFORM_DATA_BEGIN(data) \
-    const struct lpctmu_platform_data data = {
+    const struct lpctmu_platform_data data
 
 #define LPCTMU_PLATFORM_DATA_END() \
     .ext_stop_ch_en = 0, \

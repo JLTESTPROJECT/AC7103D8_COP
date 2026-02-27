@@ -159,7 +159,7 @@ struct lp_touch_key_platform_data {
 
 
 #define LP_TOUCH_KEY_PLATFORM_DATA_BEGIN(data) \
-    const struct lp_touch_key_platform_data data = {
+    const struct lp_touch_key_platform_data data
 
 #define LP_TOUCH_KEY_PLATFORM_DATA_END() \
     .ldo_wkp_algo_reset = 1,\
