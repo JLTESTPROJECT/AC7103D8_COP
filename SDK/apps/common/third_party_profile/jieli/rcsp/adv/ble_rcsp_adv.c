@@ -205,7 +205,19 @@ int rcsp_make_set_adv_data(void)
     buf[offset++] = (android_connect_way << 1) | (ios_connect_way << 4) | BIT(7);
 
     // CFG 2
+#if (TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN))
+    u8 ble_rcsp_cfg2 = 0;
+    ble_rcsp_cfg2 |= BIT(0);  // BIT0: 是否支持Le Audio功能
+    if (is_cig_phone_conn()) {
+        ble_rcsp_cfg2 |= BIT(1);          // BIT1: Le Audio是否已连接
+    }
+#if (TCFG_LE_AUDIO_RCSP_USE_SAME_ACL)
+    ble_rcsp_cfg2 |= BIT(2);  // BIT2: RCSP是否复用LE Audio地址
+#endif
+    buf[offset++] = ble_rcsp_cfg2;
+#else
     buf[offset++] = 0;
+#endif
 
     adv_data_len = offset;
     buf[0] = adv_data_len - 1;

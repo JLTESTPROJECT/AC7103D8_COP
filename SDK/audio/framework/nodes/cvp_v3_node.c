@@ -43,6 +43,10 @@ struct CVP_PRE_GAIN_CONFIG {
     float talk_fb_mic_gain;	//FB MIC前级数字增益，default:0dB(-90 ~ 40dB)
 } __attribute__((packed));
 
+struct CVP_EQ_CONFIG {
+    u8 en;
+} __attribute__((packed));
+
 struct CVP_AEC_CONFIG {
     u8 en;
     int aec_process_maxfrequency;	//default:8000,range[3000:8000]
@@ -121,6 +125,7 @@ struct cvp_cfg_t {
     struct CVP_ALGO_SEL_CONFIG algo_sel;
     struct CVP_MIC_SEL_CONFIG mic_sel;
     struct CVP_REF_MIC_CONFIG ref_mic;
+    struct CVP_EQ_CONFIG  eq_en;
     struct CVP_PRE_GAIN_CONFIG pre_gain;
     struct CVP_AEC_CONFIG aec;		 // aec
     struct CVP_NLP_CONFIG nlp;		 // nlp
@@ -202,9 +207,9 @@ void cvp_v3_node_param_cfg_update(struct cvp_cfg_t *cfg, void *priv)
     if (g_cvp_hdl->algo_sel.algo_type & CVP_ALGO_1MIC_AECNLP) {		//AEC和NLP流程一般离线识别使用
         p->enable_module = cfg->aec.en | (cfg->nlp.en << 1) ;
     } else if (g_cvp_hdl->algo_sel.algo_type & CVP_ALGO_1MIC) {
-        p->enable_module = cfg->aec.en | (cfg->nlp.en << 1) | (cfg->dns.en << 2) | (cfg->drc.en << 4);
+        p->enable_module = cfg->aec.en | (cfg->nlp.en << 1) | (cfg->dns.en << 2) | (cfg->drc.en << 4) | (cfg->eq_en.en << 7);
     } else {
-        p->enable_module = cfg->aec.en | (cfg->nlp.en << 1) | (cfg->dns.en << 2) | (cfg->enc.en << 3) | (cfg->drc.en << 4) | (cfg->wnc.en << 5) | (cfg->mfdt.en << 6);
+        p->enable_module = cfg->aec.en | (cfg->nlp.en << 1) | (cfg->dns.en << 2) | (cfg->enc.en << 3) | (cfg->drc.en << 4) | (cfg->wnc.en << 5) | (cfg->mfdt.en << 6) | (cfg->eq_en.en << 7);
     }
     //aec
     p->aec_process_maxfrequency = cfg->aec.aec_process_maxfrequency;

@@ -598,13 +598,9 @@ objs += \
 objs += \
     $(ROOT)/apps/common/debug/memory_debug.o
 
-#ifdef TCFG_DEBUG_DLOG_ENABLE
 objs += \
 	$(ROOT)/apps/common/debug/dlog_config.o \
     $(ROOT)/apps/common/debug/dlog_output_config.o
-#endif
-
-
 
 objs += \
 	$(ROOT)/apps/common/update/update.o \
@@ -1438,6 +1434,10 @@ objs += \
 
 objs += \
 	  $(ROOT)/cpu/components/touch/lp_touch_key_tool.o \
+
+
+objs += \
+	  $(ROOT)/cpu/components/touch/lp_touch_key_product_test.o
 
 
 

@@ -268,3 +268,9 @@ const char log_tag_const_d_QUICK_CONN  = CONFIG_DEBUG_LIB(0);
 const char log_tag_const_w_QUICK_CONN  = CONFIG_DEBUG_LIB(0);
 const char log_tag_const_e_QUICK_CONN  = CONFIG_DEBUG_LIB(0);
 
+const char log_tag_const_v_LL_PC  = CONFIG_DEBUG_LIB(0);
+const char log_tag_const_i_LL_PC  = CONFIG_DEBUG_LIB(0);
+const char log_tag_const_d_LL_PC  = CONFIG_DEBUG_LIB(0);
+const char log_tag_const_w_LL_PC  = CONFIG_DEBUG_LIB(0);
+const char log_tag_const_e_LL_PC  = CONFIG_DEBUG_LIB(1);
+

@@ -159,7 +159,7 @@ struct lp_touch_key_platform_data {
 
 
 #define LP_TOUCH_KEY_PLATFORM_DATA_BEGIN(data) \
-    const struct lp_touch_key_platform_data data
+    const struct lp_touch_key_platform_data data = {
 
 #define LP_TOUCH_KEY_PLATFORM_DATA_END() \
     .ldo_wkp_algo_reset = 1,\
@@ -206,8 +206,10 @@ struct touch_key_arg {
 struct eartch_inear_info {
     u8 valid;
     u8 p2m_each_ch_state;
-    u8 ctmu_ch_isel_level[2];
-    u8 ctmu_ref_ch_isel_level[2];
+    u8 ctmu_ch_l_isel_level;
+    u8 ctmu_ch_h_isel_level;
+    u8 ctmu_ref_ch_l_isel_level;
+    u8 ctmu_ref_ch_h_isel_level;
     u8 ctmu_trim_valid;
     u8 ctmu_kvld_valid;
     u16 ctmu_diff_trim[LPCTMU_CHANNEL_SIZE];
@@ -223,7 +225,7 @@ struct touch_key_eartch {
     u8  eartch_enbale;
     u8  ear_state;
     u8  user_ear_state;
-    u8  eartch_algo_state;
+    u8  touch_invalid;
     u8  trim_start_flag;
     u16 inear_valid_timeout;
     u16 outear_valid_timeout;
@@ -289,6 +291,12 @@ u32 lp_touch_key_eartch_get_trim_dc_flag(void);
 void lp_touch_eartch_trim_dc_start(u32 is_out);
 void lp_touch_eartch_set_trim_valid(u32 valid);
 void lp_touch_eartch_trim_dc_clear(void);
+u32 lp_touch_key_eartch_get_ch_num(void);
 u32 lp_touch_key_get_last_key_action(void);
+u8 lp_touch_key_online_get_state();
+u32 lp_touch_key_product_test_get_state(void);
+void lp_touch_key_eartch_product_test_recieve_handler(u8 *dat, u16 size);
+void lp_touch_key_eartch_product_test_debug_handler(u16 *res_buf);
+void lp_touch_key_get_res(u16 *res_buf);
 #endif
 

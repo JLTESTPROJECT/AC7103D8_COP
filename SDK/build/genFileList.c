@@ -825,15 +825,11 @@ c_SRC_FILES += \
 c_SRC_FILES += \
     apps/common/debug/memory_debug.c
 
-#ifdef TCFG_DEBUG_DLOG_ENABLE
 #if TCFG_DEBUG_DLOG_ENABLE
 c_SRC_FILES += \
 	apps/common/debug/dlog_config.c \
     apps/common/debug/dlog_output_config.c
 #endif
-#endif
-
-
 
 #if TCFG_UPDATE_ENABLE
 c_SRC_FILES += \
@@ -2023,6 +2019,12 @@ c_SRC_FILES += \
 	  cpu/components/touch/lp_touch_key_tool.c \
 
 #endif
+
+#if TCFG_LP_EARTCH_KEY_ENABLE && TCFG_LP_TOUCH_KEY_BT_TOOL_ENABLE
+c_SRC_FILES += \
+	  cpu/components/touch/lp_touch_key_product_test.c
+#endif
+
 
 // *INDENT-OFF*
 

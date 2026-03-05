@@ -489,6 +489,8 @@
 <Unit filename="apps/common/debug/debug.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/debug/debug_lite.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/debug/debug_uart_config.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="apps/common/debug/dlog_config.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="apps/common/debug/dlog_output_config.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/debug/memory_debug.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/dev_manager/dev_manager.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="apps/common/dev_manager/dev_manager.h" />
@@ -1675,6 +1677,7 @@
 <Unit filename="cpu/components/led_spi.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="cpu/components/pwm_led_v2.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="cpu/components/rdec_soft.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="cpu/components/touch/lp_touch_key_product_test.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="cpu/components/touch/lp_touch_key_tool.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="cpu/components/two_io_led.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="cpu/config/gpio_file_parse.c"><Option compilerVer="CC"/></Unit>

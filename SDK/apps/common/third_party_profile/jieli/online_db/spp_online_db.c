@@ -19,6 +19,7 @@
 #include "cfg_tool.h"
 #include "app_ble_spp_api.h"
 #include "app_main.h"
+#include "lp_touch_key_common.h"
 
 #if (TCFG_ANC_TOOL_DEBUG_ONLINE && TCFG_AUDIO_ANC_ENABLE)
 #include "app_anctool.h"
@@ -176,6 +177,10 @@ static void tws_online_spp_in_task(u8 *data)
         }
 #endif
         db_api->packet_handle(&data[4], data_len);
+
+#if TCFG_LP_EARTCH_KEY_ENABLE && TCFG_LP_TOUCH_KEY_BT_TOOL_ENABLE
+        lp_touch_key_eartch_product_test_recieve_handler(&data[4], data_len);
+#endif
 
         //loop send data for test
         /* if (online_spp_send_data_check(data_len)) { */

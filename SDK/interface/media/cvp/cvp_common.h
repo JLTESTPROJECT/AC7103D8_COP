@@ -51,6 +51,7 @@ enum {
     CVP_DRC_SWITCH,
     CVP_SET_EQ,
     CVP_SET_ANC_STATEMODE,
+    CVP_EQ_SWITCH,    /*三代算法关闭EQ 1->开启EQ 0->关闭EQ*/
 };
 int aec_ioctl(int cmd, int value, void *priv);
 int sms_tde_ioctl(int cmd, int value, void *priv);

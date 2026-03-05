@@ -31,7 +31,7 @@ void audio_mic_pwr_ctl(audio_mic_pwr_t state)
         break;
 #endif
         /*mic供电IO配置：输出0*/
-        for (i = 0; i < AUDIO_ADC_MIC_MAX_NUM; i++) {
+        for (i = 0; i < AUDIO_ADC_MAX_NUM; i++) {
             if (platform_cfg[i].mic_bias_sel == 0) {
                 /* u32 gpio = uuid2gpio(platform_cfg[i].power_io); */
                 u32 gpio = platform_cfg[i].power_io;
@@ -59,7 +59,7 @@ void audio_mic_pwr_ctl(audio_mic_pwr_t state)
         break;
 #endif
         /*mic供电IO配置：输出1*/
-        for (i = 0; i < AUDIO_ADC_MIC_MAX_NUM; i++) {
+        for (i = 0; i < AUDIO_ADC_MAX_NUM; i++) {
             if (platform_cfg[i].mic_bias_sel == 0) {
                 /* u32 gpio = uuid2gpio(platform_cfg[i].power_io); */
                 u32 gpio = platform_cfg[i].power_io;

@@ -363,7 +363,7 @@ int get_algo_index(int algo_type)
         index = 3; // 2MIC-HYBRID
     } else if ((algo_type & CVP_ALGO_3MIC) && !CONFIG_ANC_ENABLE) {
         index = 2; // 3MIC (no ANC)
-    } else if (algo_type & (CVP_ALGO_2MIC_BF | CVP_ALGO_2MIC_FLEXIBLE | CVP_ALGO_2MIC_CLIP)) {
+    } else if (algo_type & CVP_TYPE_2MIC_WB_NB_EQ) {
         index = 1; // 2MIC_TYPE
     } else if (algo_type & CVP_ALGO_1MIC) {
         index = 0; // 1MIC
@@ -486,6 +486,7 @@ static void audio_cvp_v3_param_init(struct cvp_attr *p, u16 node_uuid)
     cvp_cfg->dual_flex_adf_cfg  = dual_flex_adf_cfg;
     cvp_cfg->dual_flex_cfg      = dual_flex_cfg;
     cvp_cfg->dual_clip_cfg		= dual_clip_init_cfg;
+    cvp_cfg->dual_clip_v2_cfg	= dual_clip_v2_init_cfg;
 
     //读取工具配置参数+预处理参数
     CVP_CONFIG cfg;
@@ -506,19 +507,20 @@ static void audio_cvp_v3_param_init(struct cvp_attr *p, u16 node_uuid)
         cvp_cfg->single_aecnlp_cfg.enableBit = cfg.enable_module;
         cvp_cfg->dual_flex_cfg.enableBit    = cfg.enable_module;
         cvp_cfg->dual_clip_cfg.enableBit    = cfg.enable_module;
+        cvp_cfg->dual_clip_v2_cfg.enableBit = cfg.enable_module;
 
         p->output_sel = cfg.output_sel;
         p->adc_ref_en = cfg.adc_ref_en;
 
-        //aecnlp流程无流程补偿
         if (!(cvp_v3->algo_type & CVP_ALGO_1MIC_AECNLP)) {
             cvp_cfg->single_cfg.singleCompenDb = cfg.CompenDb;
             cvp_cfg->dual_cfg.dualCompenDb     = cfg.CompenDb;
             cvp_cfg->tri_cfg.triCompenDb       = cfg.CompenDb;
             cvp_cfg->dual_flex_cfg.dualCompenDb = cfg.CompenDb;
             cvp_cfg->dual_clip_cfg.dualCompenDb = cfg.CompenDb;
+            cvp_cfg->dual_clip_v2_cfg.dualCompenDb = cfg.CompenDb;
         }
-        // aec
+
         cvp_cfg->aec1_cfg.aecProcessMaxFrequency = cfg.aec_process_maxfrequency;
         cvp_cfg->aec1_cfg.aecProcessMinFrequency = cfg.aec_process_minfrequency;
 
@@ -529,7 +531,6 @@ static void audio_cvp_v3_param_init(struct cvp_attr *p, u16 node_uuid)
             cvp_cfg->aec3_cfg.aecProcessMinFrequency = cfg.aec_process_minfrequency;
         }
 
-        //nlp
         cvp_cfg->nlp1_cfg.nlpProcessMaxFrequency = cfg.nlp_process_maxfrequency;
         cvp_cfg->nlp1_cfg.nlpProcessMinFrequency = cfg.nlp_process_minfrequency;
         cvp_cfg->nlp1_cfg.overDrive = cfg.overdrive;
@@ -544,7 +545,6 @@ static void audio_cvp_v3_param_init(struct cvp_attr *p, u16 node_uuid)
         }
 
         if (!(cvp_v3->algo_type & CVP_ALGO_1MIC_AECNLP)) {
-            //dns
             cvp_cfg->single_cfg.aggressFactor = cfg.aggressfactor;
             cvp_cfg->single_cfg.minSupress = cfg.minsuppress;
             cvp_cfg->dual_cfg.aggressFactor = cfg.aggressfactor;
@@ -555,16 +555,16 @@ static void audio_cvp_v3_param_init(struct cvp_attr *p, u16 node_uuid)
             cvp_cfg->dual_flex_cfg.minSupress = cfg.minsuppress;
             cvp_cfg->dual_clip_cfg.aggressFactor = cfg.aggressfactor;
             cvp_cfg->dual_clip_cfg.minSupress = cfg.minsuppress;
+            cvp_cfg->dual_clip_v2_cfg.aggressFactor = cfg.aggressfactor;
+            cvp_cfg->dual_clip_v2_cfg.minSupress = cfg.minsuppress;
 
-            // drc
             cvp_cfg->drc_cfg.noiseGateThresholdDb = cfg.noisegatethresholdDb;
             cvp_cfg->drc_cfg.makeUpGain = cfg.makeupGain;
             cvp_cfg->drc_cfg.kneeThresholdDb = cfg. kneethresholdDb;
         }
-#if (CVP_V3_2MIC_ALGO_ENABLE || CVP_V3_3MIC_ALGO_ENABLE)//2mic/3mic
+#if (CVP_V3_2MIC_ALGO_ENABLE || CVP_V3_3MIC_ALGO_ENABLE)
         if (!(cvp_v3->algo_type & CVP_ALGO_2MIC_FLEXIBLE)) {
-            if ((cvp_v3->algo_type & CVP_TYPE_2MIC) || (cvp_v3->algo_type & CVP_ALGO_3MIC) || (cvp_v3->algo_type & CVP_ALGO_2MIC_CLIP)) {
-                //enc
+            if ((cvp_v3->algo_type & CVP_TYPE_2MIC) || (cvp_v3->algo_type & CVP_ALGO_3MIC)) {
                 cvp_cfg->bf_cfg.encProcessMaxFrequency = cfg.enc_process_maxfreq;
                 cvp_cfg->bf_cfg.encProcessMinFrequency = cfg.enc_process_minfreq;
                 cvp_cfg->bf_cfg.micDistance = cfg.mic_distance;
@@ -580,14 +580,16 @@ static void audio_cvp_v3_param_init(struct cvp_attr *p, u16 node_uuid)
                 cvp_cfg->bf_cfg.type = BF_TYPE_V2;
                 cvp_cfg->bf_cfg.bfPost_en = 0;
 #endif
+                if (cvp_v3->algo_type & CVP_ALGO_2MIC_CLIP_TYPE2) {
+                    cvp_cfg->bf_cfg.type = BF_TYPE_V1_1;
+                    cvp_cfg->bf_cfg.bfPost_en = 1;
+                }
+
             }
-            //双麦三麦有wnc mfdt
-            if ((cvp_v3->algo_type & CVP_TYPE_2MIC) || (cvp_v3->algo_type & CVP_ALGO_3MIC) || (cvp_v3->algo_type & CVP_ALGO_2MIC_CLIP)) {
-                // wnc
+            if ((cvp_v3->algo_type & CVP_TYPE_2MIC) || (cvp_v3->algo_type & CVP_ALGO_3MIC)) {
                 cvp_cfg->wind_cfg.windProbHighTh = cfg.windProbHighTh;
                 cvp_cfg->wind_cfg.windProbLowTh = cfg.windProbLowTh;
                 cvp_cfg->wind_cfg.windEngDbTh = cfg.windEngDbTh;
-                //mfdt
                 cvp_cfg->micSel_cfg.detectTime = cfg.detect_time;            // in second
                 /*0~-90 dB 两个mic能量差异持续大于此阈值超过检测时间则会检测为故障*/
                 cvp_cfg->micSel_cfg.detectEngDiffTh = cfg.detect_eng_diff_thr;     //  dB
@@ -612,11 +614,12 @@ static void audio_cvp_v3_param_init(struct cvp_attr *p, u16 node_uuid)
 #endif
         //flow
         cvp_cfg->single_cfg.preGainDb = cfg.preGainDb;
-        cvp_cfg->dual_cfg.dualPreGainDb = cfg.preGainDb;
-        cvp_cfg->tri_cfg.triPreGainDb = cfg.preGainDb;
         cvp_cfg->single_aecnlp_cfg.preGainDb = cfg.preGainDb;
+        cvp_cfg->dual_cfg.dualPreGainDb = cfg.preGainDb;
         cvp_cfg->dual_flex_cfg.dualPreGainDb = cfg.preGainDb;
         cvp_cfg->dual_clip_cfg.dualPreGainDb = cfg.preGainDb;
+        cvp_cfg->dual_clip_v2_cfg.dualPreGainDb = cfg.preGainDb;
+        cvp_cfg->tri_cfg.triPreGainDb = cfg.preGainDb;
     } else {
         log_error("CVP-V3 read cfg error,use default param\n");
         p->EnableBit = AEC_EN | NLP_EN; //读取cfg配置文件失败，默认使能AEC和NLP避免选择当前模式时传EnableBit错误
@@ -629,12 +632,14 @@ static void audio_cvp_v3_param_init(struct cvp_attr *p, u16 node_uuid)
         cvp_cfg->single_cfg.singleNbEq  = cvp_v3_coeff_info_parse(coeff_bin, NB_EQ, cvp_v3->algo_type);
         cvp_cfg->dual_cfg.dualWbEqVec   = cvp_cfg->single_cfg.singleWbEq;
         cvp_cfg->dual_cfg.dualNbEqVec   = cvp_cfg->single_cfg.singleNbEq;
-        cvp_cfg->tri_cfg.triWbEqVec  	= cvp_cfg->single_cfg.singleWbEq;
-        cvp_cfg->tri_cfg.triNbEqVec  	= cvp_cfg->single_cfg.singleNbEq;
         cvp_cfg->dual_flex_cfg.dualFlexWbEqVec  	= cvp_cfg->single_cfg.singleWbEq;
         cvp_cfg->dual_flex_cfg.dualFlexNbEqVec  	= cvp_cfg->single_cfg.singleNbEq;
         cvp_cfg->dual_clip_cfg.dualWbEqVec  	= cvp_cfg->single_cfg.singleWbEq;
         cvp_cfg->dual_clip_cfg.dualNbEqVec  	= cvp_cfg->single_cfg.singleNbEq;
+        cvp_cfg->dual_clip_v2_cfg.dualWbEqVec  	= cvp_cfg->single_cfg.singleWbEq;
+        cvp_cfg->dual_clip_v2_cfg.dualNbEqVec  	= cvp_cfg->single_cfg.singleNbEq;
+        cvp_cfg->tri_cfg.triWbEqVec  	= cvp_cfg->single_cfg.singleWbEq;
+        cvp_cfg->tri_cfg.triNbEqVec  	= cvp_cfg->single_cfg.singleNbEq;
     }
 
     //对于有参考线的算法模式,如需传入参考线对应的EQ曲线,需手动修改传入get_mag函数的类型为对应的
@@ -648,7 +653,7 @@ static void audio_cvp_v3_param_init(struct cvp_attr *p, u16 node_uuid)
     }
     free(coeff_bin);
     p->algo_type = cvp_v3->algo_type;
-    log_info("CVP_V3:AEC[%d] NLP[%d] NS[%d] ENC[%d] DRC[%d] MFDT[%d] WNC[%d]", !!(p->EnableBit & AEC_EN), !!(p->EnableBit & NLP_EN), !!(p->EnableBit & ANS_EN), !!(p->EnableBit & ENC_EN), !!(p->EnableBit & AGC_EN), !!(p->EnableBit & MFDT_EN), !!(p->EnableBit & WNC_EN));
+    log_info("CVP_V3:AEC[%d] NLP[%d] NS[%d] ENC[%d] DRC[%d] MFDT[%d] WNC[%d] EQ[%d]", !!(p->EnableBit & AEC_EN), !!(p->EnableBit & NLP_EN), !!(p->EnableBit & ANS_EN), !!(p->EnableBit & ENC_EN), !!(p->EnableBit & AGC_EN), !!(p->EnableBit & MFDT_EN), !!(p->EnableBit & WNC_EN), !!(p->EnableBit & THR_EQ_EN));
 
 #if TCFG_AUDIO_MIC_ARRAY_TRIM_ENABLE
     app_var.enc_degradation = p->target_signal_degradation;

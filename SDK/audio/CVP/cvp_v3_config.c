@@ -247,6 +247,34 @@ const JLSP_dual_clip_v3_cfg_t dual_clip_init_cfg = {
     .externalEnableBit = 0x00,
 };
 
+
+const JLSP_dual_clipv2_v3_cfg_t dual_clip_v2_init_cfg = {
+
+    .enableBit = 0b0111111,
+    // .dualPhaseCompenVec = bf_phase_factor,
+    // .dualWbEqVec = dual_wBEqFactor,
+    // .dualNbEqVec = dual_nBEqFactor,
+    .dualPhaseCompenVec = NULL,
+    .dualWbEqVec = NULL,
+    .dualNbEqVec = NULL,
+
+    .dualPreGainDb = 10.0f,//18.0f,
+    .dualProcessMaxFrequency = 8000,
+    .dualProcessMinFrequency = 0,
+    .samplerate = 16000,
+
+    .spe_att_en = 0,	// 1 for enable, else for disable.
+    .post_pro_en = 1,		// 1 for enable, else for disable.
+    .noise_est_en = 0,		// 1 for enable, else for disable.
+    .low_freq_eng_det_en = 1,	// 1 for enable, else for disable.
+
+    .aggressFactor = 1.0f,
+    .minSupress = 0.001f,
+    .dualCompenDb = 12.0f, //10.0f,
+
+    .externalEnableBit = 0x00,
+};
+
 const JLSP_tri_v3_cfg_t tri_init_cfg = {
 
     .enableBit = 0x3f,

@@ -333,17 +333,19 @@ void update_close_hw(void *filter_name)
 static void update_before_jump_common_handle(UPDATA_TYPE up_type)
 {
 
+    if (BT_UPDATA == up_type) {
 #if CPU_CORE_NUM > 1            //双核需要把CPU1关掉
-    printf("Before Suspend Current Cpu ID:%d, Cpu In Irq?:%d, cpu_irq_disabled:%d\n", current_cpu_id(),  cpu_in_irq(), cpu_irq_disabled());
-    if (current_cpu_id() == 1) {
-        os_suspend_other_core();
-    }
-    ASSERT(current_cpu_id() == 0);          //确保跳转前CPU1已经停止运行
-    cpu_suspend_other_core(CPU_SUSPEND_TYPE_UPDATE);
-    printf("After Suspend Current Cpu ID:%d\n", current_cpu_id());
+        printf("Before Suspend Current Cpu ID:%d, Cpu In Irq?:%d, cpu_irq_disabled:%d\n", current_cpu_id(),  cpu_in_irq(), cpu_irq_disabled());
+        if (current_cpu_id() == 1) {
+            os_suspend_other_core();
+        }
+        ASSERT(current_cpu_id() == 0);          //确保跳转前CPU1已经停止运行
+        cpu_suspend_other_core(CPU_SUSPEND_TYPE_UPDATE);
+        printf("After Suspend Current Cpu ID:%d\n", current_cpu_id());
 #else
-    local_irq_disable();   //双核在跳转前关中断lock_set后会和maskrom 初始化中断冲突导致ilock err
+        local_irq_disable();   //双核在跳转前关中断lock_set后会和maskrom 初始化中断冲突导致ilock err
 #endif
+    }
 
     hwi_all_close();
 

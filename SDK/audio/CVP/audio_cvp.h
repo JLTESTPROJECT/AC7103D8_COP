@@ -32,6 +32,7 @@ extern const u8 CONST_SMS_DNS_VERSION;
 #define	AGC_EN				BIT(4)
 #define WNC_EN              BIT(5)
 #define MFDT_EN             BIT(6)
+#define THR_EQ_EN           BIT(7)
 /*仅单麦使用，TDE_EN和TDEYE_EN只有在TCFG_AUDIO_SMS_SEL = SMS_TDE有效*/
 #define TDE_EN				BIT(5)	//延时估计模块使能
 #define TDEYE_EN			BIT(6)	//延时估计模块结果使用(前提是模块使能)

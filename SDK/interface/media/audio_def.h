@@ -255,6 +255,11 @@
 #define CONFIG_MSBC_INPUT_FRAME_REPLACE_SILENCE		1
 #define CONFIG_MSBC_INPUT_FRAME_REPLACE_SINE		2
 
+/*Opus Pack Header Defines*/
+#define OPUS_PACK_HEADER_OGG		(1UL << (0))	//OGG封装
+#define OPUS_PACK_HEADER_NULL		(1UL << (1))	//不带头
+#define OPUS_PACK_HEADER_STD		(1UL << (2))	//标准头
+
 /*
  *******************************************************************
  *						Linein(Aux) Definitions

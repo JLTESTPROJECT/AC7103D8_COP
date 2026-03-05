@@ -540,6 +540,11 @@ void lp_touch_eartch_trim_dc_clear(void)
     lp_touch_eartch_update_trim_info_callback(&valid, LP_TOUCH_EARTCH_TRIM_EN_INFO);
 }
 
+u32 lp_touch_key_eartch_get_ch_num(void)
+{
+    return __this->eartch.ch_num;
+}
+
 void lp_touch_key_testbox_inear_trim(u32 flag)
 {
 }

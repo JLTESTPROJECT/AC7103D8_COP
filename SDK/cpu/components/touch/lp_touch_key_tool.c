@@ -440,7 +440,11 @@ static int lp_touch_key_online_debug_parse(u8 *packet, u8 size, u8 *ext_data, u1
     //log_debug("ext_data:\n");
     //put_buf(ext_data, ext_size);
 
-
+#if TCFG_LP_EARTCH_KEY_ENABLE
+    if (lp_touch_key_product_test_get_state()) {
+        return 0;
+    }
+#endif
     log_debug("%s", __func__);
     put_buf(packet, size);
     put_buf(ext_data, ext_size);
@@ -634,6 +638,11 @@ int lp_touch_key_online_debug_init(void)
 int lp_touch_key_online_debug_exit(void)
 {
     return 0;
+}
+
+u8 lp_touch_key_online_get_state()
+{
+    return lp_key_online.state == LP_KEY_ONLINE_ST_CH_RES_DEBUG_START ? 1 : 0;
 }
 
 #endif

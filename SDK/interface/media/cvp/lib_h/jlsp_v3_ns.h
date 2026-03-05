@@ -14,6 +14,7 @@ enum {
     DRC_EN_BIT = BIT(4),
     WNC_EN_BIT = BIT(5),
     MICSEL_EN_BIT = BIT(6),
+    EQ_EN_BIT = BIT(7),
     AEC_FB_EN_BIT = BIT(0),
     NLP_FB_EN_BIT = BIT(1),
 };
@@ -29,6 +30,7 @@ typedef enum  {
     DUAL_FLEX_TYPE = BIT(7),	//双麦话务
     DUAL_BONE_TYPE = BIT(8),	//双麦骨传
     DUAL_CLIP_TYPE = BIT(9),	// Dual clip
+    DUAL_CLIP_V2_TYPE = BIT(10),// Dual clip V2
     TRI_FUSION_TYPE = BIT(16),	//三麦融合
     TRI_TELE_TYPE = BIT(17),	//三麦话务
     TRI_BONE_TYPE = BIT(18),	//三麦骨传
@@ -53,6 +55,7 @@ typedef enum {
 //bf类型
 typedef enum {
     BF_TYPE_V1,
+    BF_TYPE_V1_1,
     BF_TYPE_V2,
 } enum_bfType;
 
@@ -307,6 +310,34 @@ typedef struct {
 
 } JLSP_dual_clip_v3_cfg_t;
 
+// Dual clip V2 config.
+typedef struct {
+    int enableBit;
+
+    float *dualPhaseCompenVec; //相位补偿
+    float *dualWbEqVec;
+    float *dualNbEqVec;
+
+    int samplerate;
+    float dualPreGainDb;
+    int dualProcessMaxFrequency;
+    int dualProcessMinFrequency;
+    float dualCompenDb; //mic增益补偿
+
+    int spe_att_en;		// SPE_ATT enable/disenable
+    int post_pro_en;		// MCRA enable/disenable
+    int noise_est_en;	// NOISE_EST enable/disenable
+    int low_freq_eng_det_en;  // low freq energy detect enable/disenable
+
+
+    float aggressFactor;
+    float minSupress;
+
+    int externalEnableBit;
+
+} JLSP_dual_clipv2_v3_cfg_t;
+
+
 
 //三麦降噪参数配置
 typedef struct {
@@ -453,7 +484,6 @@ typedef struct {
     //双麦参数配置
     JLSP_dual_bf_v3_cfg_t dual_cfg;
 
-
     //三麦参数配置
     JLSP_tri_v3_cfg_t tri_cfg;
 
@@ -469,6 +499,9 @@ typedef struct {
 
     //dual clip ns module
     JLSP_dual_clip_v3_cfg_t dual_clip_cfg;
+
+    //dual clip v2 ns module
+    JLSP_dual_clipv2_v3_cfg_t dual_clip_v2_cfg;
 
 
 } JLSP_params_v3_cfg;

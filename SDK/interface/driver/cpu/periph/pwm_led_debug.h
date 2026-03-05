@@ -60,7 +60,7 @@
 
 #else
 //发布模块
-#define PWMLED_LOG_INFO       printf
+#define PWMLED_LOG_INFO(...)
 #define PWMLED_LOG_DEBUG(...)
 #define PWMLED_LOG_SUCC(...)
 #define PWMLED_LOG_ERR(...)

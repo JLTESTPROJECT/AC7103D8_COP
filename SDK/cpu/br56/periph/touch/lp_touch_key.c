@@ -216,11 +216,12 @@ void lp_touch_key_ctmu_res_deal(u32 pnd_type)
 
 #if TCFG_LP_TOUCH_KEY_BT_TOOL_ENABLE
         if ((touch_bt_tool_enable) && (touch_bt_online_debug_send) && ((ch_idx + 1) == __this->pdata->key_num)) {
-#if TCFG_LP_EARTCH_KEY_ENABLE
-            lp_touch_eartch_trim_dc_handler(touch_ch_res_buf);
-#endif
             touch_bt_online_debug_send(ch, touch_ch_res_buf);
         }
+#if TCFG_LP_EARTCH_KEY_ENABLE
+        lp_touch_key_eartch_product_test_debug_handler(touch_ch_res_buf);
+        lp_touch_eartch_trim_dc_handler(touch_ch_res_buf);
+#endif
 #endif
 
         /* log_debug("idx:%d ch:%d, res:%d", ch_idx, ch, ch_res); */
@@ -547,6 +548,14 @@ void lp_touch_key_init(const struct lp_touch_key_platform_data *pdata)
     touch_ready_sem = NULL;
 }
 
+void lp_touch_key_get_res(u16 *res_buf)
+{
+    if (res_buf == NULL) {
+        return;
+    }
+    memcpy(res_buf, touch_ch_res_buf, sizeof(touch_ch_res_buf));
+    log_info("lp_touch_key_get_res\n");
+}
 
 u32 lp_touch_key_power_on_status()
 {
