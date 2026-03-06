@@ -605,7 +605,7 @@ int app_auracast_sink_big_sync_terminate(u8 need_recover)
     if (!(tws_api_get_tws_state() & TWS_STA_SIBLING_CONNECTED)) {
         ret = __app_auracast_sink_big_sync_terminate(need_recover);
     } else {
-        u8 local_need_recover = 1;
+        u8 local_need_recover = need_recover;
         tws_api_send_data_to_sibling((void *)&local_need_recover, sizeof(u8), 0x23482C5C);
         ret = 0;
     }

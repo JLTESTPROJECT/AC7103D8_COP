@@ -1357,10 +1357,21 @@ bool tws_host_role_switch(int remote_info, int local_info)
         return FALSE;
     }
 #if RCSP_MODE
-    if (bt_rcsp_ble_conn_num()) {
-        //只连ble不连edr的情况下，tws重新连接后有ble连接的做主机
-        y_printf("tws_host_role_switch = 1, %s %d\n", __func__, __LINE__);
-        return TRUE;
+#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_UNICAST_SINK_EN | LE_AUDIO_JL_UNICAST_SINK_EN)))
+    if (local_info & TWS_STA_LE_AUDIO_CONNECTED) { //本机已连手机le_audio
+        y_printf("tws_role_switch lea ok---%x---%x\n", local_info & TWS_STA_HAVE_PAGE_INFO, !(remote_info & TWS_STA_HAVE_PAGE_INFO));
+        if ((local_info & TWS_STA_HAVE_PAGE_INFO) && !(remote_info & TWS_STA_HAVE_PAGE_INFO)) {
+            //tws超时断开同时与手机也超时断开，再次tws连接上后，还需要继续回连手机，有回连信息端要继续做回主机
+            return TRUE;
+        }
+    } else
+#endif
+    {
+        if (bt_rcsp_ble_conn_num()) {
+            //只连ble不连edr的情况下，tws重新连接后有ble连接的做主机
+            y_printf("tws_host_role_switch = 1, %s %d\n", __func__, __LINE__);
+            return TRUE;
+        }
     }
 #else
     if ((local_info & TWS_STA_HAVE_PAGE_INFO) && !(remote_info & TWS_STA_HAVE_PAGE_INFO)) {
