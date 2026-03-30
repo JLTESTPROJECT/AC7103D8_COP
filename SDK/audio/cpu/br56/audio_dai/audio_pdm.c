@@ -90,8 +90,8 @@ static void plnk_set_shift_scale(u8 order, u8 m)
 static void plnk_isr(void *priv, void *data, u32 len)
 {
     if (__this && __this->isr_cb) {
-        u32 data_len = len * __this->ch_num;
-        __this->isr_cb(__this->private_data, data, data_len);
+        /* u32 data_len = len * __this->ch_num; */
+        __this->isr_cb(__this->private_data, data, len);
     }
 }
 
@@ -238,10 +238,10 @@ void plnk_uninit(void *hw_plink)
     free(pdm_hdl);
     pdm_hdl = NULL;
 
-    if (__this->buf) {
+    /* if (__this->buf) {
         dma_free(__this->buf);
         __this->buf = NULL;
-    }
+    } */
     __this = NULL;
 }
 

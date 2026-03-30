@@ -73,6 +73,8 @@ enum audio_module {
     AUD_MODULE_TREMOLO,
     AUD_MODULE_TREMOLO_TMP,
     AUD_MODULE_THR_DET,
+    AUD_MODULE_AVC_COMMON,
+    AUD_MODULE_AVC_AEC,
 
 
     //Codec Modules
@@ -164,7 +166,9 @@ static const char *mm_module[] = {
     "HarmonyTmp",
     "Tremolo",
     "TremoloTmp",
-    "AudioThrDet"
+    "AudioThrDet",
+    "AvcCommon",
+    "AvcAec",
 
     //Codec Modules
     "AAC_Dec",

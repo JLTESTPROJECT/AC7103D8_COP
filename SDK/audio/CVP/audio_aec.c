@@ -427,7 +427,8 @@ static void audio_aec_param_init(struct aec_s_attr *p)
 *			   数据输出回调函数
 *********************************************************************
 */
-int acoustic_echo_cancel_init(struct audio_aec_init_param_t *init_param, s16 enablebit, int (*out_hdl)(s16 *data, u16 len))
+int acoustic_echo_cancel_init(struct audio_aec_init_param_t *init_param, s16 enablebit,
+                              int (*out_hdl)(s16 *data, u16 len), struct aec_param *algo_param)
 {
     s16 sample_rate = init_param->sample_rate;
     u32 ref_sr = init_param->ref_sr;
@@ -505,12 +506,12 @@ int acoustic_echo_cancel_init(struct audio_aec_init_param_t *init_param, s16 ena
         aec_param->agc_en = 0;
 
         /*AEC*/
-        aec_param->AEC_DT_AggressiveFactor = 4.f;	/*范围：1~5，越大追踪越好，但会不稳定,如破音*/
-        aec_param->AEC_RefEngThr = -70.f;
+        aec_param->AEC_DT_AggressiveFactor = algo_param->aec_dt_aggress;	/*范围：1~5，越大追踪越好，但会不稳定,如破音*/
+        aec_param->AEC_RefEngThr = algo_param->aec_refengthr;
 
         /*NLP*/
-        aec_param->ES_AggressFactor = -3.0f; /*-5~ -1 越小越强*/
-        aec_param->ES_MinSuppress = 4.f;/*0`10 越大越强*/
+        aec_param->ES_AggressFactor = algo_param->es_aggress_factor; /*-5~ -1 越小越强*/
+        aec_param->ES_MinSuppress = algo_param->es_min_suppress;/*0`10 越大越强*/
     }
 #endif // TCFG_SMART_VOICE_USE_AEC
 

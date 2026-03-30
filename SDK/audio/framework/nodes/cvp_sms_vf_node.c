@@ -352,7 +352,7 @@ static int cvp_adapter_bind(struct stream_node *node, u16 uuid)
 /*打开改节点输入接口*/
 static void cvp_ioc_open_iport(struct stream_iport *iport)
 {
-    iport->handle_frame = cvp_handle_frame;				//注册输出回调
+
 }
 
 /*节点参数协商*/
@@ -527,6 +527,7 @@ REGISTER_STREAM_NODE_ADAPTER(cvp_sms_vf_node_adapter) = {
     .bind       = cvp_adapter_bind,
     .ioctl      = cvp_adapter_ioctl,
     .release    = cvp_adapter_release,
+    .handle_frame = cvp_handle_frame,				//注册输出回调
     .hdl_size   = sizeof(struct cvp_node_hdl),
     .ability_channel_convert = 1, //支持声道转换
 };

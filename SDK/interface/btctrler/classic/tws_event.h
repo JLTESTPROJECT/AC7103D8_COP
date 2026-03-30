@@ -23,6 +23,7 @@ enum tws_role_switch_action {
     TWS_ROLE_SWITCH_ACTION_READY,
     TWS_ROLE_SWITCH_BY_AUTO,
     TWS_ROLE_SWITCH_BY_MANUAL,
+    TWS_ROLE_SWITCH_PURE_BY_AUTO,
 };
 
 enum {

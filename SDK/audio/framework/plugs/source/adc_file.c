@@ -671,28 +671,23 @@ static void adc_mic_output_handler(void *_hdl, s16 *data, int len)
 
     frame = source_plug_get_output_frame(hdl->source_node, (len * hdl->ch_num));
 
-    //cvp读dac 参考数据
-    if ((hdl->scene == STREAM_SCENE_ESCO) ||
-        (hdl->scene == STREAM_SCENE_PC_MIC) ||
-        (hdl->scene == STREAM_SCENE_LEA_CALL) ||
-        (hdl->scene == STREAM_SCENE_AI_VOICE)) {
-
 #if TCFG_AUDIO_CVP_OUTPUT_WAY_IIS_ENABLE && (defined TCFG_IIS_NODE_ENABLE)
-        /*对齐iis外部参考数据延时*/
-        if (!get_audio_aec_rebooting()) {
-            audio_cvp_ref_data_align();
-        }
+    /*对齐iis外部参考数据延时*/
+    if (!get_audio_aec_rebooting()) {
+        audio_cvp_ref_data_align();
+    }
+#else
+    //cvp读dac 参考数据
+#if TCFG_AUDIO_DUT_ENABLE
+    //打开产测功能，只有算法模式，才会读dac参考数据，避免 data full
+    if (cvp_dut_mode_get() == CVP_DUT_MODE_ALGORITHM) {
+        audio_cvp_phase_align();
+    }
+#else
+    audio_cvp_phase_align();
+#endif
 #endif
 
-#if TCFG_AUDIO_DUT_ENABLE
-        //打开产测功能，只有算法模式，才会读dac参考数据，避免 data full
-        if (cvp_dut_mode_get() == CVP_DUT_MODE_ALGORITHM) {
-            audio_cvp_phase_align();
-        }
-#else
-        audio_cvp_phase_align();
-#endif
-    }
 #if (defined(TCFG_HOWLING_AHS_NODE_ENABLE) && TCFG_HOWLING_AHS_NODE_ENABLE)
     if (hdl->scene == STREAM_SCENE_MIC_EFFECT || hdl->scene == STREAM_SCENE_LOUDSPEAKER_MIC) {
         if (audio_ahs_status()) {

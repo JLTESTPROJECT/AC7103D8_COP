@@ -1118,6 +1118,7 @@ static int set_adv_enable(void *priv, u32 en)
 #if (TCFG_LE_AUDIO_RCSP_USE_SAME_ACL)
         if (is_cig_phone_conn()) {
             app_ble_adv_enable(rcsp_server_ble_hdl, en);
+            bt_ble_rcsp_adv_enable();
             return APP_BLE_NO_ERROR;
         }
 #endif

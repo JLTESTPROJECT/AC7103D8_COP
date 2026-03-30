@@ -33,6 +33,8 @@ extern const u8 CONST_SMS_DNS_VERSION;
 #define WNC_EN              BIT(5)
 #define MFDT_EN             BIT(6)
 #define THR_EQ_EN           BIT(7)
+#define DOA_EN 				BIT(8)
+
 /*仅单麦使用，TDE_EN和TDEYE_EN只有在TCFG_AUDIO_SMS_SEL = SMS_TDE有效*/
 #define TDE_EN				BIT(5)	//延时估计模块使能
 #define TDEYE_EN			BIT(6)	//延时估计模块结果使用(前提是模块使能)
@@ -221,6 +223,7 @@ void audio_cvp_v3_set_output_way(u8 en);
 int audio_cvp_v3_get_wind_detect_info(int *wd_flag, float *wd_val);
 int audio_cvp_v3_get_bandwidth_info(int is_wb_state);
 int audio_cvp_v3_get_mic_state_info(int mic_state);
+void audio_cvp_v3_set_anc_mode(u8 anc_mode);
 
 void audio_sms_vf_spk_data_push(s16 *data0, s16 *data1, u16 len);
 void audio_sms_vf_talk_mic_push(s16 *buf, u16 len);

@@ -307,6 +307,7 @@
 // ------------表单节点全局配置宏------------
 #define CVP_BF_VERSION 2 // VERSION
 #define CVP_THIRD_ALGO_TYPE 1 // ../../.CVP第三方算法.json-算法预设
+#define TCFG_CVP_FLEXIBLE_MODE  1  // ../../.cvp_v3配置.json-Mode_Type
 // ------------表单节点全局配置宏------------
 #endif
 

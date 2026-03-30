@@ -1314,3 +1314,14 @@ void audio_volume_mixer_init(struct volume_mixer *param)
     //printf("audio_volume_mixer_init");
     __this->hw_dvol_max = param->hw_dvol_max;
 }
+
+void app_audio_volume_dvol_set(s16 digital_volume)
+{
+    __this->digital_volume = digital_volume;
+}
+
+void app_audio_volume_avol_set(u8 analog_volume_l, u8 analog_volume_r)
+{
+    __this->analog_volume_l = analog_volume_l;
+    __this->analog_volume_r = analog_volume_r;
+}

@@ -969,6 +969,7 @@ void cvp_node_context_setup(u16 uuid)
     y_printf("cvp node context setup,node uuid:%x\n", uuid);
     g_cvp_context.active_node_uuid = uuid;
     if (g_cvp_context.active_node_uuid == 0) {
+        memset(&g_cvp_context, 0, sizeof(g_cvp_context));
         printf("cvp_node_uuid clear\n");
         return;
     }

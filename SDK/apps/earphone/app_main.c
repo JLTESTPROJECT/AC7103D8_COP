@@ -49,6 +49,7 @@
 #include "mix_record_api.h"
 #include "lib_update_config.h"
 #include "app_mode_sink.h"
+#include "audio_avc.h"
 
 #define LOG_TAG             "[APP]"
 #define LOG_ERROR_ENABLE
@@ -229,6 +230,9 @@ const struct task_info task_info_table[] = {
 #endif
 #if TCFG_AUDIO_CVP_DEMO_ENABLE
     {"cvp_demo",			3,	   1,   768,   128 },
+#endif
+#if TCFG_AUDIO_AVC_NODE_ENABLE && AVC_USE_AEC && AVC_ESCO_AEC_PROCESS_TASK
+    {"avc_esco_aec",			2,	   0,   512,   0 },
 #endif
     {0, 0},
 };

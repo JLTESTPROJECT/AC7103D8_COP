@@ -53,13 +53,39 @@
 #include "adc_file.h"
 #include "cvp_v3_config.c"
 
+#if TCFG_AUDIO_AVC_NODE_ENABLE
+#include "audio_avc.h"
+#endif
 //*********************************************************************************//
 //                          CVP Common Configs                                     //
 //*********************************************************************************//
+#define CVP_V3_EQ_FILE_OFFSET   			(4)
+#define CVP_V3_EQ_TOTAL_GAIN_DEFAULT_LINEAR (1.0f)
+#define CVP_V3_ALGO_INDEX_INVALID  			(-1)
+#define CVP_V3_ALGO_INDEX_1MIC              (0)
+#define CVP_V3_ALGO_INDEX_2MIC              (1)
+#define CVP_V3_ALGO_INDEX_3MIC_NO_ANC       (2)
+#define CVP_V3_ALGO_INDEX_2MIC_HYBRID       (3)
+#define CVP_V3_ALGO_INDEX_3MIC_WITH_ANC     (4)
+
+#define CVP_V3_ALGO_INDEX_MIN               (CVP_V3_ALGO_INDEX_1MIC)
+#define CVP_V3_ALGO_INDEX_MAX               (CVP_V3_ALGO_INDEX_3MIC_WITH_ANC)
+#define CVP_V3_ALGO_INDEX_IS_VALID(idx)     (((idx) >= CVP_V3_ALGO_INDEX_MIN) && ((idx) <= CVP_V3_ALGO_INDEX_MAX))
+
+#define CVP_V3_ALGO_TYPE_MIN				(3)
+#define CVP_V3_ALGO_TYPE_MAX				(7)
+#define CVP_V3_ALGO_TYPE_IS_VALID(type)     (((type) >= CVP_V3_ALGO_TYPE_MIN) && ((type) <= CVP_V3_ALGO_TYPE_MAX))
+
 const u8 CONST_JLSP_FF_COMPEN = 1;
 const u8 CONST_ACTSEQ_EN = 0;
 //代码量控制
 const int CVP_V3_ALGO_ENABLEBIT = TCFG_CVP_ALGO_TYPE;
+const int DUAL_FLEX_MODE = TCFG_CVP_FLEXIBLE_MODE;
+#ifdef TCFG_AUDIO_FLOW_PRESET_AVC_ESCO_AEC_ENABLE
+const int CVP_V3_PROCESS_RESULT_DUMP_ENABLE = TCFG_AUDIO_FLOW_PRESET_AVC_ESCO_AEC_ENABLE;
+#else
+const int CVP_V3_PROCESS_RESULT_DUMP_ENABLE = 0;
+#endif
 //EQ DEBUG打印
 const u8 CONST_EQ_DEBUG_ENABLE = 0;
 
@@ -138,6 +164,16 @@ int audio_cvp_v3_probe_param_update(struct audio_cvp_pre_param_t *cfg)
     return 0;
 }
 
+void audio_cvp_v3_set_anc_mode(u8 anc_mode)
+{
+    if (cvp_v3 && (cvp_v3->algo_type & CVP_ALGO_3MIC)) {
+        static JLSP_set_anc_state_mode anc_state_mode;
+        anc_state_mode.isAncOn = anc_mode;
+        anc_state_mode.ancMode = 0;
+        audio_cvp_v3_ioctl(CVP_SET_ANC_STATEMODE, TRI_SET_ANC_STATEMODE, &anc_state_mode);
+    }
+}
+
 /*
 *********************************************************************
 *                  Audio CVP Process_Probe
@@ -168,7 +204,18 @@ static int audio_cvp_v3_probe(short *talk_mic, short *ff_mic, short *fb_mic, sho
         }
     }
 #endif
-
+    if (cvp_v3->pre.pre_gain_en) {
+        if ((cvp_v3->algo_type & CVP_ALGO_1MIC) || (cvp_v3->algo_type & CVP_ALGO_1MIC_AECNLP)) {
+            GainProcess_16Bit(talk_mic, talk_mic, cvp_v3->pre.talk_mic_gain, 1, 1, 1, len >> 1);
+        } else if (cvp_v3->algo_type & CVP_TYPE_2MIC) {
+            GainProcess_16Bit(talk_mic, talk_mic, cvp_v3->pre.talk_mic_gain, 1, 1, 1, len >> 1);
+            GainProcess_16Bit(ff_mic, ff_mic, cvp_v3->pre.talk_ref_mic_gain, 1, 1, 1, len >> 1);
+        } else if (cvp_v3->algo_type & CVP_ALGO_3MIC) {
+            GainProcess_16Bit(talk_mic, talk_mic, cvp_v3->pre.talk_mic_gain, 1, 1, 1, len >> 1);
+            GainProcess_16Bit(ff_mic, ff_mic, cvp_v3->pre.talk_ref_mic_gain, 1, 1, 1, len >> 1);
+            GainProcess_16Bit(fb_mic, fb_mic, cvp_v3->pre.talk_fb_mic_gain, 1, 1, 1, len >> 1);
+        }
+    }
 #if TCFG_SUPPORT_MIC_CAPLESS
     if (cvp_v3->dcc_hdl) {
         audio_dc_offset_remove_run(cvp_v3->dcc_hdl, (void *)talk_mic, len);
@@ -194,6 +241,26 @@ static int audio_cvp_v3_probe(short *talk_mic, short *ff_mic, short *fb_mic, sho
     }
     return 0;
 }
+
+/*
+*********************************************************************
+*                  Audio CVP Get AEC Data
+* Description: 获取CVP模块aec算法后数据
+* Arguments  : data 回音消除处理后的数据
+* Return	 : None.
+* Note(s)    : None.
+*********************************************************************
+*/
+int audio_cvp_v3_aec_cllback(s16 *data, u16 len)
+{
+    /* printf(">>>%d %d %d\n", data[0], data[1], data[2]); */
+#if (TCFG_AUDIO_AVC_NODE_ENABLE && \
+        (defined TCFG_AUDIO_FLOW_PRESET_AVC_ESCO_AEC_ENABLE) && TCFG_AUDIO_FLOW_PRESET_AVC_ESCO_AEC_ENABLE)
+    audio_avc_esco_aec_run(data, len);
+#endif
+    return 0;
+}
+
 
 /*
 *********************************************************************
@@ -247,22 +314,23 @@ static void sys_memory_trace(void)
         mem_stats();
     }
 }
-/*跟踪系统风噪信息->宽窄带信息->麦克风状态信息*/
-/*
-void wind_band_trace(void *priv)
+
+//跟踪系统风噪信息->宽窄带信息->麦克风状态信息->ANC状态信息
+void audio_cvp_v3_info_trace(void *priv)
 {
     int is_wb_state = 0;
     int mic_state = 0;
     int wd_flag = 0;
     float wd_val = 0.f;
+    int mode = 0;
     mic_state = audio_cvp_v3_get_mic_state_info(is_wb_state);
     is_wb_state =  audio_cvp_v3_get_bandwidth_info(mic_state);
     audio_cvp_v3_get_wind_detect_info(&wd_flag, &wd_val);
-    printf("is_wb_state %d mic_state %d wd_flag %d\n", is_wb_state, mic_state, wd_flag);
+    audio_cvp_v3_get_anc_mode(&mode);
+    printf("is_wb_state %d mic_state %d wd_flag %d anc_mode %d\n", is_wb_state, mic_state, wd_flag, mode);
     printf("cvp_v3 wd_val(dB):\n");
     put_float(wd_val);
 }
-*/
 
 /*
  *********************************************************************
@@ -329,47 +397,53 @@ enum cvp_coeff_type {
     FB_ANC_OFF_REF_EQ,
     FB_ANC_TRANS_EQ,
     FB_ANC_TRANS_REF_EQ,
+    WN_WB_EQ,
+    WN_WB_REF_EQ,
+    WN_NB_EQ,
+    WN_NB_REF_EQ,
     CVP_TYPE_COUNT
     /* DMS_PHASE,
     TMD_PHASE, */
 };
-const char *cvp_coeff_name[] = {"WB_EQ", "WB_REF_EQ", 	\
-                                "NB_EQ", "NB_REF_EQ", 	\
-                                "FB_ANC_ON_EQ", "FB_ANC_ON_REF_EQ",	\
-                                "FB_ANC_OFF_EQ", "FB_ANC_OFF_REF_EQ", \
-                                "FB_ANC_TRANS_EQ", "FB_ANC_TRANS_REF_EQ"
-                               };
+const char *cvp_v3_coeff_name[] = {"WB_EQ", "WB_REF_EQ", 	\
+                                   "NB_EQ", "NB_REF_EQ", 	\
+                                   "FB_ANC_ON_EQ", "FB_ANC_ON_REF_EQ",	\
+                                   "FB_ANC_OFF_EQ", "FB_ANC_OFF_REF_EQ", \
+                                   "FB_ANC_TRANS_EQ", "FB_ANC_TRANS_REF_EQ", \
+                                   "WN_WB_EQ", "WN_WB_REF_EQ", \
+                                   "WN_NB_EQ", "WN_NB_REF_EQ",
+                                  };
 
 /* algo_index: 0=1MIC, 1=2MIC, 2=3MIC, 3=2MIC-HYBRID, 4=3MIC-ANC */
 static const int curve_layout_table[5][CVP_TYPE_COUNT] = {
     /* 0: 1MIC → WB_EQ(0), NB_EQ(1)，其余没有 */
-    { 0,  -1,  1,  -1,  -1,  -1,  -1,  -1,  -1,  -1 },
+    { 0,  -1,  1,  -1,  -1,  -1,  -1,  -1,  -1,  -1, -1, -1, -1, -1 },
     /* 1: 2MIC → 同上 */
-    { 0,  -1,  1,  -1,  -1,  -1,  -1,  -1,  -1,  -1 },
+    { 0,  -1,  1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  2, -1,  3, -1 },
     /* 2: 3MIC → 同上 */
-    { 0,  -1,  1,  -1,  -1,  -1,  -1,  -1,  -1,  -1 },
+    { 0,  -1,  1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  2,  -1, 3, -1 },
     /* 3: 2MIC-HYBRID → WB_EQ,WB_REF,NB_EQ,NB_REF = 0,1,2,3 */
-    { 0,   1,  2,   3,  -1,  -1,  -1,  -1,  -1,  -1 },
+    { 0,   1,  2,   3,  -1,  -1,  -1,  -1,  -1,  -1, -1, -1, -1, -1 },
     /* 4: 3MIC-ANC → 按排列顺序依次填 0..7 */
-    { 0,  -1,  1,  -1,   2,   3,   4,   5,   6,   7 }
+    { 0,  -1,  1,  -1,   2,   3,   4,   5,   6,   7,  8, -1,  9, -1 }
 };
 
 int get_algo_index(int algo_type)
 {
-    int index = 0;
+    int index = CVP_V3_ALGO_INDEX_INVALID;
+
     if ((algo_type & CVP_ALGO_3MIC) && CONFIG_ANC_ENABLE) {
-        index = 4; // 3MIC + ANC
+        index = CVP_V3_ALGO_INDEX_3MIC_WITH_ANC;
     } else if (algo_type & CVP_ALGO_2MIC_HYBRID) {
-        index = 3; // 2MIC-HYBRID
+        index = CVP_V3_ALGO_INDEX_2MIC_HYBRID;
     } else if ((algo_type & CVP_ALGO_3MIC) && !CONFIG_ANC_ENABLE) {
-        index = 2; // 3MIC (no ANC)
+        index = CVP_V3_ALGO_INDEX_3MIC_NO_ANC;
     } else if (algo_type & CVP_TYPE_2MIC_WB_NB_EQ) {
-        index = 1; // 2MIC_TYPE
+        index = CVP_V3_ALGO_INDEX_2MIC;
     } else if (algo_type & CVP_ALGO_1MIC) {
-        index = 0; // 1MIC
-    } else {
-        index = -1;
+        index = CVP_V3_ALGO_INDEX_1MIC;
     }
+
     log_info("algo_type=%d -> index=%d\n", algo_type, index);
     return index;
 }
@@ -413,45 +487,92 @@ void *cvp_v3_coeff_info_parse(void *coeff_file, enum cvp_coeff_type type, int al
     }
     struct cvp_v3_coeff_format *coeff_format = (struct cvp_v3_coeff_format *)coeff_file;
     u8 coeff_algo_type = coeff_format->mix_flag & 0xF;          // 算法类型
-    int coeff_offset = 4;
-    int eq_points    = (coeff_format->fft_size >> 1) + 1;  // (fft>>1) + 1
-    int algo_index = get_algo_index(algo_type);
-    if (algo_index < 0 || algo_index >= 5) {
-        log_error("algo_index=%d\n", algo_index);
+    int coeff_offset   = CVP_V3_EQ_FILE_OFFSET;
+    int eq_points      = (coeff_format->fft_size >> 1) + 1;  // (fft>>1) + 1
+    int algo_index     = get_algo_index(algo_type);
+
+    if (!CVP_V3_ALGO_INDEX_IS_VALID(algo_index)) {
+        log_error("invalid algo_index=%d (min=%d max=%d)\n",
+                  algo_index,
+                  CVP_V3_ALGO_INDEX_MIN,
+                  CVP_V3_ALGO_INDEX_MAX);
         return NULL;
     }
     int block = curve_layout_table[algo_index][type];
-    if (block < 0) {
+
+    if (block < CVP_V3_ALGO_INDEX_1MIC) {
         log_error("curve no exist=%d\n", block);
         return NULL;
     }
 
     int offset = coeff_offset + block * eq_points;
-    // coeff_offset + 曲线值 * (fft_points >> 1 + 1)
     float *coeff_info = (float *)zalloc(eq_points * sizeof(float));
     if (!coeff_info) {
         log_error("zalloc coeff_info failed\n");
         return NULL;
     }
     float *coeff_file_offset = (float *)coeff_file + offset;
-    float eq_global_gain = 1.0f;
-    if (coeff_algo_type > 2) {
+
+    float eq_global_gain = CVP_V3_EQ_TOTAL_GAIN_DEFAULT_LINEAR;
+    if (CVP_V3_ALGO_TYPE_IS_VALID(coeff_algo_type)) {
         if (type == WB_EQ) {
             eq_global_gain =  eq_db2mag(coeff_format->wb_eq_global_gain);
         } else if (type == NB_EQ) {
             eq_global_gain =  eq_db2mag(coeff_format->nb_eq_global_gain);
         }
     } else {
-        log_error("algo type!\n");
+        log_error("invalid coeff_algo_type=%d\n", coeff_algo_type);
     }
+
     for (int i = 0; i < eq_points; i++) {
         coeff_info[i] = eq_db2mag(coeff_file_offset[i]) * eq_global_gain;
     }
-    log_info("[%s] coeff_info_parse succ", cvp_coeff_name[type]);
-    return coeff_info;
 
+    log_info("[%s] coeff_info_parse succ", cvp_v3_coeff_name[type]);
+    return coeff_info;
 }
 
+static void audio_cvp_v3_set_aec_dump_enable(int algo_type, JLSP_params_v3_cfg *cfg)
+{
+    if (algo_type & CVP_ALGO_1MIC) {
+        cfg->single_cfg.aec_dump_enable = 1;
+    } else if (algo_type & CVP_ALGO_2MIC_BF) {
+        cfg->dual_cfg.aec_dump_enable = 1;
+    } else if (algo_type & CVP_ALGO_2MIC_HYBRID) {
+        cfg->hybrid_cfg.aec_dump_enable = 1;
+    } else if (algo_type & CVP_ALGO_2MIC_FLEXIBLE) {
+        cfg->dual_flex_cfg.aec_dump_enable = 1;
+    } else if (algo_type & CVP_ALGO_2MIC_CLIP) {
+        cfg->dual_clip_cfg.aec_dump_enable = 1;
+    } else if (algo_type & CVP_ALGO_2MIC_CLIP_TYPE2) {
+        cfg->dual_clip_v2_cfg.aec_dump_enable = 1;
+    } else if (algo_type & CVP_ALGO_3MIC) {
+        cfg->tri_cfg.aec_dump_enable = 1;
+    } else {
+
+    }
+}
+
+static u8 audio_cvp_v3_get_aec_dump_enable(int algo_type, JLSP_params_v3_cfg *cfg)
+{
+    if (algo_type & CVP_ALGO_1MIC) {
+        return cfg->single_cfg.aec_dump_enable;
+    } else if (algo_type & CVP_ALGO_2MIC_BF) {
+        return cfg->dual_cfg.aec_dump_enable;
+    } else if (algo_type & CVP_ALGO_2MIC_HYBRID) {
+        return cfg->hybrid_cfg.aec_dump_enable;
+    } else if (algo_type & CVP_ALGO_2MIC_FLEXIBLE) {
+        return cfg->dual_flex_cfg.aec_dump_enable;
+    } else if (algo_type & CVP_ALGO_2MIC_CLIP) {
+        return cfg->dual_clip_cfg.aec_dump_enable;
+    } else if (algo_type & CVP_ALGO_2MIC_CLIP_TYPE2) {
+        return cfg->dual_clip_v2_cfg.aec_dump_enable;
+    } else if (algo_type & CVP_ALGO_3MIC) {
+        return cfg->tri_cfg.aec_dump_enable;
+    } else {
+        return 0;
+    }
+}
 /*
 *********************************************************************
 *                  Audio CVP Parameters
@@ -487,6 +608,7 @@ static void audio_cvp_v3_param_init(struct cvp_attr *p, u16 node_uuid)
     cvp_cfg->dual_flex_cfg      = dual_flex_cfg;
     cvp_cfg->dual_clip_cfg		= dual_clip_init_cfg;
     cvp_cfg->dual_clip_v2_cfg	= dual_clip_v2_init_cfg;
+    cvp_cfg->doa_cfg			= doa_init_cfg;
 
     //读取工具配置参数+预处理参数
     CVP_CONFIG cfg;
@@ -511,6 +633,10 @@ static void audio_cvp_v3_param_init(struct cvp_attr *p, u16 node_uuid)
 
         p->output_sel = cfg.output_sel;
         p->adc_ref_en = cfg.adc_ref_en;
+
+#ifdef TCFG_AUDIO_FLOW_PRESET_AVC_ESCO_AEC_ENABLE
+        audio_cvp_v3_set_aec_dump_enable(cvp_v3->algo_type, cvp_cfg);
+#endif
 
         if (!(cvp_v3->algo_type & CVP_ALGO_1MIC_AECNLP)) {
             cvp_cfg->single_cfg.singleCompenDb = cfg.CompenDb;
@@ -603,12 +729,21 @@ static void audio_cvp_v3_param_init(struct cvp_attr *p, u16 node_uuid)
 #if (CVP_V3_2MIC_FLEXIBLE_ENABLE)
         //双麦话务adaptive
         if (cvp_v3->algo_type & CVP_ALGO_2MIC_FLEXIBLE) {
+            cvp_cfg->dual_flex_cfg.dualFlexType	= cfg.flexible_mode;
             cvp_cfg->dual_flex_adf_cfg.processMaxFrequency = cfg.adaptive_processMaxFrequency;
             cvp_cfg->dual_flex_adf_cfg.processMinFrequency = cfg.adaptive_processMinFrequency;
             cvp_cfg->dual_flex_adf_cfg.cohefMaxGamma = cfg.cohefMaxGamma;
             cvp_cfg->dual_flex_adf_cfg.varmuMaxGamma = cfg.varmuMaxGamma;
             cvp_cfg->dual_flex_adf_cfg.sirMaxGamma	 = cfg.sirMaxGamma;
             cvp_cfg->dual_flex_adf_cfg.useSirGain	 = cfg.useSirGain;
+        }
+#endif
+
+#if (CVP_V3_3MIC_FUSION_ENABLE)
+        if (cvp_v3->algo_type & CVP_ALGO_3MIC) {
+            cvp_cfg->doa_cfg.use_au = cfg.use_au;
+            cvp_cfg->doa_cfg.degree_start = cfg.degree_start;
+            cvp_cfg->doa_cfg.degree_end = cfg.degree_end;
         }
 #endif
 #endif
@@ -630,16 +765,26 @@ static void audio_cvp_v3_param_init(struct cvp_attr *p, u16 node_uuid)
     if (!(cvp_v3->algo_type & CVP_ALGO_1MIC_AECNLP)) {
         cvp_cfg->single_cfg.singleWbEq  = cvp_v3_coeff_info_parse(coeff_bin, WB_EQ, cvp_v3->algo_type);
         cvp_cfg->single_cfg.singleNbEq  = cvp_v3_coeff_info_parse(coeff_bin, NB_EQ, cvp_v3->algo_type);
+        cvp_cfg->dual_cfg.dualWnWbEqVec = cvp_v3_coeff_info_parse(coeff_bin, WN_WB_EQ, cvp_v3->algo_type);
+        cvp_cfg->dual_cfg.dualWnNbEqVec = cvp_v3_coeff_info_parse(coeff_bin, WN_NB_EQ, cvp_v3->algo_type);
         cvp_cfg->dual_cfg.dualWbEqVec   = cvp_cfg->single_cfg.singleWbEq;
         cvp_cfg->dual_cfg.dualNbEqVec   = cvp_cfg->single_cfg.singleNbEq;
-        cvp_cfg->dual_flex_cfg.dualFlexWbEqVec  	= cvp_cfg->single_cfg.singleWbEq;
-        cvp_cfg->dual_flex_cfg.dualFlexNbEqVec  	= cvp_cfg->single_cfg.singleNbEq;
+        cvp_cfg->dual_flex_cfg.dualFlexWbEqVec	= cvp_cfg->single_cfg.singleWbEq;
+        cvp_cfg->dual_flex_cfg.dualFlexNbEqVec 	= cvp_cfg->single_cfg.singleNbEq;
         cvp_cfg->dual_clip_cfg.dualWbEqVec  	= cvp_cfg->single_cfg.singleWbEq;
         cvp_cfg->dual_clip_cfg.dualNbEqVec  	= cvp_cfg->single_cfg.singleNbEq;
         cvp_cfg->dual_clip_v2_cfg.dualWbEqVec  	= cvp_cfg->single_cfg.singleWbEq;
         cvp_cfg->dual_clip_v2_cfg.dualNbEqVec  	= cvp_cfg->single_cfg.singleNbEq;
         cvp_cfg->tri_cfg.triWbEqVec  	= cvp_cfg->single_cfg.singleWbEq;
         cvp_cfg->tri_cfg.triNbEqVec  	= cvp_cfg->single_cfg.singleNbEq;
+        cvp_cfg->dual_clip_cfg.dualWnWbEqVec = cvp_cfg->dual_cfg.dualWnWbEqVec;
+        cvp_cfg->dual_clip_cfg.dualWnNbEqVec = cvp_cfg->dual_cfg.dualWnNbEqVec;
+        cvp_cfg->dual_clip_v2_cfg.dualWnWbEqVec = cvp_cfg->dual_cfg.dualWnWbEqVec;
+        cvp_cfg->dual_clip_v2_cfg.dualWnNbEqVec = cvp_cfg->dual_cfg.dualWnNbEqVec;
+        cvp_cfg->dual_flex_cfg.dualWnFlexWbEqVec = cvp_cfg->dual_cfg.dualWnWbEqVec;
+        cvp_cfg->dual_flex_cfg.dualWnFlexNbEqVec = cvp_cfg->dual_cfg.dualWnNbEqVec;
+        cvp_cfg->tri_cfg.triWnWbEqVec = cvp_cfg->dual_cfg.dualWnWbEqVec;
+        cvp_cfg->tri_cfg.triWnNbEqVec = cvp_cfg->dual_cfg.dualWnNbEqVec;
     }
 
     //对于有参考线的算法模式,如需传入参考线对应的EQ曲线,需手动修改传入get_mag函数的类型为对应的
@@ -653,7 +798,8 @@ static void audio_cvp_v3_param_init(struct cvp_attr *p, u16 node_uuid)
     }
     free(coeff_bin);
     p->algo_type = cvp_v3->algo_type;
-    log_info("CVP_V3:AEC[%d] NLP[%d] NS[%d] ENC[%d] DRC[%d] MFDT[%d] WNC[%d] EQ[%d]", !!(p->EnableBit & AEC_EN), !!(p->EnableBit & NLP_EN), !!(p->EnableBit & ANS_EN), !!(p->EnableBit & ENC_EN), !!(p->EnableBit & AGC_EN), !!(p->EnableBit & MFDT_EN), !!(p->EnableBit & WNC_EN), !!(p->EnableBit & THR_EQ_EN));
+
+    log_info("CVP_V3:AEC[%d] NLP[%d] NS[%d] ENC[%d] DRC[%d] MFDT[%d] WNC[%d] EQ[%d] DOA[%d]", !!(p->EnableBit & AEC_EN), !!(p->EnableBit & NLP_EN), !!(p->EnableBit & ANS_EN), !!(p->EnableBit & ENC_EN), !!(p->EnableBit & AGC_EN), !!(p->EnableBit & MFDT_EN), !!(p->EnableBit & WNC_EN), !!(p->EnableBit & THR_EQ_EN), !!(p->EnableBit & DOA_EN));
 
 #if TCFG_AUDIO_MIC_ARRAY_TRIM_ENABLE
     app_var.enc_degradation = p->target_signal_degradation;
@@ -676,6 +822,7 @@ static void audio_cvp_v3_param_init(struct cvp_attr *p, u16 node_uuid)
 __CVP_BANK_CODE
 int audio_cvp_v3_open(struct audio_aec_init_param_t *init_param, s16 enablebit, int (*out_hdl)(s16 *data, u16 len))
 {
+    u8 aec_dump_enable = 0;
     u32 mic_sr = init_param->sample_rate;
     u32 ref_sr = init_param->ref_sr;
     struct cvp_attr *cvp_param;
@@ -699,7 +846,6 @@ int audio_cvp_v3_open(struct audio_aec_init_param_t *init_param, s16 enablebit, 
     cvp_v3->output_fade_in_gain = 0;
     cvp_param = &cvp_v3->attr;
     cvp_param->cvp_probe = audio_cvp_v3_probe;
-    cvp_param->cvp_post = audio_cvp_v3_post;
     cvp_param->cvp_output = audio_cvp_v3_output;
     cvp_param->wn_en = 0;
     cvp_param->ref_channel = init_param->ref_channel;
@@ -711,10 +857,15 @@ int audio_cvp_v3_open(struct audio_aec_init_param_t *init_param, s16 enablebit, 
     }
 
     if (ref_sr) {
-        cvp_param->ref_sr  = ref_sr;
+        if (cvp_param->adc_ref_en) {
+            cvp_param->ref_sr  = mic_sr; // 硬回采参考数据采样率ref_sr和ADC采样率sample_rate保持一致
+        } else {
+            cvp_param->ref_sr  = ref_sr;	  // 软回采
+        }
     } else {
         cvp_param->ref_sr  = usb_mic_is_running();
     }
+
     if (cvp_param->ref_sr == 0) {
         if (TCFG_ESCO_DL_CVSD_SR_USE_16K && (mic_sr == 8000)) {
             cvp_param->ref_sr = 16000;	//CVSD 下行为16K
@@ -724,7 +875,14 @@ int audio_cvp_v3_open(struct audio_aec_init_param_t *init_param, s16 enablebit, 
     }
 
     audio_cvp_v3_param_init(cvp_param, init_param->node_uuid);
-
+    aec_dump_enable = audio_cvp_v3_get_aec_dump_enable(cvp_v3->algo_type, &cvp_param->cvp_cfg);
+    if (aec_dump_enable) {
+        if (cvp_param->cvp_aec_ouput == NULL) {
+            cvp_param->cvp_aec_ouput = audio_cvp_v3_aec_cllback;
+        }
+    } else {
+        cvp_param->cvp_aec_ouput = NULL;
+    }
     if (enablebit >= 0) {
         cvp_param->EnableBit = enablebit;
     }
@@ -924,6 +1082,15 @@ void audio_cvp_v3_close(void)
             cvp_v3->attr.cvp_cfg.tri_cfg.triFbTransferFuncOff = NULL;
         }
 
+        if (cvp_v3->attr.cvp_cfg.dual_cfg.dualWnWbEqVec) {
+            free(cvp_v3->attr.cvp_cfg.dual_cfg.dualWnWbEqVec);
+            cvp_v3->attr.cvp_cfg.dual_cfg.dualWnWbEqVec = NULL;
+        }
+
+        if (cvp_v3->attr.cvp_cfg.dual_cfg.dualWnNbEqVec) {
+            free(cvp_v3->attr.cvp_cfg.dual_cfg.dualWnNbEqVec);
+            cvp_v3->attr.cvp_cfg.dual_cfg.dualWnNbEqVec = NULL;
+        }
 
         free(cvp_v3);
         cvp_v3 = NULL;
@@ -1116,6 +1283,18 @@ int audio_cvp_v3_toggle_set(u8 toggle)
         return 0;
     }
     return 1;
+}
+
+//获取算法中anc模式
+int audio_cvp_v3_get_anc_mode(int *mode)
+{
+    if (!mode) {
+        return -1;
+    }
+    if (cvp_v3 && cvp_v3->start) {
+        return jlsp_cvp_v3_get_anc_mode(mode);
+    }
+    return -1;
 }
 
 /**

@@ -2,22 +2,22 @@ project earphone_sdk/
 4e2d01558fe51511de983a4a40b4fb40f253a7e8
 
 project earphone_sdk/apps/common/
-1de3910014ebe1e10d8ea7766507fe21fa03a4b3
+3ab8be20f9503024e7ae25ea08335bfa07d24ee5
 
 project earphone_sdk/apps/common/device/
 e6f4bbe0cdcb0d25298c7608d2ea6e2b058bb73f
 
 project earphone_sdk/apps/earphone/
-fabfb986733504911ccab92e201f7086229d4c63
+17442ae59e43fcc9b69ab6f2100b7fbc11502fba
 
 project earphone_sdk/audio/
-94bada0efb77d5253945a139e04cb6f17edfd6e4
+e84d28a66200ca21ec65e52f2424e2d0a8c02cda
 
 project earphone_sdk/cpu/
-ca1baf6bce46b0446091980b322dc00b011005be
+b510452b07d5c4d931dc11c930862691a1abe4c6
 
 project earphone_sdk/interface/btctrler/
-faf424e9da6f41fcb4d0536d8b7f9cfd48a50386
+e57a15b3564187ec9f8970ffd87d10406897c38b
 
 project earphone_sdk/interface/btstack/
 57e3cc4afa41a1ae7625a4cc62ca8badc2db449a
@@ -26,7 +26,7 @@ project earphone_sdk/interface/driver/
 7738c7ba8744647e6a5b0af3f0bec7cb706c9810
 
 project earphone_sdk/interface/media/
-b488540246006f3ef77caa611d2bb2e9824df838
+db000f5ed56fcdf97271c21f7559b08a09c266a1
 
 project earphone_sdk/interface/net/
 9c44ca3ed3ccab6bc955093f40326ad8c7032d47
@@ -41,10 +41,10 @@ project earphone_sdk/interface/utils/
 aaa61429b0303e29bdea9ed46d42010f533a35d5
 
 project earphone_sdk/lib/bt_protocol/
-6c3bfc76b7c708b0b7ba366ea5f06559a4dc7afb
+8f6d84201d334f2825ad1a1fae49cfd458fedc14
 
 project earphone_sdk/lib/btctrler/
-e6044efccdf5fee0ac20493c57fc78e65491bace
+c2b6cdd764ea41d842f33179bd64361ccf885c1a
 
 project earphone_sdk/lib/driver/
 3e0fd1aefa02069b0a6f76c0d4c8c413515e7b7a
@@ -53,13 +53,13 @@ project earphone_sdk/lib/interface/crypto_toolbox/
 0c0b7c430c2cad0079e876fb290a51a918efff87
 
 project earphone_sdk/lib/media/
-4f1fd2b7f3973cd49c2f2f380d54dbc0867eb39f
+05ce2a84ab85f954bf3724e9cc88c58757c27aa1
 
 project earphone_sdk/lib/net/
 5befdc5b508d82573e948fe0b926bb1655ac1f91
 
 project earphone_sdk/lib/system/
-3967dcb00ae631d9dbda530d0ac87e47d2dee413
+2511437cb41e0ad639edc370841602b8f0466621
 
 project earphone_sdk/lib/update/
 f68e1fd86f509dc4398bee544636fc8bbf639775

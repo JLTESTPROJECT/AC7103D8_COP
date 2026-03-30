@@ -1046,12 +1046,16 @@ int audio_aec_open(struct audio_aec_init_param_t *init_param, s16 enablebit, int
     aec_param->aec_probe = audio_aec_probe;
     aec_param->aec_post = audio_aec_post;
     aec_param->output_handle = audio_aec_output;
-
     if (ref_sr) {
-        aec_param->ref_sr  = ref_sr;
+        if (aec_param->adc_ref_en) {
+            aec_param->ref_sr  = sample_rate; // 硬回采参考数据采样率ref_sr和ADC采样率sample_rate保持一致
+        } else {
+            aec_param->ref_sr  = ref_sr;	  // 软回采
+        }
     } else {
         aec_param->ref_sr  = usb_mic_is_running();
     }
+
     if (aec_param->ref_sr == 0) {
         if (TCFG_ESCO_DL_CVSD_SR_USE_16K && (sample_rate == 8000)) {
             aec_param->ref_sr = 16000;	//CVSD 下行为16K
@@ -1059,7 +1063,6 @@ int audio_aec_open(struct audio_aec_init_param_t *init_param, s16 enablebit, int
             aec_param->ref_sr = sample_rate;
         }
     }
-
     if (ref_channel != 2) {
         ref_channel = 1;
     }

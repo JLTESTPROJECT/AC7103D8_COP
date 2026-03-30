@@ -102,5 +102,6 @@
 // CVP V3 table bit : 9 ~ 31
 #define NN_TABLE_CVP_R3				  BIT(9)
 #define NN_TABLE_CVP_2MIC_CLIP    	  BIT(12)
+#define NN_TABLE_CVP_1MIC_LARGE    	  BIT(13)		// kpt模型
 #define NN_TABLE_CVP_DEFAULT      	  NN_TABLE_CVP_R3
 #endif/*_AUDIO_CVP_DEF_H_*/

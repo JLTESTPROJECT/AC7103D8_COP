@@ -14,7 +14,7 @@
 #define CVP_ALGO_2MIC_AWN   			BIT(6)
 #define CVP_ALGO_2MIC_FLEXIBLE   		BIT(7)
 #define CVP_ALGO_2MIC_CLIP  			BIT(9)
-#define CVP_ALGO_2MIC_CLIP_TYPE2  			BIT(10)
+#define CVP_ALGO_2MIC_CLIP_TYPE2  		BIT(10)
 //BIT[16:23]
 #define CVP_ALGO_3MIC   				BIT(16)
 
@@ -37,6 +37,9 @@
 #define CVP_V3_2MIC_AWN_ENABLE     		(TCFG_CVP_ALGO_TYPE & CVP_ALGO_2MIC_AWN)
 #define CVP_V3_2MIC_FLEXIBLE_ENABLE     (TCFG_CVP_ALGO_TYPE & CVP_ALGO_2MIC_FLEXIBLE)
 
+/* 3-MIC融合控制 */
+#define CVP_V3_3MIC_FUSION_ENABLE 		(TCFG_CVP_ALGO_TYPE & CVP_ALGO_3MIC)
+
 /* Beamforming 版本控制*/
 #define JLSP_BF_V100					0X01
 #define JLSP_BF_V200					0X02
@@ -46,8 +49,8 @@ typedef struct {
     u8 mic_again;					//MIC增益,default:3(0~14)
     u8 fb_mic_again;				//FB MIC增益,default:3(0~14)
     u8 dac_again;					//DAC增益,default:22(0~31)
-    u8 enable_module;       		//使能模块
     u8 ul_eq_en;        			//上行EQ使能,default:enable(disable(0), enable(1))
+    u32 enable_module;       		//使能模块
     /*
     float mic0PreGain;
     float mic1PreGain;
@@ -73,6 +76,10 @@ typedef struct {
     float target_signal_degradation;//default:1,range[0:1]
     float enc_aggressfactor;		//default:4.f,range[0:4]
     float enc_minsuppress;			//default:0.09f,range[0:0.1]
+    /* doa */
+    u8 use_au;
+    float degree_start;
+    float degree_end;
     /*dns*/
     float aggressfactor;			//default:1.25,range[1:2]
     float minsuppress;				//default:0.04,range[0.01:0.1]
@@ -93,6 +100,7 @@ typedef struct {
     int OnlyDetect;					// 0 -> 故障切换到单mic模式， 1-> 只检测不切换
 
     /* flexible */
+    u8 flexible_mode;
     int adaptive_processMaxFrequency; // MaxProFreq
     int adaptive_processMinFrequency; // MinProFreq
     float cohefMaxGamma;
@@ -112,7 +120,6 @@ typedef struct {
 } _GNU_PACKED_ CVP_CONFIG;
 
 struct cvp_attr {
-    u8 EnableBit;
     u8 ul_eq_en;
     u8 wn_en;
     u8 output_way;   		/*输出方式配置0:dac  1:fm_tx */
@@ -131,6 +138,7 @@ struct cvp_attr {
     u32 mic_sr;				/*麦克风数据采样率*/
     u32 ref_sr;				/*参考数据采样率*/
     u32 algo_type;
+    u32 EnableBit;
     /*流程配置*/
     float CompenDb;					//流程补偿增益
     float target_signal_degradation;//default:1,range[0:1]
@@ -146,6 +154,7 @@ struct cvp_attr {
     int (*cvp_probe)(short *talk_mic, short *ff_mic, short *fb_mic, short *ref, u16 len);
     int (*cvp_post)(s16 *dat, u16 len);
     int (*cvp_update)(u8 EnableBit);
+    int (*cvp_aec_ouput)(s16 *dat, u16 len);
     int (*cvp_output)(s16 *dat, u16 len);
 };
 
@@ -184,5 +193,14 @@ int jlsp_cvp_v3_get_bandwidth_info(int is_wb_state);
  * 2: 前馈麦克风工作（FF 模式）
  */
 int jlsp_cvp_v3_get_mic_state_info(int mic_state);
+
+/* 话务双麦单双麦切换
+ * mic_mode: 0 单麦 1/2双麦
+ * dualFlexType == DF_TYPE_V1_V2时(1:mode1 2:mode2)
+ * */
+int jlsp_cvp_v3_flexible_switch_mic(u8 mic_mode);
+
+int jlsp_cvp_v3_get_anc_mode(int *anc_mode);
+int audio_cvp_v3_get_anc_mode(int *mode);
 
 #endif/*_CVP_V3_H_*/

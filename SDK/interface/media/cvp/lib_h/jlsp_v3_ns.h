@@ -1,7 +1,9 @@
+
 #ifndef __JLSP_V3_NS_H__
 #define __JLSP_V3_NS_H__
 
 #include "asm/cpu.h"
+
 
 //=========================================================================
 //===============================模块参数配置==============================
@@ -15,6 +17,7 @@ enum {
     WNC_EN_BIT = BIT(5),
     MICSEL_EN_BIT = BIT(6),
     EQ_EN_BIT = BIT(7),
+    DOA_EN_BIT = BIT(8),
     AEC_FB_EN_BIT = BIT(0),
     NLP_FB_EN_BIT = BIT(1),
 };
@@ -133,6 +136,7 @@ typedef struct {
     int fusionFreq;
     float dBTh1;
     float dBTh2;
+    float dBTh3;
     enum_fbFusion type;
 
 } JLSP_fusion_cfg_t;
@@ -153,6 +157,7 @@ typedef struct {
     int nlpProcessMinFrequency;    //最大频率
     int preEnhance;
     float overDrive;     //压制系数
+    float overDrivePre;     //压制系数
 } JLSP_nlp_v3_cfg_t;
 
 
@@ -255,6 +260,9 @@ typedef struct {
     float aggressFactor;
     float minSupress;
 
+    // AEC data output enablebit
+    int aec_dump_enable;
+
 } JLSP_single_v3_cfg_t;
 
 
@@ -266,6 +274,8 @@ typedef struct {
     float *dualPhaseCompenVec; //相位补偿
     float *dualWbEqVec;
     float *dualNbEqVec;
+    float *dualWnWbEqVec;
+    float *dualWnNbEqVec;
 
     int samplerate;
     float dualPreGainDb;
@@ -282,6 +292,9 @@ typedef struct {
 
     int externalEnableBit;
 
+    // AEC data output enablebit
+    int aec_dump_enable;
+
 } JLSP_dual_bf_v3_cfg_t;
 
 
@@ -293,6 +306,8 @@ typedef struct {
     float *dualPhaseCompenVec; //相位补偿
     float *dualWbEqVec;
     float *dualNbEqVec;
+    float *dualWnWbEqVec;
+    float *dualWnNbEqVec;
 
     int samplerate;
     float dualPreGainDb;
@@ -306,9 +321,14 @@ typedef struct {
     float aggressFactor;
     float minSupress;
 
+    int nlpSelectTalkOrFf;
     int externalEnableBit;
 
+    // AEC data output enablebit
+    int aec_dump_enable;
+
 } JLSP_dual_clip_v3_cfg_t;
+
 
 // Dual clip V2 config.
 typedef struct {
@@ -317,6 +337,8 @@ typedef struct {
     float *dualPhaseCompenVec; //相位补偿
     float *dualWbEqVec;
     float *dualNbEqVec;
+    float *dualWnWbEqVec;
+    float *dualWnNbEqVec;
 
     int samplerate;
     float dualPreGainDb;
@@ -332,8 +354,11 @@ typedef struct {
 
     float aggressFactor;
     float minSupress;
-
+    int nlpSelectTalkOrFf;
     int externalEnableBit;
+
+    // AEC data output enablebit
+    int aec_dump_enable;
 
 } JLSP_dual_clipv2_v3_cfg_t;
 
@@ -349,6 +374,8 @@ typedef struct {
     float *triPhaseCompenVec; 	// 相位补偿
     float *triWbEqVec;
     float *triNbEqVec;
+    float *triWnWbEqVec;
+    float *triWnNbEqVec;
     float triFbCompenDb; 		// fb补偿增益
 
     int samplerate;
@@ -365,6 +392,11 @@ typedef struct {
     float minSupress;
 
     int externalEnableBit;
+
+    // AEC data output enablebit
+    int aec_dump_enable;
+
+    int ref_vad_en;
 
 } JLSP_tri_v3_cfg_t;
 
@@ -392,18 +424,28 @@ typedef struct {
 
     int externalEnableBit;
 
+    // AEC data output enablebit
+    int aec_dump_enable;
+
 } JLSP_hybrid_v3_cfg_t;
 
 
 
 
 //话务麦双麦降噪参数配置
+typedef enum {
+    DF_TYPE_V1 = 1,
+    DF_TYPE_V2 = 2,
+    DF_TYPE_V1_V2 = 3,
+} enum_dfType;
 typedef struct {
 
     int enableBit;
 
     float *dualFlexWbEqVec;
     float *dualFlexNbEqVec;
+    float *dualWnFlexWbEqVec;
+    float *dualWnFlexNbEqVec;
     float *dualFlexPhaseCompenVec; //相位补偿
 
     int dualFlexType;
@@ -415,13 +457,14 @@ typedef struct {
     float dualCompenDb;
 
     int post_pro_en; // MCRA enable/disenable
-    int mcramode;
-    int mcra_usegain_mode;
 
     float aggressFactor;
     float minSupress;
 
     int externalEnableBit;
+
+    // AEC data output enablebit
+    int aec_dump_enable;
 
 } JLSP_dual_flex_v3_cfg_t;
 
@@ -433,6 +476,18 @@ typedef struct {
     float preGainDb;
 
 } JLSP_single_aecnlp_v3_cfg_t;
+
+typedef struct {
+
+    float degree_start; // 30.0f; end > start
+    float degree_end;  // 60.0f;
+    int doa_low_freq;
+    int doa_high_freq;
+    float pwr_avg_min_th;
+    int use_au;
+
+} JLSP_doa_v3_cfg_t;
+
 
 
 typedef struct {
@@ -484,6 +539,7 @@ typedef struct {
     //双麦参数配置
     JLSP_dual_bf_v3_cfg_t dual_cfg;
 
+
     //三麦参数配置
     JLSP_tri_v3_cfg_t tri_cfg;
 
@@ -503,7 +559,9 @@ typedef struct {
     //dual clip v2 ns module
     JLSP_dual_clipv2_v3_cfg_t dual_clip_v2_cfg;
 
+    /* ------------- Others config -------------*/
 
+    JLSP_doa_v3_cfg_t doa_cfg;
 } JLSP_params_v3_cfg;
 
 
@@ -514,6 +572,7 @@ typedef enum {
     // common function port
     SET_WBORNB_EQ,           // set EQ
     GET_WBORNB_EQ,           // get EQ-wb/nb state
+    GET_AECNLP_DATA,
 
     // Dual-mic function port
     DUAL_SET_ATT_PARAMS,
@@ -530,12 +589,15 @@ typedef enum {
     TRI_SET_PHASE_COMPEN,    // set phase compensatory EQ
     TRI_GET_WD_INFO,         // get wind info
     TRI_GET_MIC_STATE,       // get micsel state: `0` for dual_mic, `1` for mic0, `2` for mic1
+    TRI_GET_ANC_STATEMODE,   // set anc state
+
 } enum_portName;
 
 
 typedef struct {
     u8 is_wb;
     float *eqCoeffs;
+    u8 type;			// 1 for eq, 2 for wn eq
 } JLSP_set_wbornb_eq;
 
 
@@ -561,6 +623,7 @@ typedef struct {
 typedef struct {
     int wd_flag;
     float wd_val;
+    // int state;
 } JLSP_get_wd_info_t;
 
 

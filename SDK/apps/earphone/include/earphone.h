@@ -103,10 +103,9 @@
 
 
 enum {
-    DUAL_CONN_CLOSE = 0,
-    DUAL_CONN_SET_ONE,
-    DUAL_CONN_SET_TWO,
-
+    DUAL_CONN_CLOSE = 0, //这个基本不用
+    DUAL_CONN_SET_ONE,   //支持单连接，关闭双连接
+    DUAL_CONN_SET_TWO,   //支持双连接
 };
 
 typedef enum {

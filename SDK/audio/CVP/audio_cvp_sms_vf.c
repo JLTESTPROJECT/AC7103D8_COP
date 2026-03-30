@@ -395,7 +395,11 @@ int audio_sms_vf_open(struct audio_aec_init_param_t *init_param, s16 enablebit, 
     aec_param->output_handle = audio_sms_vf_output;
     aec_param->far_noise_gate = 10;
     if (ref_sr) {
-        aec_param->ref_sr  = ref_sr;
+        if (aec_param->adc_ref_en) {
+            aec_param->ref_sr  = sample_rate; // 硬回采参考数据采样率ref_sr和ADC采样率sample_rate保持一致
+        } else {
+            aec_param->ref_sr  = ref_sr;	  // 软回采
+        }
     } else {
         aec_param->ref_sr  = usb_mic_is_running();
     }

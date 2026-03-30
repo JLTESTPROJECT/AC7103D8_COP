@@ -109,6 +109,7 @@ static void anc_mode_switch_sem_post();
 
 #define ESCO_MIC_DUMP_CNT	10
 extern void esco_mic_dump_set(u16 dump_cnt);
+extern void audio_cvp_v3_set_anc_mode(u8 anc_mode);
 
 typedef struct {
     u8 mode_num;					/*模式总数*/
@@ -503,6 +504,9 @@ static void anc_task(void *p)
                     audio_anc_dcc_trim_process();
                 }
 #endif
+#if TCFG_AUDIO_CVP_V3_MODE
+                audio_cvp_v3_set_anc_mode(cur_anc_mode);
+#endif
                 anc_hdl->last_mode = cur_anc_mode;
                 anc_hdl->mode_switch_lock = 0;
                 anc_mode_switch_sem_post();
@@ -638,6 +642,7 @@ static void anc_task(void *p)
 #if TCFG_ANC_SELF_DUT_GET_SZ
             case ANC_MSG_SZ_FFT_OPEN:
                 clock_refurbish();	//模块时钟消耗96M
+                audio_mic_pwr_ctl(MIC_PWR_ON);
                 anc_hdl->param.mode = ANC_TRAIN;
                 anc_hdl->new_mode = anc_hdl->param.mode;
                 anc_hdl->param.test_type = ANC_TEST_TYPE_FFT;	//设置当前的测试类型
@@ -994,6 +999,7 @@ void anc_train_close(void)
         anc_hdl->new_mode = anc_hdl->param.mode;
         anc_hdl->state = ANC_STA_INIT;
         audio_anc_train(&anc_hdl->param, 0);
+        audio_mic_pwr_ctl(MIC_PWR_OFF);
         user_anc_log("anc_train_close ok\n");
     }
 }

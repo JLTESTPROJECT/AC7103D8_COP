@@ -288,4 +288,12 @@ u16 dac_dvol_max_query(void);
 
 void audio_fast_mode_test();
 
+u16 audio_ana_vol_dynamic_switch_init(u16 *gain_table, int table_size);
+
+void audio_ana_vol_dynamic_switch_set(u16 cur_vol, u16 ana_vol_set);
+
+void app_audio_volume_dvol_set(s16 digital_volume);
+
+void app_audio_volume_avol_set(u8 analog_volume_l, u8 analog_volume_r);
+
 #endif/*_APP_AUDIO_H_*/

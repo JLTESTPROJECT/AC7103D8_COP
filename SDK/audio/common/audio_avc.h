@@ -9,8 +9,21 @@
 //实时查看当前噪声阈值与avc档位，打印较多，建议调试时打开
 #define AVC_THR_DEBUG_ENABLE        0
 
+#define AVC_AEC_A2DP_MODE           BIT(0)
+#define AVC_AEC_ESCO_MODE           BIT(1)
+
 //AVC使能回声消除
-#define AVC_USE_AEC                 (TCFG_AVC_AEC_ENABLE || TCFG_AVC_NLP_ENABLE)              //与通话回声消除互斥
+#define AVC_USE_AEC                 (TCFG_AVC_AEC_ENABLE || TCFG_AVC_NLP_ENABLE || TCFG_AUDIO_FLOW_PRESET_AVC_ESCO_AEC_ENABLE)
+
+#if (OS_CPU_CORE > 1)
+//多核芯片创建一个线程对通话回声消除数据进行处理，防止占用aec线程
+#define AVC_ESCO_AEC_PROCESS_TASK           1
+#define AVC_ESCO_AEC_PROCESS_TASK_NAME      "avc_esco_aec"
+#define AVC_ESCO_AEC_PROCESS_BUF_NUM        2       //cbuf存储数据帧数，大小：512 * buf_num bytes
+#else
+#define AVC_ESCO_AEC_PROCESS_TASK           0
+#endif
+
 #define AVC_AEC_CLOCK               (96 * 1000000) //启动回声消除后所设置的最小系统时钟
 
 //AVC算法类型选择
@@ -27,6 +40,8 @@
 #else
 #define ALGO_RUN_FRAME_LEN          1024      //byte
 #endif
+
+#define AVC_VOL_OFFSET_TWS_SYNC_TIMEOUT     400
 
 //ADC采样率
 #define AVC_ADC_SAMPLE_RATE         16000
@@ -50,6 +65,18 @@ struct avc_tool_common_param {
     float es_min_suppress;  //回音后级静态压制,越大越强,default: 4.f(0 ~ 10)
 };
 
+/*
+ * 数据格式：
+ * 1、通用参数：全int
+ * 2、噪声阈值表：
+ *  (1) 表的总长度(u16)
+ *  (2) 成员(int)
+ * 3、音量偏移表：
+ *  (1) 表的总长度(u16)
+ *  (2) 二级嵌套音量档位表：
+ *      <1> 表的总长度(u8)
+ *      <2> 表的成员(u8)
+ */
 struct avc_tool_table_param {
     int thr_len;
     int *thr_table;
@@ -62,6 +89,7 @@ struct avc_param_tool_set {
     struct avc_tool_table_param table_param;
 };
 
+void audio_avc_esco_aec_run(s16 *data, u16 len);
 int audio_avc_aec_data_fill(s16 *data, u16 len);
 int audio_avc_aec_open();
 int audio_avc_aec_close();

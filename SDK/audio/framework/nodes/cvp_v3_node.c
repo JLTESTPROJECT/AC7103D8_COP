@@ -10,6 +10,7 @@
 #include "cvp_node.h"
 #include "app_config.h"
 #include "cvp_v3.h"
+#include "audio_anc.h"
 
 #if TCFG_AUDIO_DUT_ENABLE
 #include "audio_dut_control.h"
@@ -71,6 +72,13 @@ struct CVP_ENC_CONFIG {
     float enc_minsuppress;			//default:0.09f,range[0:0.1]
 } __attribute__((packed));
 
+struct CVP_DOA_CONFIG {
+    u8 en;
+    u8 use_au;
+    float degree_start;
+    float degree_end;
+} __attribute__((packed));
+
 struct CVP_DNS_CONFIG {
     u8 en;
     float aggressfactor;			//default:1.25,range[1:2]
@@ -104,6 +112,7 @@ struct CVP_MFDT_CONFIG {
 
 /* adaptive */
 struct CVP_ADAPTIVE_CONFIG {
+    u8	flex_mode;
     int adaptive_processMaxFrequency; // MaxProFreq
     int adaptive_processMinFrequency; // MinProFreq
     float cohefMaxGamma;// 预压制强度，越小压制越强，默认值0.5
@@ -125,11 +134,12 @@ struct cvp_cfg_t {
     struct CVP_ALGO_SEL_CONFIG algo_sel;
     struct CVP_MIC_SEL_CONFIG mic_sel;
     struct CVP_REF_MIC_CONFIG ref_mic;
-    struct CVP_EQ_CONFIG  eq_en;
     struct CVP_PRE_GAIN_CONFIG pre_gain;
+    struct CVP_EQ_CONFIG  eq_en;
     struct CVP_AEC_CONFIG aec;		 // aec
     struct CVP_NLP_CONFIG nlp;		 // nlp
     struct CVP_ENC_CONFIG enc;		 // enc
+    struct CVP_DOA_CONFIG doa;		 // doa
     struct CVP_DNS_CONFIG dns;	     // dns
     struct CVP_DRC_CONFIG drc;		 // drc
     struct CVP_WNC_CONFIG wnc;		 // wnc
@@ -193,7 +203,7 @@ void cvp_v3_node_param_cfg_update(struct cvp_cfg_t *cfg, void *priv)
         }
         printf("talk_mic=%d, ff_mic=%d, fb_mic=%d", g_cvp_hdl->mic_sel.talk_mic, g_cvp_hdl->mic_sel.talk_ref_mic, g_cvp_hdl->mic_sel.talk_fb_mic);
         printf("ref_mic_en=%d, ref_mic_ch=%d", g_cvp_hdl->ref_mic.en, g_cvp_hdl->ref_mic.ref_mic_ch);
-        printf("algo type=%d", g_cvp_hdl->algo_sel.algo_type);
+        printf("algo type=%d pre_en=%d eq_en=%d", g_cvp_hdl->algo_sel.algo_type, cfg->pre_gain.en, cfg->eq_en.en);
     }
     p->adc_ref_en = cfg->ref_mic.en;
     //更新预处理参数
@@ -203,13 +213,14 @@ void cvp_v3_node_param_cfg_update(struct cvp_cfg_t *cfg, void *priv)
     pre_cfg.talk_ref_mic_gain = eq_db2mag(cfg->pre_gain.talk_ref_mic_gain);
     pre_cfg.talk_fb_mic_gain = eq_db2mag(cfg->pre_gain.talk_fb_mic_gain);
     audio_cvp_v3_probe_param_update(&pre_cfg);
+
     //更新算法参数
     if (g_cvp_hdl->algo_sel.algo_type & CVP_ALGO_1MIC_AECNLP) {		//AEC和NLP流程一般离线识别使用
         p->enable_module = cfg->aec.en | (cfg->nlp.en << 1) ;
     } else if (g_cvp_hdl->algo_sel.algo_type & CVP_ALGO_1MIC) {
         p->enable_module = cfg->aec.en | (cfg->nlp.en << 1) | (cfg->dns.en << 2) | (cfg->drc.en << 4) | (cfg->eq_en.en << 7);
     } else {
-        p->enable_module = cfg->aec.en | (cfg->nlp.en << 1) | (cfg->dns.en << 2) | (cfg->enc.en << 3) | (cfg->drc.en << 4) | (cfg->wnc.en << 5) | (cfg->mfdt.en << 6) | (cfg->eq_en.en << 7);
+        p->enable_module = cfg->aec.en | (cfg->nlp.en << 1) | (cfg->dns.en << 2) | (cfg->enc.en << 3) | (cfg->drc.en << 4) | (cfg->wnc.en << 5) | (cfg->mfdt.en << 6) | (cfg->eq_en.en << 7) | (cfg->doa.en << 8);
     }
     //aec
     p->aec_process_maxfrequency = cfg->aec.aec_process_maxfrequency;
@@ -259,12 +270,21 @@ void cvp_v3_node_param_cfg_update(struct cvp_cfg_t *cfg, void *priv)
 #if (CVP_V3_2MIC_FLEXIBLE_ENABLE)
     //双麦话务adaptive
     if (g_cvp_hdl->algo_sel.algo_type & CVP_ALGO_2MIC_FLEXIBLE) {
+        p->flexible_mode = cfg->adaptive.flex_mode;
         p->adaptive_processMaxFrequency	= cfg->adaptive.adaptive_processMaxFrequency;
         p->adaptive_processMinFrequency = cfg->adaptive.adaptive_processMinFrequency;
         p->cohefMaxGamma = cfg->adaptive.cohefMaxGamma;
         p->varmuMaxGamma = cfg->adaptive.varmuMaxGamma;
         p->sirMaxGamma	 = cfg->adaptive.sirMaxGamma;
         p->useSirGain	 = cfg->adaptive.useSirGain;
+    }
+#endif
+
+#if (CVP_V3_3MIC_FUSION_ENABLE)
+    if (g_cvp_hdl->algo_sel.algo_type & CVP_ALGO_3MIC) {
+        p->use_au = cfg->doa.use_au;
+        p->degree_start = cfg->doa.degree_start;
+        p->degree_end = cfg->doa.degree_end;
     }
 #endif
 #endif
@@ -725,7 +745,9 @@ static void cvp_ioc_start(struct cvp_node_hdl *hdl)
     u8 mic_num; //算法需要使用的MIC个数
 
     audio_cvp_v3_init(&init_param);
-
+#if TCFG_AUDIO_ANC_ENABLE
+    audio_cvp_v3_set_anc_mode(anc_mode_get());
+#endif
     if (hdl->source_uuid == NODE_UUID_ADC) {
         if (hdl->ref_mic.en) {
             if ((g_cvp_hdl->algo_sel.algo_type & CVP_ALGO_1MIC) || (g_cvp_hdl->algo_sel.algo_type & CVP_ALGO_1MIC_AECNLP)) {  //1mic or aecnlp
