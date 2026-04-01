@@ -256,7 +256,7 @@ const u8 sdp_get_remote_pnp_info = 0;
 #if TCFG_USER_EDR_ENABLE
 void hid_sdp_init(const u8 *hid_descriptor, u16 size)
 {
-#if (USER_SUPPORT_PROFILE_HID==1)
+#if (TCFG_BT_SUPPORT_HID)
     int real_size;
 
 #if (NEW_SDP_PNP_DATA_VER == 0)

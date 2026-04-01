@@ -15,6 +15,9 @@
 
 #define TCFG_MUSIC_PLC_ENABLE	1
 
+#define MUSIC_PLC_DURATION_MS   25
+#define MUSIC_PLC_CONTINUE_MS   280
+
 enum audio_plc_type {
     AUD_PLC_BYPASS = 0, //不做任何处理，但是仍然会有缓存;
     AUD_PLC_NORMAL,     //仅修复
@@ -38,7 +41,7 @@ struct plc_node_hdl {
 struct music_plc {
     LFaudio_PLC_API *plc_ops;
     void *plc_mem;
-    af_DataType datatype;
+    u8 data_width;
 };
 
 struct music_plc *music_plc_open(struct plc_node_hdl *hdl, u32 sr, u8 ch_num)
@@ -46,19 +49,29 @@ struct music_plc *music_plc_open(struct plc_node_hdl *hdl, u32 sr, u8 ch_num)
 
     struct music_plc *plc = zalloc(sizeof(struct music_plc));
     if (plc) {
-        plc->datatype.IndataBit  = hdl->data_wide.iport_data_wide;
-        plc->datatype.OutdataBit = hdl->data_wide.oport_data_wide;
-        plc->datatype.IndataInc  = (ch_num == 2) ? 2 : 1;
-        plc->datatype.OutdataInc = (ch_num == 2) ? 2 : 1;
+        plc->data_width = hdl->data_wide.iport_data_wide;
         plc->plc_ops = get_lfaudioPLC_api();
-        int plc_mem_size = plc->plc_ops->need_buf(ch_num, &plc->datatype); // 3660bytes，请衡量是否使用该空间换取PLC处理
+        LFaudio_plc_parm plc_params;
+        plc_params.sr = sr;
+        plc_params.nch = ch_num;
+        plc_params.mode = tws_api_get_low_latency_state() ? 4 : 0;
+        plc_params.lf_audio_plc_duration_ms = MUSIC_PLC_DURATION_MS;
+        plc_params.laudio_plc_freeze_ms = MUSIC_PLC_CONTINUE_MS;
+        plc_params.recover_dropHalf = 1;
+        plc_params.dataTypeobj.IndataBit  = hdl->data_wide.iport_data_wide;
+        plc_params.dataTypeobj.OutdataBit = hdl->data_wide.oport_data_wide;
+        plc_params.dataTypeobj.IndataInc  = (ch_num == 2) ? 2 : 1;
+        plc_params.dataTypeobj.OutdataInc = (ch_num == 2) ? 2 : 1;
+        int plc_mem_size = plc->plc_ops->need_buf(&plc_params); // 3660bytes，请衡量是否使用该空间换取PLC处理
+        /*r_printf("music plc mem size : %dbytes\n", plc_mem_size);*/
         plc->plc_mem = media_malloc(AUD_MODULE_MUSIC_PLC, plc_mem_size);
         if (!plc->plc_mem) {
             plc->plc_ops = NULL;
             free(plc);
             return NULL;
         }
-        int ret = plc->plc_ops->open(plc->plc_mem, ch_num, sr, tws_api_get_low_latency_state() ? 4 : 0, &plc->datatype); //4是延时最低 16个点
+
+        int ret = plc->plc_ops->open(plc->plc_mem, &plc_params); //4是延时最低 16个点
         if (ret) { //低于 16k采样率,不支持做plc
             ASSERT(0, "music plc open  error !!! ret = %d\n", ret);
             media_free(plc->plc_mem);
@@ -84,9 +97,8 @@ void music_plc_run(struct music_plc *plc, s16 *data, u16 len, u8 repair)
     }
 #endif
     if (plc && plc->plc_ops) {
-        u16 point_offset = plc->datatype.IndataBit ? 2 : 1;
-        u16 plc_type = repair ? AUD_PLC_WITH_FADE : AUD_PLC_BYPASS;
-        plc->plc_ops->run(plc->plc_mem, data, data, len >> point_offset, plc_type);
+        u16 point_offset = plc->data_width ? 2 : 1;
+        plc->plc_ops->run(plc->plc_mem, data, data, len >> point_offset, repair);
     }
 }
 
