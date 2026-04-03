@@ -42,6 +42,10 @@
 #include "smart_voice/smart_voice.h"
 #endif
 
+#if TCFG_AUDIO_DUT_ENABLE
+#include "audio_dut_control.h"
+#endif/*TCFG_AUDIO_DUT_ENABLE*/
+
 
 #define LOG_TAG_CONST       AEC_USER
 #define LOG_TAG             "[AEC_USER]"
@@ -508,6 +512,9 @@ int audio_sms_vf_open(struct audio_aec_init_param_t *init_param, s16 enablebit, 
     ASSERT(ret == 0, "aec_open err %d!!", ret);
 #endif/*CVP_TOGGLE*/
     cvp_sms_vf->start = 1;
+#if TCFG_AUDIO_DUT_ENABLE
+    audio_dut_cvp_control_check();    //产测命令控制检查
+#endif
     mem_stats();
     printf("audio_aec_open succ\n");
     return 0;

@@ -77,13 +77,13 @@ const u8 gpadc_power_supply_mode = 1; //映射供电方式
 
 #else
 
-#if (defined(TCFG_VBAT_CH) && (TCFG_VBAT_CH != AD_CH_PMU_VBAT_2) && (TCFG_VBAT_CH != AD_CH_PMU_VBAT_4))
+#if (defined(TCFG_VBAT_CH) && (TCFG_VBAT_CH != ADC_CH_PMU_VBAT_4))
 
 const u32 gpadc_ch_power = TCFG_VBAT_CH;    //根据供电方式选择通道
 
 #else
 
-#ifdef AD_CH_PMU_VBAT_2
+#ifdef ADC_CH_PMU_VBAT_2
 const u32 gpadc_ch_power = AD_CH_PMU_VBAT_2; //未定义默认VBAT通道
 #else
 const u32 gpadc_ch_power = AD_CH_PMU_VBAT_4; //未定义默认VBAT通道
@@ -91,14 +91,14 @@ const u32 gpadc_ch_power = AD_CH_PMU_VBAT_4; //未定义默认VBAT通道
 
 #endif
 
-#if (defined(TCFG_BAT_EXT_DIV) && defined(TCFG_VBAT_CH) && (TCFG_VBAT_CH != AD_CH_PMU_VBAT_2) && (TCFG_VBAT_CH != AD_CH_PMU_VBAT_4))
+#if (defined(TCFG_BAT_EXT_DIV) && defined(TCFG_VBAT_CH) && (TCFG_VBAT_CH != ADC_CH_PMU_VBAT_4))
 
 const u8 gpadc_ch_power_div = TCFG_BAT_EXT_DIV; //分压系数,需和gpadc_ch_power匹配 例如:200/(200+600)
 const u8 gpadc_power_supply_mode = 3; //映射供电方式
 
 #else
 
-#ifdef AD_CH_PMU_VBAT_2
+#ifdef ADC_CH_PMU_VBAT_2
 const u8 gpadc_ch_power_div = 2;                //未定义默认配置2
 #else
 const u8 gpadc_ch_power_div = 4;                //未定义默认配置4

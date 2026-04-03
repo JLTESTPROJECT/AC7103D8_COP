@@ -9,6 +9,7 @@
 #include "encoder_node.h"
 #include "audio_dac.h"
 #include "audio_cvp.h"
+#include "cvp_node.h"
 
 struct ai_voice_recoder {
     struct jlstream *stream;
@@ -42,6 +43,8 @@ int ai_voice_recoder_open(u32 code_type, u8 ai_type)
     struct stream_fmt fmt;
     struct encoder_fmt enc_fmt;
     struct ai_voice_recoder *recoder;
+    struct stream_fmt s_fmt;
+    struct cvp_param_fmt cvp_fmt;
     u16 source_uuid = 0;
 
     if (g_ai_voice_recoder) {
@@ -126,11 +129,14 @@ int ai_voice_recoder_open(u32 code_type, u8 ai_type)
     //设置源节点是哪个
     u16 node_uuid = get_cvp_node_uuid();
     u32 ref_sr = audio_dac_get_sample_rate(&dac_hdl);
+    jlstream_node_ioctl(recoder->stream, NODE_UUID_SOURCE, NODE_IOC_GET_FMT, (int)&s_fmt);
+    cvp_fmt.mic_num = s_fmt.channel_mode >> 4;
     if (node_uuid) {
 #if !(TCFG_AUDIO_CVP_OUTPUT_WAY_IIS_ENABLE && (defined TCFG_IIS_NODE_ENABLE))
         jlstream_node_ioctl(recoder->stream, node_uuid, NODE_IOC_SET_FMT, (int)ref_sr);
 #endif
-        err = jlstream_node_ioctl(recoder->stream, node_uuid, NODE_IOC_SET_PRIV_FMT, source_uuid);
+        cvp_fmt.source_uuid = source_uuid;
+        err = jlstream_node_ioctl(recoder->stream, node_uuid, NODE_IOC_SET_PRIV_FMT, (int)&cvp_fmt);
         if (err && (err != -ENOENT)) {	//兼容没有cvp节点的情况
             goto __exit1;
         }
@@ -139,6 +145,7 @@ int ai_voice_recoder_open(u32 code_type, u8 ai_type)
     }
     jlstream_set_callback(recoder->stream, recoder->stream, ai_voice_recoder_callback);
     jlstream_set_scene(recoder->stream, STREAM_SCENE_AI_VOICE);
+
     err = jlstream_start(recoder->stream);
     if (err) {
         goto __exit1;

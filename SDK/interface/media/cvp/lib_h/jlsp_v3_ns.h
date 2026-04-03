@@ -51,6 +51,7 @@ typedef enum {
     FB_FUSION_TYPE_V4,
     FB_FUSION_TYPE_V5,
     FB_FUSION_TYPE_V6,
+    FB_FUSION_TYPE_V7,
 } enum_fbFusion;
 
 

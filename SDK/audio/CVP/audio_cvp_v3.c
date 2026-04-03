@@ -36,7 +36,7 @@
 #include "spp_user.h"
 #include "audio_anc_includes.h"
 #if TCFG_AUDIO_DUT_ENABLE
-//#include "audio_dut_control.h"
+#include "audio_dut_control.h"
 #endif/*TCFG_AUDIO_DUT_ENABLE*/
 
 #if !defined(TCFG_CVP_DEVELOP_ENABLE) || (TCFG_CVP_DEVELOP_ENABLE == 0)
@@ -759,7 +759,7 @@ static void audio_cvp_v3_param_init(struct cvp_attr *p, u16 node_uuid)
         log_error("CVP-V3 read cfg error,use default param\n");
         p->EnableBit = AEC_EN | NLP_EN; //读取cfg配置文件失败，默认使能AEC和NLP避免选择当前模式时传EnableBit错误
         p->ul_eq_en = 1;
-        p->output_sel = DMS_OUTPUT_SEL_DEFAULT;
+        p->output_sel = CVP_OUTPUT_SEL_DEFAULT;
     }
     void *coeff_bin = cvp_v3_coeff_file_read();
     if (!(cvp_v3->algo_type & CVP_ALGO_1MIC_AECNLP)) {
@@ -949,6 +949,9 @@ int audio_cvp_v3_open(struct audio_aec_init_param_t *init_param, s16 enablebit, 
     ASSERT(ret == 0, "cvp_v3 open err %d!!", ret);
 #endif
     cvp_v3->start = 1;
+#if TCFG_AUDIO_DUT_ENABLE
+    audio_dut_cvp_control_check();    //产测命令控制检查
+#endif
     mem_stats();
     log_info("audio_cvp_v3_open succ\n");
     return 0;
@@ -1004,9 +1007,9 @@ void audio_cvp_v3_reboot(u8 reduce)
 *********************************************************************
 *                  Audio CVP Output Select
 * Description: 输出选择
-* Arguments  : sel = DMS_OUTPUT_SEL_DEFAULT 默认输出算法处理结果
-*				   = DMS_OUTPUT_SEL_MASTER	输出主mic(通话mic)的原始数据
-*				   = DMS_OUTPUT_SEL_SLAVE	输出副mic(降噪mic)的原始数据
+* Arguments  : sel = CVP_OUTPUT_SEL_DEFAULT 默认输出算法处理结果
+*				   = CVP_OUTPUT_SEL_TALK_MIC	输出主mic(通话mic)的原始数据
+*				   = CVP_OUTPUT_SEL_FF_MIC	输出副mic(降噪mic)的原始数据
 *			   agc 输出数据要不要经过agc自动增益控制模块
 * Return	 : None.
 * Note(s)    : 可以通过选择不同的输出，来测试mic的频响和ENC指标

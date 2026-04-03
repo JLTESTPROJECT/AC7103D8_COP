@@ -151,6 +151,7 @@ struct cvp_cfg_t {
 //------------------stream.bin CVP参数文件解析结构-END---------------//
 
 struct cvp_node_hdl {
+    enum stream_scene scene;
     char name[16];
     CVP_CONFIG online_cfg;
     struct stream_frame *frame[3];	//输入frame存储，算法输入缓存使用
@@ -167,6 +168,7 @@ struct cvp_node_hdl {
     struct CVP_REF_MIC_CONFIG ref_mic;
     struct CVP_ALGO_SEL_CONFIG algo_sel;
     u8 ref_mic_num; //回采mic个数
+    u8 adc_ch_num;
 };
 
 static struct cvp_node_hdl *g_cvp_hdl;
@@ -205,6 +207,10 @@ void cvp_v3_node_param_cfg_update(struct cvp_cfg_t *cfg, void *priv)
         printf("ref_mic_en=%d, ref_mic_ch=%d", g_cvp_hdl->ref_mic.en, g_cvp_hdl->ref_mic.ref_mic_ch);
         printf("algo type=%d pre_en=%d eq_en=%d", g_cvp_hdl->algo_sel.algo_type, cfg->pre_gain.en, cfg->eq_en.en);
     }
+
+    //获取algo_type, 兼容非数据流，没有g_cvp_hdl的流程
+    u32 algo_type = cvp_get_algo_type();
+
     p->adc_ref_en = cfg->ref_mic.en;
     //更新预处理参数
     struct audio_cvp_pre_param_t pre_cfg;
@@ -215,9 +221,9 @@ void cvp_v3_node_param_cfg_update(struct cvp_cfg_t *cfg, void *priv)
     audio_cvp_v3_probe_param_update(&pre_cfg);
 
     //更新算法参数
-    if (g_cvp_hdl->algo_sel.algo_type & CVP_ALGO_1MIC_AECNLP) {		//AEC和NLP流程一般离线识别使用
+    if (algo_type & CVP_ALGO_1MIC_AECNLP) {		//AEC和NLP流程一般离线识别使用
         p->enable_module = cfg->aec.en | (cfg->nlp.en << 1) ;
-    } else if (g_cvp_hdl->algo_sel.algo_type & CVP_ALGO_1MIC) {
+    } else if (algo_type & CVP_ALGO_1MIC) {
         p->enable_module = cfg->aec.en | (cfg->nlp.en << 1) | (cfg->dns.en << 2) | (cfg->drc.en << 4) | (cfg->eq_en.en << 7);
     } else {
         p->enable_module = cfg->aec.en | (cfg->nlp.en << 1) | (cfg->dns.en << 2) | (cfg->enc.en << 3) | (cfg->drc.en << 4) | (cfg->wnc.en << 5) | (cfg->mfdt.en << 6) | (cfg->eq_en.en << 7) | (cfg->doa.en << 8);
@@ -230,7 +236,7 @@ void cvp_v3_node_param_cfg_update(struct cvp_cfg_t *cfg, void *priv)
     p->nlp_process_minfrequency = cfg->nlp.nlp_process_minfrequency;
     p->overdrive = cfg->nlp.overdrive;
 
-    if (!(g_cvp_hdl->algo_sel.algo_type & CVP_ALGO_1MIC_AECNLP)) {
+    if (!(algo_type & CVP_ALGO_1MIC_AECNLP)) {
         //dns
         p->aggressfactor = cfg->dns.aggressfactor;
         p->minsuppress = cfg->dns.minsuppress;
@@ -241,8 +247,8 @@ void cvp_v3_node_param_cfg_update(struct cvp_cfg_t *cfg, void *priv)
     }
 #if (TCFG_CVP_ALGO_TYPE > 0xF)
     //双麦 三麦
-    if (!(g_cvp_hdl->algo_sel.algo_type & CVP_ALGO_2MIC_FLEXIBLE)) {
-        if ((g_cvp_hdl->algo_sel.algo_type & CVP_TYPE_2MIC) || (g_cvp_hdl->algo_sel.algo_type & CVP_ALGO_3MIC)) {
+    if (!(algo_type & CVP_ALGO_2MIC_FLEXIBLE)) {
+        if ((algo_type & CVP_TYPE_2MIC) || (algo_type & CVP_ALGO_3MIC)) {
             //enc
             p->enc_process_maxfreq = cfg->enc.enc_process_maxfreq;
             p->enc_process_minfreq = cfg->enc.enc_process_minfreq;
@@ -253,7 +259,7 @@ void cvp_v3_node_param_cfg_update(struct cvp_cfg_t *cfg, void *priv)
             p->enc_minsuppress = cfg->enc.enc_minsuppress;
         }
         //双麦三麦有wnc mfdt
-        if ((g_cvp_hdl->algo_sel.algo_type & CVP_TYPE_2MIC) || (g_cvp_hdl->algo_sel.algo_type & CVP_ALGO_3MIC)) {
+        if ((algo_type & CVP_TYPE_2MIC) || (algo_type & CVP_ALGO_3MIC)) {
             //wnc
             p->windProbHighTh = cfg->wnc.windProbHighTh;
             p->windProbLowTh = cfg->wnc.windProbLowTh;
@@ -269,7 +275,7 @@ void cvp_v3_node_param_cfg_update(struct cvp_cfg_t *cfg, void *priv)
     }
 #if (CVP_V3_2MIC_FLEXIBLE_ENABLE)
     //双麦话务adaptive
-    if (g_cvp_hdl->algo_sel.algo_type & CVP_ALGO_2MIC_FLEXIBLE) {
+    if (algo_type & CVP_ALGO_2MIC_FLEXIBLE) {
         p->flexible_mode = cfg->adaptive.flex_mode;
         p->adaptive_processMaxFrequency	= cfg->adaptive.adaptive_processMaxFrequency;
         p->adaptive_processMinFrequency = cfg->adaptive.adaptive_processMinFrequency;
@@ -290,7 +296,7 @@ void cvp_v3_node_param_cfg_update(struct cvp_cfg_t *cfg, void *priv)
 #endif
     //flow
     p->preGainDb = cfg->flow.preGainDb;
-    if (!(g_cvp_hdl->algo_sel.algo_type & CVP_ALGO_1MIC_AECNLP)) {
+    if (!(algo_type & CVP_ALGO_1MIC_AECNLP)) {
         p->CompenDb = cfg->flow.CompenDb;
     }
     //output sel
@@ -348,7 +354,11 @@ u8 cvp_v3_get_talk_fb_mic_ch(void)
 
 int cvp_get_algo_type(void)
 {
-    return  g_cvp_hdl->algo_sel.algo_type;
+    if (g_cvp_hdl) {
+        return  g_cvp_hdl->algo_sel.algo_type;
+    } else {
+        return global_cvp_cfg.algo_sel.algo_type;
+    }
 }
 
 __CVP_BANK_CODE
@@ -772,15 +782,14 @@ static void cvp_ioc_start(struct cvp_node_hdl *hdl)
                 mic_num = 3;
             }
         }
-
-        if (audio_adc_file_get_esco_mic_num() != mic_num) {
+        if (hdl->adc_ch_num != mic_num) {
 #if TCFG_AUDIO_DUT_ENABLE
             //使能产测时，只有算法模式才需判断
             if (cvp_dut_mode_get() == CVP_DUT_MODE_ALGORITHM) {
-                ASSERT(0, "CVP_DMS, ESCO MIC num is %d != %d\n", audio_adc_file_get_esco_mic_num(), mic_num);
+                ASSERT(0, "CVP_DMS, ESCO MIC num is %d != %d\n", hdl->adc_ch_num, mic_num);
             }
 #else
-            ASSERT(0, "CVP_DMS, ESCO MIC num is %d != %d\n", audio_adc_file_get_esco_mic_num(), mic_num);
+            ASSERT(0, "CVP_DMS, ESCO MIC num is %d != %d\n", hdl->adc_ch_num, mic_num);
 #endif
         }
     }
@@ -829,6 +838,9 @@ static int cvp_adapter_ioctl(struct stream_iport *iport, int cmd, int arg)
     case NODE_IOC_SET_FMT:
         hdl->ref_sr = (u32)arg;
         break;
+    case NODE_IOC_SET_SCENE:
+        hdl->scene = arg;
+        break;
     case NODE_IOC_START:
         cvp_ioc_start(hdl);
         break;
@@ -847,8 +859,10 @@ static int cvp_adapter_ioctl(struct stream_iport *iport, int cmd, int arg)
 #endif
         break;
     case NODE_IOC_SET_PRIV_FMT:
-        hdl->source_uuid = (u16)arg;
-        printf("source_uuid %x", (int)hdl->source_uuid);
+        struct cvp_param_fmt *fmt = (struct cvp_param_fmt *)arg;
+        hdl->source_uuid = fmt->source_uuid;
+        hdl->adc_ch_num = fmt->mic_num;
+        printf("source_uuid %x adc_ch_num %d", (int)hdl->source_uuid, hdl->adc_ch_num);
         break;
     }
 

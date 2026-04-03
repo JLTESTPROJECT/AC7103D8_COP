@@ -34,7 +34,7 @@
 #include "app_main.h"
 #include "lib_h/jlsp_ns.h"
 #if TCFG_AUDIO_DUT_ENABLE
-//#include "audio_dut_control.h"
+#include "audio_dut_control.h"
 #endif/*TCFG_AUDIO_DUT_ENABLE*/
 
 #if !defined(TCFG_CVP_DEVELOP_ENABLE) || (TCFG_CVP_DEVELOP_ENABLE == 0)
@@ -484,7 +484,7 @@ static void audio_aec_param_init(struct dms_attr *p, u16 node_uuid)
         p->MalfuncDet_MinFrequency = 400;   //检测频率下限
         p->OnlyDetect = 0;// 0 -> 故障切换到单mic模式， 1-> 只检测不切换
 
-        p->output_sel = DMS_OUTPUT_SEL_DEFAULT;
+        p->output_sel = CVP_OUTPUT_SEL_DEFAULT;
         log_error("read dms_param default\n");
     }
     log_info("DMS:AEC[%d] NLP[%d] NS[%d] ENC[%d] AGC[%d]", !!(p->EnableBit & AEC_EN), !!(p->EnableBit & NLP_EN), !!(p->EnableBit & ANS_EN), !!(p->EnableBit & ENC_EN), !!(p->EnableBit & AGC_EN));
@@ -588,7 +588,7 @@ static void audio_dms_flexible_param_init(struct dms_attr *p, u16 node_uuid)
         p->enc_minsuppress = 0.09f;
         p->Disconverge_ERLE_Thr = -6.0f;
 
-        p->output_sel = DMS_OUTPUT_SEL_DEFAULT;
+        p->output_sel = CVP_OUTPUT_SEL_DEFAULT;
         log_error("use dms_flexible param default\n");
     }
     log_info("DMS_Flexible:AEC[%d] NLP[%d] NS[%d] ENC[%d] AGC[%d]", !!(p->EnableBit & AEC_EN), !!(p->EnableBit & NLP_EN), !!(p->EnableBit & ANS_EN), !!(p->EnableBit & ENC_EN), !!(p->EnableBit & AGC_EN));
@@ -806,7 +806,7 @@ static void audio_dms_hybrid_param_init(struct dms_attr *p, u16 node_uuid)
 
         p->adc_ref_en = 0;
 
-        p->output_sel = DMS_OUTPUT_SEL_DEFAULT;
+        p->output_sel = CVP_OUTPUT_SEL_DEFAULT;
         log_error("read tms_param default\n");
     }
     log_info("DMS_HYBRID:WNC[%d] AEC[%d] NLP[%d] NS[%d] ENC[%d] AGC[%d] WNC[%d]", !!(p->EnableBit & WNC_EN), !!(p->EnableBit & AEC_EN), !!(p->EnableBit & NLP_EN), !!(p->EnableBit & ANS_EN), !!(p->EnableBit & ENC_EN), !!(p->EnableBit & AGC_EN), !!(p->EnableBit & WNC_EN));
@@ -936,7 +936,7 @@ static void audio_dms_awn_param_init(struct dms_attr *p, u16 node_uuid)
 
         p->adc_ref_en = 0;
 
-        p->output_sel = DMS_OUTPUT_SEL_DEFAULT;
+        p->output_sel = CVP_OUTPUT_SEL_DEFAULT;
         log_error("read tms_param default\n");
     }
     log_info("DMS_AWN:WNC[%d] AEC[%d] NLP[%d] NS[%d] ENC[%d] AGC[%d] WNC[%d]", !!(p->EnableBit & WNC_EN), !!(p->EnableBit & AEC_EN), !!(p->EnableBit & NLP_EN), !!(p->EnableBit & ANS_EN), !!(p->EnableBit & ENC_EN), !!(p->EnableBit & AGC_EN), !!(p->EnableBit & WNC_EN));
@@ -1170,6 +1170,9 @@ int audio_aec_open(struct audio_aec_init_param_t *init_param, s16 enablebit, int
     ASSERT(ret == 0, "cvp-2mic open err %d!!", ret);
 #endif
     cvp_dms->start = 1;
+#if TCFG_AUDIO_DUT_ENABLE
+    audio_dut_cvp_control_check();    //产测命令控制检查
+#endif
     mem_stats();
     printf("audio_dms_open succ\n");
     return 0;
@@ -1225,9 +1228,9 @@ void audio_aec_reboot(u8 reduce)
 *********************************************************************
 *                  Audio AEC Output Select
 * Description: 输出选择
-* Arguments  : sel = DMS_OUTPUT_SEL_DEFAULT 默认输出算法处理结果
-*				   = DMS_OUTPUT_SEL_MASTER	输出主mic(通话mic)的原始数据
-*				   = DMS_OUTPUT_SEL_SLAVE	输出副mic(降噪mic)的原始数据
+* Arguments  : sel = CVP_OUTPUT_SEL_DEFAULT 默认输出算法处理结果
+*				   = CVP_OUTPUT_SEL_TALK_MIC	输出主mic(通话mic)的原始数据
+*				   = CVP_OUTPUT_SEL_FF_MIC	输出副mic(降噪mic)的原始数据
 *			   agc 输出数据要不要经过agc自动增益控制模块
 * Return	 : None.
 * Note(s)    : 可以通过选择不同的输出，来测试mic的频响和ENC指标

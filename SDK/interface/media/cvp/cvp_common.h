@@ -16,10 +16,11 @@ typedef enum {
 
 /*DMS输出选择*/
 typedef enum {
-    DMS_OUTPUT_SEL_DEFAULT = 0,	/*默认输出：dms处理后的数据*/
-    DMS_OUTPUT_SEL_MASTER,		/*主mic原始数据*/
-    DMS_OUTPUT_SEL_SLAVE,		/*副mic原始数据*/
-    DMS_OUTPUT_SEL_FBMIC,		/*FB mic原始数据*/
+    CVP_OUTPUT_SEL_DEFAULT = 0, /*默认输出：dms处理后的数据*/
+    CVP_OUTPUT_SEL_TALK_MIC,    /*主mic原始数据*/
+    CVP_OUTPUT_SEL_FF_MIC,      /*副mic原始数据*/
+    CVP_OUTPUT_SEL_FB_MIC,      /*FB mic原始数据*/
+    CVP_OUTPUT_SEL_VPU,         /*VPU 原始数据*/
 } CVP_OUTPUT_ENUM;
 
 /*

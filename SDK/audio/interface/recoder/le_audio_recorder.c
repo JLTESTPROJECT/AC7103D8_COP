@@ -21,6 +21,8 @@
 #include "audio_cvp.h"
 #include "app_config.h"
 #include "audio_anc_includes.h"
+#include "esco_recoder.h"
+#include "cvp_node.h"
 
 #include "app_main.h"
 #include "volume_node.h"
@@ -945,11 +947,9 @@ int le_audio_mic_recorder_open(void *params, void *le_audio, int latency)
     int err = 0;
     struct le_audio_stream_params *lea_params = params;
     struct le_audio_stream_format *le_audio_fmt = &lea_params->fmt;
-    u16 source_uuid;
+    u16 source_uuid = 0;
 #ifdef CONFIG_WIRELESS_MIC_CASE_ENABLE
     u16 uuid = jlstream_event_notify(STREAM_EVENT_GET_PIPELINE_UUID, (int)"mic_effect");
-#else
-    u16 uuid = jlstream_event_notify(STREAM_EVENT_GET_PIPELINE_UUID, (int)"mic_le_audio_call");
 #endif
     struct stream_enc_fmt fmt = {
         .channel = le_audio_fmt->nch,
@@ -964,8 +964,12 @@ int le_audio_mic_recorder_open(void *params, void *le_audio, int latency)
             return -ENOMEM;
         }
     }
+#ifdef CONFIG_WIRELESS_MIC_CASE_ENABLE
     g_mic_recorder->stream = jlstream_pipeline_parse_by_node_name(uuid, "le_audio_adc");
     source_uuid = NODE_UUID_ADC;
+#else
+    g_mic_recorder->stream = esco_recoder_stream_search(&source_uuid);
+#endif
 
     if (!g_mic_recorder->stream) {
         err = -ENOMEM;
@@ -1015,11 +1019,16 @@ int le_audio_mic_recorder_open(void *params, void *le_audio, int latency)
     /* jlstream_node_ioctl(g_mic_recorder->stream, NODE_UUID_SOURCE, NODE_IOC_SET_PRIV_FMT, AUDIO_ADC_IRQ_POINTS); */
 
 #ifndef CONFIG_WIRELESS_MIC_CASE_ENABLE
+    struct stream_fmt s_fmt;
+    struct cvp_param_fmt cvp_fmt;
+    jlstream_node_ioctl(g_mic_recorder->stream, NODE_UUID_SOURCE, NODE_IOC_GET_FMT, (int)&s_fmt);
+    cvp_fmt.mic_num = s_fmt.channel_mode >> 4;
     u16 node_uuid = get_cvp_node_uuid();
     if (node_uuid) {
         u32 ref_sr = audio_dac_get_sample_rate(&dac_hdl);
+        cvp_fmt.source_uuid = source_uuid;
         jlstream_node_ioctl(g_mic_recorder->stream, node_uuid, NODE_IOC_SET_FMT, (int)ref_sr);
-        err = jlstream_node_ioctl(g_mic_recorder->stream, node_uuid, NODE_IOC_SET_PRIV_FMT, source_uuid);
+        err = jlstream_node_ioctl(g_mic_recorder->stream, node_uuid, NODE_IOC_SET_PRIV_FMT, (int)&cvp_fmt);
         //根据回音消除的类型，将配置传递到对应的节点
         if (err && (err != -ENOENT)) {	//兼容没有cvp节点的情况
             goto __exit1;

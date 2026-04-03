@@ -485,7 +485,6 @@ void pwm_led_hw_init(void *pdata)
 
     pwm_led_lrc_clk_init();
     JL_PLED->CON0 &= ~(0b11 << 2);      //PWM_LED选择LRD_200K做时钟源
-    JL_PLED->CON0 &= ~(0b1111 << 4);    //时钟源不分频
 
     JL_PLED->CON0 |= BIT(0);
 

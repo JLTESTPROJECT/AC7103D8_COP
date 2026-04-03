@@ -64,9 +64,15 @@ static void pdm_mic_output_handler(void *priv, void *data,  u32 len)
         memset((u8 *)data, 0x0, len * hdl->pdm_mic->ch_num);
     }
 
-    if (hdl->scene == STREAM_SCENE_ESCO) {	//cvp读dac 参考数据
+    //cvp读dac 参考数据
+#if TCFG_AUDIO_DUT_ENABLE
+    //打开产测功能，只有算法模式，才会读dac参考数据，避免 data full
+    if (cvp_dut_mode_get() == CVP_DUT_MODE_ALGORITHM) {
         audio_cvp_phase_align();
     }
+#else
+    audio_cvp_phase_align();
+#endif
 
     frame = source_plug_get_output_frame(hdl->source_node, len * hdl->pdm_mic->ch_num);
     if (frame) {

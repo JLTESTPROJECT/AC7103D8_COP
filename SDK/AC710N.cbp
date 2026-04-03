@@ -1567,6 +1567,7 @@
 <Unit filename="audio/interface/include/ai_rx_player.h" />
 <Unit filename="audio/interface/include/ai_voice_recoder.h" />
 <Unit filename="audio/interface/include/audio_dsp_low_latency_player.h" />
+<Unit filename="audio/interface/include/cvp_develop_node.h" />
 <Unit filename="audio/interface/include/cvp_node.h" />
 <Unit filename="audio/interface/include/dev_flow_player.h" />
 <Unit filename="audio/interface/include/dev_flow_recoder.h" />

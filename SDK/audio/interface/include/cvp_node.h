@@ -6,6 +6,11 @@
 #include "effects/effects_adj.h"
 #include "adc_file.h"
 
+struct cvp_param_fmt {
+    u8  mic_num;
+    u16 source_uuid;
+};
+
 int cvp_sms_node_param_cfg_read(void *priv, u8 ignore_subid, u16 algo_uuid);
 int cvp_sms_vf_node_param_cfg_read(void *priv, u8 ignore_subid, u16 algo_uuid);
 int cvp_dms_node_param_cfg_read(void *priv, u8 ignore_subid, u16 algo_uuid);
@@ -15,7 +20,6 @@ int cvp_sms_node_output_handle(s16 *data, u16 len);
 int cvp_sms_vf_node_output_handle(s16 *data, u16 len);
 int cvp_dms_node_output_handle(s16 *data, u16 len);
 int cvp_tms_node_output_handle(s16 *data, u16 len);
-int cvp_dev_node_output_handle(s16 *data, u16 len);
 int cvp_v3_node_output_handle(s16 *data, u16 len);
 
 int cvp_sms_param_cfg_read(void);
