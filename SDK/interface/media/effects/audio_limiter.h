@@ -50,6 +50,7 @@ int audio_limiter_run(struct audio_limiter *hdl, s16 *indata, s16 *outdata, u32 
 int audio_limiter_close(struct audio_limiter *hdl);
 void audio_limiter_update_parm(struct audio_limiter *hdl, struct limiter_param_tool_set *parm);
 
+void limiter_printf(struct limiter_param_tool_set *limiter);
 
 #endif
 

@@ -46,10 +46,16 @@ struct stream_crc {
     u16 uuid;
     u16 crc;
 };
+struct load_data_in_segments { //分段填充调音数据
+    char name[16];
+    u16 offset;
+    u16 len;
+    u8 nodedata[0];
+};
 
 struct eff_struct { //参数结构，节点结构组成uuid name parm_struct
     u16 uuid;
-    u16 reserve;//bit0 是否伪模块，伪模块时发送多个节点数据  bit1:表单类节点是否为手动调节，bit2-7:保留
+    u16 reserve;//bit0 是否伪模块，伪模块时发送多个节点数据  bit1:表单类节点是否为手动调节，bit2 调音数据分段填从， bit3-7:保留
     char data[0];//多节点一起更新时[len +nodedata(struct eff_struct结构) ...]
 } __attribute__((packed));
 
@@ -187,24 +193,32 @@ void eq_list_entry_update(struct eq_list_entry *hdl, struct eff_online_packet *e
 /*
  *通用音效临时参数更新
  * */
-void eff_list_entry_update(struct eff_list_entry *hdl, struct eff_online_packet *ep, u32 size)
+void eff_list_entry_update(struct eff_list_entry *hdl, struct eff_online_packet *ep, u32 size, int *ret)
 {
-    if (size != hdl->len) {
-        if (hdl->packet) {
-            if (total_buf > hdl->len) {
-                total_buf -= hdl->len;
-            } else {
-                total_buf = 0;
+
+    if (ep->par.reserve & EFF_LOAD_TUNING_DATA_IN_SEGMENTS) { //分段填充调音数据
+        struct load_data_in_segments *load = (struct load_data_in_segments *)ep->par.data;
+        memcpy((void *)((u32)hdl->packet->par.data + sizeof(load->name) + load->offset), load->nodedata, load->len);
+        *ret = LOAD_TUNING_DATA_IN_SEGMENTS;
+    } else {
+        if (size != hdl->len) {
+            if (hdl->packet) {
+                if (total_buf > hdl->len) {
+                    total_buf -= hdl->len;
+                } else {
+                    total_buf = 0;
+                }
+                free(hdl->packet);
             }
-            free(hdl->packet);
+            hdl->len = size;
+            hdl->packet = zalloc(size);
+            total_buf += size;
         }
-        hdl->len = size;
-        hdl->packet = zalloc(size);
-        total_buf += size;
+        hdl->packet->cmd = ep->cmd;
+        hdl->packet->par.uuid = ep->par.uuid;
+        memcpy(&hdl->packet->par, &ep->par, size - 4);
+        *ret = 0;
     }
-    hdl->packet->cmd = ep->cmd;
-    hdl->packet->par.uuid = ep->par.uuid;
-    memcpy(&hdl->packet->par, &ep->par, size - 4);
 }
 /*
  *获取特殊类型节点(mdrc)参数名字后的第一个int,协议见Mdrc调试
@@ -261,9 +275,12 @@ void eff_entry_add(void *packet, u32 size, int *ret, int *start, int *end)
                     if (!eff_check_mdrc_private_type(hdl, ep->par.uuid,  private_type)) {
                         continue;
                     }
-                    eff_list_entry_update(hdl, ep, size);
+                    eff_list_entry_update(hdl, ep, size, ret);
                     log_debug("node update %x\n", ep->par.uuid);
                     spin_unlock(&eff_lock[0]);
+                    if (*ret == LOAD_TUNING_DATA_IN_SEGMENTS) {
+                        jlstream_set_node_param(hdl->packet->par.uuid, hdl->packet->par.data, &hdl->packet->par.data[16], hdl->len - 4 - 16);//4:cmd 16:name
+                    }
                     return;
                 }
             }
@@ -273,7 +290,7 @@ void eff_entry_add(void *packet, u32 size, int *ret, int *start, int *end)
         struct eff_list_entry *hdl = zalloc(sizet);
         total_buf += sizet;
         hdl->private_type = private_type;
-        eff_list_entry_update(hdl, ep, size);
+        eff_list_entry_update(hdl, ep, size, ret);
         list_add(&hdl->entry, &eff_hdl.head);
         log_debug("node add %x\n", ep->par.uuid);
         spin_unlock(&eff_lock[0]);
@@ -330,7 +347,7 @@ int get_eff_online_param(u32 _uuid, char *name, void *packet)
                     memcpy(&len, &ptr[4 + 16], 4); //4byte uuid + 16byte name
                     int cp_len = hdl->len - 4 - 20;// 4byte 是减去cmd的长度, 20是 uuid reserve name 长度
                     if (cp_len > len) {
-                        log_error("=====node online param err %s %d %d=====\n", name, len, cp_len);
+                        log_debug("=====node online param err %s %d %d=====\n", name, len, cp_len);
                         cp_len = len;
                     }
                     memcpy(&ptr[20 + 4], &src[20], cp_len);
@@ -687,6 +704,10 @@ static s32 eff_online_update_base(void *packet, u32 size, u8 sq)
         if (eq_ret == EQ_SPECIAL_SEG_CMD) {
             res = ERR_NONE;
             eq_fast_update(name, eq_ret, start, end, ep->par.uuid);
+            break;
+        }
+        if (eq_ret == LOAD_TUNING_DATA_IN_SEGMENTS) {
+            res = ERR_NONE;
             break;
         }
         int eff_size = size - sizeof(ep->cmd) - sizeof(ep->par.uuid) - sizeof(ep->par.reserve) - 16;//减去cmd 减uuid 减revere 减name

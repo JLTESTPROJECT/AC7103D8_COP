@@ -37,6 +37,7 @@ void audio_virtual_bass_classic_set_bit_wide(virtual_bass_classic_hdl *hdl, u32 
 
 int audio_virtual_bass_classic_update_parm(virtual_bass_classic_hdl *hdl, virtual_bass_classic_update_param *parm);
 void audio_virtual_bass_classic_bypass(virtual_bass_classic_hdl *hdl, u8 bypass);
+void virtual_bass_classic_printf(void *p, void *name);
 
 #ifndef RUN_NORMAL
 #define RUN_NORMAL  0

@@ -16,7 +16,9 @@
 #include "effects/audio_vibrato.h"
 #include "effects/audio_harmony.h"
 #include "effects/audio_tremolo.h"
-
+#include "effects/audio_plate_reverb_echo_combined.h"
+#include "effects/audio_bass_boost_combined.h"
+#include "effects/audio_fade.h"
 
 
 struct effects_param {
@@ -46,12 +48,18 @@ struct audio_effects {
     void *tmp_buf;                 //部分算法可能需要堆的临时buf
     void *cross_fade_buf;
     void *cross_fade_param;
+    fade_hdl *fade;
     struct stream_frame *frame[2]; //带det输入算法
     struct effects_param parm;
     u16  tmpbuf_size;
     u16 cross_fade_param_len;
     u8 status;
     u8 output_frame;
+};
+struct effects_fade_parm {
+    int fade_time;
+    void *priv;
+    int (*callback)(void *fade_hdl, int status);//淡出结束时的回调函数
 };
 
 
@@ -67,6 +75,9 @@ int audio_effects_handle_frame(struct audio_effects *hdl, struct stream_iport *i
 int audio_effects_update_bypass(struct audio_effects *hdl, int bypass);
 //带det的算法
 int audio_effects_iport_handle_frame(struct audio_effects *hdl, struct stream_iport *iport, struct stream_note *note);
+
+//fade_out->update_param->fade_in
+void audio_effects_fade_update(struct audio_effects *hdl, struct effects_fade_parm *par);
 
 #define EFFECTS_RUN_NORMAL 0
 #define EFFECTS_RUN_BYPASS           BIT(0)

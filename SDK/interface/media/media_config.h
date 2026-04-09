@@ -144,7 +144,10 @@ extern const int config_audio_limiter_xfade_enable;
 extern const int config_audio_mblimiter_xfade_enable;
 extern const int virtual_surround_hp_run_points;
 extern const int config_out_dev_data_convert_enable;
-
+extern const int auido_echo_delay_ms;
+extern const int plate_reverb_combo_en;
+extern const int echo_combo_en;
+extern const int audio_bass_boost_combo_fade_time_ms;
 
 /*
  *******************************************************************

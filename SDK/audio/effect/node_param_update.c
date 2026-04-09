@@ -235,6 +235,18 @@ int reverb_advance_update_parm(u8 mode_index, char *node_name, u8 cfg_index)
     }
     return jlstream_set_node_param(NODE_UUID_PLATE_REVERB_ADVANCE, node_name, &cfg, sizeof(cfg));
 }
+
+int plate_reverb_echo_combo_update_parm(u8 mode_index, char *node_name, u8 cfg_index)
+{
+    return node_param_update_parm(NODE_UUID_PLATE_REVERB_ECHO_COMBINED, mode_index, node_name, cfg_index);
+}
+
+int bass_boost_combo_update_parm(u8 mode_index, char *node_name, u8 cfg_index)
+{
+    return node_param_update_parm(NODE_UUID_BASS_BOOST_COMBO, mode_index, node_name, cfg_index);
+}
+
+
 int spectrum_update_parm(u8 mode_index, char *node_name, u8 cfg_index)
 {
     struct spectrum_parm  cfg = {0};

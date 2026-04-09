@@ -650,3 +650,6 @@ jl_vocoder_dec_plug
 jl_vocoder_encoder_plug
 #endif
 
+#if TCFG_BASS_BOOST_COMBO_NODE_ENABLE
+bass_boost_combined_node_adapter
+#endif

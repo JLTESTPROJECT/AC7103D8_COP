@@ -1907,7 +1907,9 @@
 <Unit filename="interface/media/effects/VirtualBass_api.h" />
 <Unit filename="interface/media/effects/audio_autoduck.h" />
 <Unit filename="interface/media/effects/audio_autotune.h" />
+<Unit filename="interface/media/effects/audio_bass_boost_combined.h" />
 <Unit filename="interface/media/effects/audio_bass_treble_eq.h" />
+<Unit filename="interface/media/effects/audio_cbuf_pcm_delay.h" />
 <Unit filename="interface/media/effects/audio_chorus.h" />
 <Unit filename="interface/media/effects/audio_chorus_advance.h" />
 <Unit filename="interface/media/effects/audio_crossover.h" />
@@ -1916,6 +1918,7 @@
 <Unit filename="interface/media/effects/audio_echo.h" />
 <Unit filename="interface/media/effects/audio_effects.h" />
 <Unit filename="interface/media/effects/audio_eq.h" />
+<Unit filename="interface/media/effects/audio_fade.h" />
 <Unit filename="interface/media/effects/audio_flanger.h" />
 <Unit filename="interface/media/effects/audio_frequency_compressor.h" />
 <Unit filename="interface/media/effects/audio_frequency_shift_howling.h" />
@@ -1938,6 +1941,7 @@
 <Unit filename="interface/media/effects/audio_pitch.h" />
 <Unit filename="interface/media/effects/audio_pitchspeed.h" />
 <Unit filename="interface/media/effects/audio_plate_reverb.h" />
+<Unit filename="interface/media/effects/audio_plate_reverb_echo_combined.h" />
 <Unit filename="interface/media/effects/audio_reverb.h" />
 <Unit filename="interface/media/effects/audio_reverb_common.h" />
 <Unit filename="interface/media/effects/audio_spatial_adv.h" />

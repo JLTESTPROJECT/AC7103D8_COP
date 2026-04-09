@@ -271,6 +271,7 @@ int audio_dut_new_event_deal(void *packet)
         ret = audio_dut_common_event_deal(hdl->cmd, &reset_flag);
         //再新筛选命令
         if (ret == AUDIO_DUT_ACK_ERR_UNKNOW) {
+            ret = AUDIO_DUT_ACK_SUCCESS;	//使用新的命令解析之前，更新默认返回值
             switch (hdl->cmd) {
                 //JL自研算法指令API
 #if !TCFG_CVP_DEVELOP_ENABLE && !TCFG_AUDIO_CVP_V3_MODE
@@ -381,6 +382,7 @@ int audio_dut_new_event_deal(void *packet)
             default:
                 audio_dut_log("CMD:UNKNOW CMD!!!\n");
                 ret = AUDIO_DUT_ACK_ERR_UNKNOW;
+                break;
             }
         }
         if (last_mode != audio_dut_hdl->mode) {
