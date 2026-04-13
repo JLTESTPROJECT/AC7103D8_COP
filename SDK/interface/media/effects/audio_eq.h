@@ -456,5 +456,7 @@ int eq_seg_design(struct eq_seg_info *seg, int sample_rate, void *coeff);
 
 int audio_eq_tab_check(struct eq_seg_info *seg, u16 seg_num);
 int audio_eq_cal_hp_lp_filter_addr(struct audio_eq *eq, struct eq_seg_info *seg_tab, u8 i);
+
+void eq_tool_printf(struct eq_tool *tool);
 #endif
 

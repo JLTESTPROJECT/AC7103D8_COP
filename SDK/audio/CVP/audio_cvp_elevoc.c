@@ -21,7 +21,7 @@
 #include "overlay_code.h"
 #include "audio_config.h"
 #include "debug.h"
-#include "cvp_node.h"
+#include "cvp_develop_node.h"
 #include "sdk_config.h"
 
 #if TCFG_AUDIO_CVP_SYNC
@@ -419,18 +419,21 @@ static int audio_aec_run(s16 *in, s16 *inref, s16 *inref1, s16 *inref2, s16 *ref
 
 #if TCFG_AUDIO_DUT_ENABLE
     switch (cvp_dev->output_sel) {
-    case CVP_3MIC_OUTPUT_SEL_MASTER:
-        memcpy(out, in, (points << 1));
+    case CVP_OUTPUT_SEL_TALK_MIC:
+        memcpy(out, talk2_mic, (points << 1));     //TALK_MIC
         break;
-    case CVP_3MIC_OUTPUT_SEL_SLAVE:
+    case CVP_OUTPUT_SEL_FF_MIC:
         if (cvp_dev->mic_num > 1) {
-            memcpy(out, inref, (points << 1));
+            memcpy(out, talk1_mic, (points << 1)); //FF_MIC
         }
         break;
-    case CVP_3MIC_OUTPUT_SEL_FBMIC:
+    case CVP_OUTPUT_SEL_FB_MIC:
         if (cvp_dev->mic_num > 2) {
-            memcpy(out, inref1, (points << 1));
+            memcpy(out, talk3_mic, (points << 1)); //FB_MIC
         }
+        break;
+    case CVP_OUTPUT_SEL_VPU:
+        memcpy(out, talk4_mic, (points << 1));     //VPU
         break;
     default:
         break;
@@ -620,7 +623,7 @@ int audio_aec_open(struct audio_aec_init_param_t *init_param, s16 enablebit, int
     cvp_dev->output_fade_in_gain = 0;
 
 #if TCFG_AUDIO_DUT_ENABLE
-    cvp_dev->output_sel = CVP_3MIC_OUTPUT_SEL_DEFAULT;
+    cvp_dev->output_sel = CVP_OUTPUT_SEL_DEFAULT;
 #endif/*TCFG_AUDIO_DUT_ENABLE*/
 
 #if TCFG_AUDIO_CVP_SYNC
@@ -733,7 +736,9 @@ int audio_aec_open(struct audio_aec_init_param_t *init_param, s16 enablebit, int
     // extern void elevoc_test_fft(void);
     // elevoc_test_fft();
 #endif
-
+#if TCFG_AUDIO_DUT_ENABLE
+    audio_dut_cvp_control_check();    //产测命令控制检查
+#endif
     printf("audio_aec_open succ\n");
     return 0;
 }

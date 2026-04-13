@@ -98,6 +98,8 @@ struct dac_platform_data {
     u8 classh_mode;         // CLASSH 模式  0：蓝牙最低电压1.2v  1:蓝牙最低电压1.15v
     u8 mute_delay_time;         //开关机延时参数
     u8 mute_delay_isel;         //开关机速度参数
+    u8 ana_vol_delay_time;      //设置模拟增益单独使用的参数
+    u8 ana_vol_delay_isel;
     u8 miller_en;           // miller使能
     u8 dacvcm_sel;          // DACVCM电源选择, 0:AUDIO内部电源 1:PMU电源
     u16 dma_buf_time_ms;    // DAC dma buf 大小

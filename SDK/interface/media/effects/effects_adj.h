@@ -105,8 +105,9 @@ struct group_param {
 
 #define EFF_NODE_MERGE_UPDATE          BIT(0)
 #define EFF_MANUAL_ADJ_NODE            BIT(1)
+#define EFF_LOAD_TUNING_DATA_IN_SEGMENTS  BIT(2)  //调音数据分段填充
 
-
+#define LOAD_TUNING_DATA_IN_SEGMENTS  (0xff)
 enum {
     ERR_NONE                    = 1, //处理成功,返回"OK"
     ERR_COMM                    = 0, //通用错误,例如模块未打开,返回"ER"

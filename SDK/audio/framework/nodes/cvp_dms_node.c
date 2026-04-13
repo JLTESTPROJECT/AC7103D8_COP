@@ -253,9 +253,11 @@ struct cvp_node_hdl {
         DMS_HYBRID_CONFIG dms_hybrid;
         DMS_AWN_CONFIG dms_awn;
     } online_cfg;
+    enum stream_scene scene;
     struct stream_frame *frame[3];	//输入frame存储，算法输入缓存使用
     u8 buf_cnt;						//循环输入buffer位置
     u8 mic_swap;					//主副MIC顺序交换标志
+    u8 adc_ch_num;
     s16 buf[CVP_INPUT_SIZE];
     s16 buf_1[CVP_INPUT_SIZE];
     s16 *buf_2;
@@ -1005,14 +1007,14 @@ static void cvp_ioc_start(struct cvp_node_hdl *hdl)
             /*硬回采需要开2个MIC*/
             mic_num = 2;
         }
-        if (audio_adc_file_get_esco_mic_num() != mic_num) {
+        if (hdl->adc_ch_num != mic_num) {
 #if TCFG_AUDIO_DUT_ENABLE
             //使能产测时，只有算法模式才需判断
             if (cvp_dut_mode_get() == CVP_DUT_MODE_ALGORITHM) {
-                ASSERT(0, "CVP_DMS, ESCO MIC num is %d != %d\n", audio_adc_file_get_esco_mic_num(), mic_num);
+                ASSERT(0, "CVP_DMS, ESCO MIC num is %d != %d\n", hdl->adc_ch_num, mic_num);
             }
 #else
-            ASSERT(0, "CVP_DMS, ESCO MIC num is %d != %d\n", audio_adc_file_get_esco_mic_num(), mic_num);
+            ASSERT(0, "CVP_DMS, ESCO MIC num is %d != %d\n", hdl->adc_ch_num, mic_num);
 #endif
         }
     }
@@ -1082,6 +1084,9 @@ static int cvp_adapter_ioctl(struct stream_iport *iport, int cmd, int arg)
     case NODE_IOC_SET_FMT:
         hdl->ref_sr = (u32)arg;
         break;
+    case NODE_IOC_SET_SCENE:
+        hdl->scene = arg;
+        break;
     case NODE_IOC_START:
         cvp_ioc_start(hdl);
         break;
@@ -1095,8 +1100,10 @@ static int cvp_adapter_ioctl(struct stream_iport *iport, int cmd, int arg)
 #endif
         break;
     case NODE_IOC_SET_PRIV_FMT:
-        hdl->source_uuid = (u16)arg;
-        printf("source_uuid %x", (int)hdl->source_uuid);
+        struct cvp_param_fmt *fmt = (struct cvp_param_fmt *)arg;
+        hdl->source_uuid = fmt->source_uuid;
+        hdl->adc_ch_num = fmt->mic_num;
+        printf("source_uuid %x adc_ch_num %d", (int)hdl->source_uuid, hdl->adc_ch_num);
         break;
     }
 

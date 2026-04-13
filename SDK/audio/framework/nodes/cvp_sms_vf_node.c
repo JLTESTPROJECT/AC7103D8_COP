@@ -66,6 +66,7 @@ struct cvp_node_hdl {
     void (*unlock)(void);
     struct CVP_REF_MIC_CONFIG ref_mic;
     u8 ref_mic_num; //回采mic个数
+    u8 adc_ch_num;
 };
 
 static struct cvp_node_hdl *g_cvp_hdl;
@@ -352,7 +353,7 @@ static int cvp_adapter_bind(struct stream_node *node, u16 uuid)
 /*打开改节点输入接口*/
 static void cvp_ioc_open_iport(struct stream_iport *iport)
 {
-    iport->handle_frame = cvp_handle_frame;				//注册输出回调
+
 }
 
 /*节点参数协商*/
@@ -423,14 +424,14 @@ static void cvp_ioc_start(struct cvp_node_hdl *hdl)
             /*硬回采需要开1个MIC*/
             mic_num = 1;
         }
-        if (audio_adc_file_get_esco_mic_num() != mic_num) {
+        if (hdl->adc_ch_num != mic_num) {
 #if TCFG_AUDIO_DUT_ENABLE
             //使能产测时，只有算法模式才需判断
             if (cvp_dut_mode_get() == CVP_DUT_MODE_ALGORITHM) {
-                ASSERT(0, "CVP_SMS, ESCO MIC num is %d != %d\n", audio_adc_file_get_esco_mic_num(), mic_num);
+                ASSERT(0, "CVP_DMS, ESCO MIC num is %d != %d\n", hdl->adc_ch_num, mic_num);
             }
 #else
-            ASSERT(0, "CVP_SMS, ESCO MIC num is %d != %d\n", audio_adc_file_get_esco_mic_num(), mic_num);
+            ASSERT(0, "CVP_DMS, ESCO MIC num is %d != %d\n", hdl->adc_ch_num, mic_num);
 #endif
         }
     }
@@ -502,8 +503,10 @@ static int cvp_adapter_ioctl(struct stream_iport *iport, int cmd, int arg)
 #endif
         break;
     case NODE_IOC_SET_PRIV_FMT:
-        hdl->source_uuid = (u16)arg;
-        printf("source_uuid %x", (int)hdl->source_uuid);
+        struct cvp_param_fmt *fmt = (struct cvp_param_fmt *)arg;
+        hdl->source_uuid = fmt->source_uuid;
+        hdl->adc_ch_num = fmt->mic_num;
+        printf("source_uuid %x adc_ch_num %d", (int)hdl->source_uuid, hdl->adc_ch_num);
         break;
     }
 
@@ -527,6 +530,7 @@ REGISTER_STREAM_NODE_ADAPTER(cvp_sms_vf_node_adapter) = {
     .bind       = cvp_adapter_bind,
     .ioctl      = cvp_adapter_ioctl,
     .release    = cvp_adapter_release,
+    .handle_frame = cvp_handle_frame,				//注册输出回调
     .hdl_size   = sizeof(struct cvp_node_hdl),
     .ability_channel_convert = 1, //支持声道转换
 };

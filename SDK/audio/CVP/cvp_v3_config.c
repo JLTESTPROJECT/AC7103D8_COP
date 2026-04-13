@@ -1,4 +1,3 @@
-
 const JLSP_mic_v3_cfg_t mic_init_cfg = {
     .mic0En = 1,
     .mic1En = 1,
@@ -39,8 +38,9 @@ const JLSP_bf_v3_cfg_t bf_init_cfg = {
     .bfDrvTypeHyper = 0,
     .bfMainLobeMic = 1,
     .bfSideLobeMic = 0,
-    .supressFactor = 0.6f,
+
     .type = BF_TYPE_V2,
+    .supressFactor = 0.6f,
     .bfPost_en = 0,
     .desiredAngle = 130.f
 };
@@ -48,41 +48,47 @@ const JLSP_bf_v3_cfg_t bf_init_cfg = {
 
 const JLSP_fusion_cfg_t fusion_init_cfg = {
     .fusionFreq = 2000,
-    .dBTh1 = 1,
-    .dBTh2 = 105,
-    .type = FB_FUSION_TYPE_V5,
+    .dBTh1 = -4.0f,
+    .dBTh2 = 105.0f,
+    .dBTh3 = 86.0f,
+    .type = FB_FUSION_TYPE_V6,
 };
 
 const JLSP_aec_v3_cfg_t aec_cfg_default = {
     .aecProcessMaxFrequency = 8000,
     .aecProcessMinFrequency = 0,
-    .muf = 0.05f
+    .muf = 0.05f,
+    .aec_type = 0
 };
 
 const JLSP_nlp_v3_cfg_t nlp_cfg_default = {
     .nlpProcessMaxFrequency = 8000,
     .nlpProcessMinFrequency = 0,
     .preEnhance = 0,
-    .overDrive = 5.0f
+    .overDrive = 5.0f,
+    .overDrivePre = 0.f
 };
 
 JLSP_aec_v3_cfg_t aec_fb_cfg_default = {
     .aecProcessMaxFrequency = 2000,
     .aecProcessMinFrequency = 0,
-    .muf = 0.05f
+    .muf = 0.05f,
+    .aec_type = 0
 };
 
 const JLSP_nlp_v3_cfg_t nlp_fb_cfg_default = {
     .nlpProcessMaxFrequency = 2000,
     .nlpProcessMinFrequency = 0,
     .preEnhance = 1,
-    .overDrive = 5.0f
+    .overDrive = 5.0f,
+    .overDrivePre = 0.f
 };
 
 const JLSP_dns_v3_cfg_t dns_init_cfg = {
     .aggressFactor = 1.0f,
     .minSuppress = 0.001f,
-    .initNoiseLvl = 2.2e4f
+    .initNoiseLvl = 2.2e4f,
+    .compenDb = 0.f
 };
 
 const JLSP_wind_v3_cfg_t wn_init_cfg = {
@@ -133,11 +139,131 @@ const JLSP_dual_flex_adf_cfg_t dual_flex_adf_cfg = {
     }
 };
 
+const JLSP_doa_v3_cfg_t doa_init_cfg = {
+    .degree_start = 30.f,
+    .degree_end = 60.f,
+    .doa_low_freq = 10,
+    .doa_high_freq = 32,
+    .pwr_avg_min_th = 1.f,
+    .use_au = 0,
+};
+
+const JLSP_single_aecnlp_v3_cfg_t aecnlp_init_cfg = {
+    .enableBit = 0x03,
+    .samplerate = 16000,
+    .preGainDb = 10.f,
+};
+
+const JLSP_single_v3_cfg_t single_init_cfg = {
+
+    .enableBit = 0x14,
+    .singleWbEq = NULL,
+    .singleNbEq = NULL,
+    .samplerate = 16000,
+    .spe_att_en = 0,	// 1 for enable, else for disable.
+    .post_pro_en = 0,		// 1 for enable, else for disable.
+    .processMaxFrequency = 8000,
+    .processMinFrequency = 0,
+    .preGainDb = 0.0f,
+    .singleCompenDb = 0.0f,
+    .aggressFactor = 1.0f,
+    .minSupress = 0.001f,
+    .externalEnableBit = 0x00,
+    .aec_dump_enable = 0,
+};
+
+const JLSP_dual_bf_v3_cfg_t dual_bf_init_cfg = {
+
+    .enableBit = 0x3f,
+
+    .dualPhaseCompenVec = NULL,
+    .dualWbEqVec = NULL,
+    .dualNbEqVec = NULL,
+    .dualWnWbEqVec = NULL,
+    .dualWnNbEqVec = NULL,
+
+    .samplerate = 16000,
+    .dualPreGainDb = 18.0f,
+    .dualProcessMaxFrequency = 8000,
+    .dualProcessMinFrequency = 0,
+    .dualCompenDb = 10.0f, //18.0f, //bf增益补偿
+
+
+    .spe_att_en = 0,	// 1 for enable, else for disable.
+    .post_pro_en = 0,		// 1 for enable, else for disable.
+    .noise_est_en = 0,		// 1 for enable, else for disable.
+
+    .aggressFactor = 1.0f,
+    .minSupress = 0.001f,
+
+    .externalEnableBit = 0x00,
+    .aec_dump_enable = 0,
+};
+
+const JLSP_dual_clip_v3_cfg_t dual_clip_init_cfg = {
+
+    .enableBit = 0x1f,
+
+    .dualPhaseCompenVec = NULL,
+    .dualWbEqVec = NULL,
+    .dualNbEqVec = NULL,
+    .dualWnWbEqVec = NULL,
+    .dualWnNbEqVec = NULL,
+
+    .dualPreGainDb = 12.0f,//18.0f,
+    .dualProcessMaxFrequency = 8000,
+    .dualProcessMinFrequency = 0,
+    .samplerate = 16000,
+
+    .spe_att_en = 0,	// 1 for enable, else for disable.
+    .post_pro_en = 1,		// 1 for enable, else for disable.
+
+    .aggressFactor = 1.0f,
+    .minSupress = 0.001f,
+    .dualCompenDb = 10.0f, //10.0f,
+
+    .nlpSelectTalkOrFf = 1,
+    .externalEnableBit = 0x00,
+    .aec_dump_enable = 0,
+};
+
+
+const JLSP_dual_clipv2_v3_cfg_t dual_clip_v2_init_cfg = {
+
+    .enableBit = 0b0111111,
+    .dualPhaseCompenVec = NULL,
+    .dualWbEqVec = NULL,
+    .dualNbEqVec = NULL,
+    .dualWnWbEqVec = NULL,
+    .dualWnNbEqVec = NULL,
+
+    .dualPreGainDb = 10.0f,//18.0f,
+    .dualProcessMaxFrequency = 8000,
+    .dualProcessMinFrequency = 0,
+    .samplerate = 16000,
+
+    .spe_att_en = 0,	// 1 for enable, else for disable.
+    .post_pro_en = 1,		// 1 for enable, else for disable.
+    .noise_est_en = 0,		// 1 for enable, else for disable.
+    .low_freq_eng_det_en = 1,	// 1 for enable, else for disable.
+
+    .aggressFactor = 1.0f,
+    .minSupress = 0.001f,
+    .dualCompenDb = 12.0f, //10.0f,
+
+
+    .nlpSelectTalkOrFf = 1,
+    .externalEnableBit = 0x00,
+    .aec_dump_enable = 0,
+};
+
 JLSP_dual_flex_v3_cfg_t dual_flex_cfg = {
     .enableBit = 0b010111,//0b0010100,
 
     .dualFlexWbEqVec = NULL,
     .dualFlexNbEqVec = NULL,
+    .dualWnFlexWbEqVec = NULL,
+    .dualWnFlexNbEqVec = NULL,
     .dualFlexPhaseCompenVec = NULL,
 
     .dualFlexType = 1,
@@ -153,12 +279,7 @@ JLSP_dual_flex_v3_cfg_t dual_flex_cfg = {
     .dualCompenDb = 8.0f, //18.0f,
 
     .externalEnableBit = 0x00,
-};
-
-const JLSP_single_aecnlp_v3_cfg_t aecnlp_init_cfg = {
-    .enableBit = 0x03,
-    .samplerate = 16000,
-    .preGainDb = 10.f,
+    .aec_dump_enable = 0,
 };
 
 const JLSP_hybrid_v3_cfg_t hybrid_init_cfg = {
@@ -180,99 +301,7 @@ const JLSP_hybrid_v3_cfg_t hybrid_init_cfg = {
     .minSupress = 0.001f,
 
     .externalEnableBit = 0x00,
-};
-
-const JLSP_single_v3_cfg_t single_init_cfg = {
-
-    .enableBit = 0x14,
-    .singleWbEq = NULL,
-    .singleNbEq = NULL,
-    .samplerate = 16000,
-    .spe_att_en = 0,	// 1 for enable, else for disable.
-    .post_pro_en = 0,		// 1 for enable, else for disable.
-    .processMaxFrequency = 8000,
-    .processMinFrequency = 0,
-    .preGainDb = 0.0f,
-    .singleCompenDb = 0.0f,
-    .aggressFactor = 1.0f,
-    .minSupress = 0.001f,
-    .externalEnableBit = 0x00,
-};
-
-const JLSP_dual_bf_v3_cfg_t dual_bf_init_cfg = {
-
-    .enableBit = 0x3f,
-
-    .dualPhaseCompenVec = NULL,
-    .dualWbEqVec = NULL,
-    .dualNbEqVec = NULL,
-
-    .samplerate = 16000,
-    .dualPreGainDb = 18.0f,
-    .dualProcessMaxFrequency = 8000,
-    .dualProcessMinFrequency = 0,
-    .dualCompenDb = 10.0f, //18.0f, //bf增益补偿
-
-
-    .spe_att_en = 0,	// 1 for enable, else for disable.
-    .post_pro_en = 0,		// 1 for enable, else for disable.
-    .noise_est_en = 0,		// 1 for enable, else for disable.
-
-    .aggressFactor = 1.0f,
-    .minSupress = 0.001f,
-
-    .externalEnableBit = 0x00,
-};
-
-const JLSP_dual_clip_v3_cfg_t dual_clip_init_cfg = {
-
-    .enableBit = 0x1f,
-
-    .dualPhaseCompenVec = NULL,
-    .dualWbEqVec = NULL,
-    .dualNbEqVec = NULL,
-
-    .dualPreGainDb = 12.0f,//18.0f,
-    .dualProcessMaxFrequency = 8000,
-    .dualProcessMinFrequency = 0,
-    .samplerate = 16000,
-
-    .spe_att_en = 0,	// 1 for enable, else for disable.
-    .post_pro_en = 1,		// 1 for enable, else for disable.
-
-    .aggressFactor = 1.0f,
-    .minSupress = 0.001f,
-    .dualCompenDb = 10.0f, //10.0f,
-
-    .externalEnableBit = 0x00,
-};
-
-
-const JLSP_dual_clipv2_v3_cfg_t dual_clip_v2_init_cfg = {
-
-    .enableBit = 0b0111111,
-    // .dualPhaseCompenVec = bf_phase_factor,
-    // .dualWbEqVec = dual_wBEqFactor,
-    // .dualNbEqVec = dual_nBEqFactor,
-    .dualPhaseCompenVec = NULL,
-    .dualWbEqVec = NULL,
-    .dualNbEqVec = NULL,
-
-    .dualPreGainDb = 10.0f,//18.0f,
-    .dualProcessMaxFrequency = 8000,
-    .dualProcessMinFrequency = 0,
-    .samplerate = 16000,
-
-    .spe_att_en = 0,	// 1 for enable, else for disable.
-    .post_pro_en = 1,		// 1 for enable, else for disable.
-    .noise_est_en = 0,		// 1 for enable, else for disable.
-    .low_freq_eng_det_en = 1,	// 1 for enable, else for disable.
-
-    .aggressFactor = 1.0f,
-    .minSupress = 0.001f,
-    .dualCompenDb = 12.0f, //10.0f,
-
-    .externalEnableBit = 0x00,
+    .aec_dump_enable = 0,
 };
 
 const JLSP_tri_v3_cfg_t tri_init_cfg = {
@@ -285,8 +314,10 @@ const JLSP_tri_v3_cfg_t tri_init_cfg = {
     .triPhaseCompenVec = NULL,
     .triWbEqVec = NULL,
     .triNbEqVec = NULL,
+    .triWnWbEqVec = NULL,
+    .triWnNbEqVec = NULL,
     .triFbCompenDb = 0.0f,	//fb增益补偿
-    //.Tri_TransferMode = 0,
+
     .spe_att_en = 0,	// 1 for enable, else for disable.
     .post_pro_en = 0,		// 1 for enable, else for disable.
     .noise_est_en = 0,		// 1 for enable, else for disable.
@@ -301,5 +332,6 @@ const JLSP_tri_v3_cfg_t tri_init_cfg = {
     .minSupress = 0.001f,
 
     .externalEnableBit = 0x00,
-
+    .aec_dump_enable = 0,
+    .ref_vad_en = 1,
 };

@@ -50,6 +50,10 @@
 #include "audio_dac.h"
 #include "effects/convert_data.h"
 #include "audio_splicing.h"
+#include "esco_recoder.h"
+#include "os/os_api.h"
+#include "circular_buf.h"
+#include "esco_recoder.h"
 
 extern struct audio_adc_hdl adc_hdl;
 extern struct audio_dac_hdl dac_hdl;
@@ -67,12 +71,24 @@ struct avc_aec_hdl_t {
     u8 dac_bit_width;
     u8 ref_channel;
     u8 start;
+    u8 mode;                        //aec_mode
+#if AVC_ESCO_AEC_PROCESS_TASK
+    OS_SEM *sem;
+    cbuffer_t *cbuf;
+    u8 *cbuf_data;                  //cbuf 内存
+    u8 task_state;
+    u8 task_busy;
+#endif
 };
 struct avc_aec_hdl_t *avc_aec_hdl = NULL;
 static int audio_avc_aec_init(void *hdl);
 static int audio_avc_aec_uninit();
 static void audio_avc_aec_param_update(struct avc_param_tool_set *avc_tool_param);
+static int audio_avc_esco_aec_open();
+static int audio_avc_esco_aec_close();
 #endif
+
+static void avc_vol_offset_set(struct vol_offset_fade_handle *hdl, s8 target_offset, int fade_time_ms);
 
 //作为全局句柄，防止模块关闭后timer还存在
 struct vol_offset_fade_handle fade_hdl = { //音量淡入句柄
@@ -108,7 +124,12 @@ struct avc_hdl {
     //参数更新标志位
     u8 thr_update;
     u8 vol_update; //tws中断使用
+    u8 tws_conn;    //tws是否为连接状态
 };
+
+#if AVC_USE_AEC && TCFG_USER_TWS_ENABLE
+static void avc_esco_tws_add_check(struct avc_hdl *hdl);
+#endif
 
 static int avc_thr_table_len_get(int thr_lvl_num)
 {
@@ -117,7 +138,7 @@ static int avc_thr_table_len_get(int thr_lvl_num)
 }
 static int avc_vol_table_len_get(int thr_lvl_num, int vol_lvl_num)
 {
-    /* avc_log("avc_vol_table_len_get %d\n", (u32)(vol_lvl_num * (thr_lvl_num * sizeof(int) + 1))); */
+    /* avc_log("avc_vol_table_len_get %d\n", (u32)(vol_lvl_num * (thr_lvl_num * sizeof(s8) + 1))); */
     return (vol_lvl_num * (thr_lvl_num * sizeof(s8) + 1));
 }
 
@@ -130,11 +151,11 @@ static void avc_tool_param_get(struct avc_hdl *hdl, u8 *data_buf)
     if ((cfg->thr_lvl_num != hdl->avc_tool_param->common_param.thr_lvl_num) || \
         (cfg->vol_lvl_num != hdl->avc_tool_param->common_param.vol_lvl_num)) {
         if (hdl->avc_tool_param->table_param.thr_table) {
-            free(hdl->avc_tool_param->table_param.thr_table);
+            media_free(hdl->avc_tool_param->table_param.thr_table);
             hdl->avc_tool_param->table_param.thr_table = NULL;
         }
         if (hdl->avc_tool_param->table_param.vol_table) {
-            free(hdl->avc_tool_param->table_param.vol_table);
+            media_free(hdl->avc_tool_param->table_param.vol_table);
             hdl->avc_tool_param->table_param.vol_table = NULL;
         }
     }
@@ -154,7 +175,7 @@ static void avc_tool_param_get(struct avc_hdl *hdl, u8 *data_buf)
     }
     avc_log("avc thr_len %d\n", hdl->avc_tool_param->table_param.thr_len);
     if (!hdl->avc_tool_param->table_param.thr_table) {
-        hdl->avc_tool_param->table_param.thr_table = zalloc(hdl->avc_tool_param->table_param.thr_len);
+        hdl->avc_tool_param->table_param.thr_table = media_malloc(AUD_MODULE_AVC_COMMON, hdl->avc_tool_param->table_param.thr_len);
         ASSERT(hdl->avc_tool_param->table_param.thr_table);
     }
     memcpy(hdl->avc_tool_param->table_param.thr_table,
@@ -171,7 +192,7 @@ static void avc_tool_param_get(struct avc_hdl *hdl, u8 *data_buf)
     }
     avc_log("avc vol_len %d\n", hdl->avc_tool_param->table_param.vol_len);
     if (!hdl->avc_tool_param->table_param.vol_table) {
-        hdl->avc_tool_param->table_param.vol_table = zalloc(hdl->avc_tool_param->table_param.vol_len);
+        hdl->avc_tool_param->table_param.vol_table = media_malloc(AUD_MODULE_AVC_COMMON, hdl->avc_tool_param->table_param.vol_len);
     }
     memcpy(hdl->avc_tool_param->table_param.vol_table,
            &data_buf_table[1], hdl->avc_tool_param->table_param.vol_len);
@@ -241,6 +262,11 @@ static void avc_thr_to_lvl_sync(struct avc_hdl *hdl, int noise_thr)
 #if AVC_THR_DEBUG_ENABLE
     avc_log("avc_det-avc_thr: %d, avc_lvl: %d, cur_lvl: %d\n", noise_thr, avc_lvl + 1, hdl->lvl_sync_hdl->cur_lvl + 1);
 #endif
+
+#if AVC_USE_AEC && TCFG_USER_TWS_ENABLE
+    avc_esco_tws_add_check(hdl);
+#endif
+
     if (hdl->lvl_sync_hdl->cur_lvl == avc_lvl) {
         return;
     }
@@ -254,7 +280,12 @@ static void avc_thr_to_lvl_sync(struct avc_hdl *hdl, int noise_thr)
             /*如果在蓝牙siniff下需要退出蓝牙sniff再发送*/
             tws_api_tx_unsniff_req();
         }
+#if AVC_USE_AEC
+        if (get_tws_sibling_connect_state() && !esco_recoder_running()) {
+            //通话AVC，不走TWS档位同步流程，直接TWS同步设置音量offset
+#else
         if (get_tws_sibling_connect_state()) {
+#endif
             data[0] = AUDIO_ANC_LVL_SYNC_CMP;
             data[1] = avc_lvl;
             audio_anc_lvl_sync_info(hdl->lvl_sync_hdl, data, 4);
@@ -292,6 +323,62 @@ u8 get_vol_lvl(struct avc_hdl *hdl)
     return vol_lvl;
 }
 
+#if AVC_USE_AEC && TCFG_USER_TWS_ENABLE //以下为TWS通话AVC处理，直接同步音量偏移值
+/*
+   低8bit：target_offset
+   8-24bit：fade_time
+ */
+static void tws_avc_vol_offset_set_hdl(int priv, int err)
+{
+    avc_log("tws_avc_vol_offset_set_hdl target_offset %d, fade_time_ms %d\n", (priv & 0xFF), ((priv >> 8) & 0xFFFFFF));
+    audio_app_set_vol_offset_dB_fade_process_by_app_core(&fade_hdl, (float)(priv & 0xFF), (int)((priv >> 8) & 0xFFFFFF));
+}
+
+#define TWS_AVC_VOL_OFFSET_SET    		 TWS_FUNC_ID('A', 'V', 'C', 'O')
+TWS_SYNC_CALL_REGISTER() = {
+    .uuid = TWS_AVC_VOL_OFFSET_SET,
+    .task_name = "app_core",
+    .func = tws_avc_vol_offset_set_hdl,
+};
+
+static void tws_avc_vol_offset_set(s8 target_offset, int fade_time_ms)
+{
+    int priv = (fade_time_ms << 8) | target_offset;
+    tws_api_sync_call_by_uuid(TWS_AVC_VOL_OFFSET_SET, priv, AVC_VOL_OFFSET_TWS_SYNC_TIMEOUT);
+}
+
+//单边触发时，另一边加入，此时需要直接同步音量值
+static void avc_esco_tws_add_check(struct avc_hdl *hdl)
+{
+    if (!esco_recoder_running()) {
+        return;
+    }
+    if (!hdl->tws_conn && get_tws_sibling_connect_state()) {
+        //另一边加入，同步音量值
+        if (hdl->last_offset_dB) {
+            avc_log("tws add: sync last_vol_offset %d\n", hdl->last_offset_dB);
+            avc_vol_offset_set(&fade_hdl, hdl->last_offset_dB, 0);
+        }
+    }
+    hdl->tws_conn = get_tws_sibling_connect_state();
+}
+#endif
+
+static void avc_vol_offset_set(struct vol_offset_fade_handle *hdl, s8 target_offset, int fade_time_ms)
+{
+#if AVC_USE_AEC && TCFG_USER_TWS_ENABLE
+    if (esco_recoder_running()) {
+        //通话：由于仅主机端打开AVC，故需要同步音量offset到从机端
+        tws_avc_vol_offset_set(target_offset, fade_time_ms);
+    } else {
+        //音乐：主从机均打开AVC，走正常流程
+        audio_app_set_vol_offset_dB_fade_process_by_app_core(hdl, (float)target_offset, fade_time_ms);
+    }
+#else
+    audio_app_set_vol_offset_dB_fade_process_by_app_core(hdl, (float)target_offset, fade_time_ms);
+#endif
+}
+
 static void avc_lvl_sync_cb(void *_hdl)
 {
     struct audio_anc_lvl_sync *lvl_sync_hdl = (struct audio_anc_lvl_sync *)_hdl;
@@ -307,8 +394,8 @@ static void avc_lvl_sync_cb(void *_hdl)
     if (hdl->vol_update) {
         hdl->vol_update = 0;
         if (hdl->cur_vol_len != hdl->avc_tool_param->table_param.vol_len) {
-            free(hdl->cur_vol_table);
-            hdl->cur_vol_table = zalloc(hdl->cur_vol_len);
+            media_free(hdl->cur_vol_table);
+            hdl->cur_vol_table = media_malloc(AUD_MODULE_AVC_COMMON, hdl->cur_vol_len);
         }
         hdl->cur_vol_lvl_num = hdl->avc_tool_param->common_param.vol_lvl_num;
         hdl->cur_vol_len = hdl->avc_tool_param->table_param.vol_len;
@@ -327,9 +414,9 @@ static void avc_lvl_sync_cb(void *_hdl)
     if (lvl_sync_hdl->first_sync) {
         //单边触发后对耳加入，不需跑fade，直接设置音量offset，保证双耳音量一致
         avc_log("avc_first_sync: %d\n", vol_table[avc_lvl]);
-        audio_app_set_vol_offset_dB_fade_process_by_app_core(&fade_hdl, (float)vol_table[avc_lvl], 0);
+        avc_vol_offset_set(&fade_hdl, vol_table[avc_lvl], 0);
     } else {
-        audio_app_set_vol_offset_dB_fade_process_by_app_core(&fade_hdl, (float)vol_table[avc_lvl], hdl->cur_vol_offset_fade_time);
+        avc_vol_offset_set(&fade_hdl, vol_table[avc_lvl], hdl->cur_vol_offset_fade_time);
     }
     hdl->last_offset_dB = vol_table[avc_lvl];
 
@@ -410,7 +497,7 @@ static void avc_handle_frame(struct stream_iport *iport, struct stream_note *not
             break;
         }
 #if AVC_USE_AEC
-        if (avc_aec_hdl && !avc_aec_hdl->start) {
+        if (avc_aec_hdl && (avc_aec_hdl->mode == AVC_AEC_A2DP_MODE) && !avc_aec_hdl->start) {
             //start之后在aec_output调用
             avc_pack_frame_process(hdl, (u8 *)frame->data, &frame->offset, frame->len);
         }
@@ -464,13 +551,13 @@ static int avc_ioc_start(struct avc_hdl *hdl)
         return 0;
     }
 
-    u8 *data_buf = zalloc(info.size);
+    u8 *data_buf = media_malloc(AUD_MODULE_AVC_COMMON, info.size);
     avc_log("avc info size %d\n", info.size);
     if (data_buf) {
         jlstream_read_form_cfg_data(&info, data_buf);
-        hdl->avc_tool_param = zalloc(sizeof(struct avc_param_tool_set));
+        hdl->avc_tool_param = media_malloc(AUD_MODULE_AVC_COMMON, sizeof(struct avc_param_tool_set));
         avc_tool_param_get(hdl, data_buf);
-        free(data_buf);
+        media_free(data_buf);
     }
     avc_log("avc read stream bin\n");
     avc_param_printf(hdl->avc_tool_param);
@@ -480,7 +567,7 @@ static int avc_ioc_start(struct avc_hdl *hdl)
      */
     if (config_audio_cfg_online_enable) {
         u32 online_param_size = sizeof(struct avc_tool_common_param) + sizeof(u16) * 2 + avc_thr_table_len_get(THR_LVL_MAX_NUM) + avc_vol_table_len_get(THR_LVL_MAX_NUM, VOL_LVL_MAX_NUM);
-        u8 *online_cfg = zalloc(online_param_size);
+        u8 *online_cfg = media_malloc(AUD_MODULE_AVC_COMMON, online_param_size);
         if (online_cfg) {
             ret = jlstream_read_effects_online_param(hdl_node(hdl)->uuid, hdl->name, online_cfg, online_param_size);
             if (ret) {
@@ -488,7 +575,7 @@ static int avc_ioc_start(struct avc_hdl *hdl)
                 avc_log("avc read online cfg\n");
                 avc_param_printf(hdl->avc_tool_param);
             }
-            free(online_cfg);
+            media_free(online_cfg);
             online_cfg = NULL;
         }
     }
@@ -496,7 +583,7 @@ static int avc_ioc_start(struct avc_hdl *hdl)
     hdl->cur_vol_lvl_num = hdl->avc_tool_param->common_param.vol_lvl_num;
     hdl->cur_vol_len = hdl->avc_tool_param->table_param.vol_len;
     hdl->cur_vol_offset_fade_time = hdl->avc_tool_param->common_param.vol_offset_fade_time;
-    hdl->cur_vol_table = zalloc(hdl->cur_vol_len);
+    hdl->cur_vol_table = media_malloc(AUD_MODULE_AVC_COMMON, hdl->cur_vol_len);
     memcpy(hdl->cur_vol_table, hdl->avc_tool_param->table_param.vol_table, hdl->avc_tool_param->table_param.vol_len);
 
     //阈值检测
@@ -522,12 +609,12 @@ static int avc_ioc_start(struct avc_hdl *hdl)
 
     //拼拆包buf
     hdl->frame_len = ALGO_RUN_FRAME_LEN;
-    hdl->remain_buf = zalloc(hdl->frame_len);
+    hdl->remain_buf = media_malloc(AUD_MODULE_AVC_COMMON, hdl->frame_len);
 
 #if (AVC_ALGO_RUN_TYPE == ICSD_AVC_ALGO_RUN)
     //icsd avc
     int alloc_size = icsd_adt_avc_get_libfmt(ICSD_AVC_ALGO_TYPE);
-    hdl->lib_alloc_ptr = zalloc(alloc_size);
+    hdl->lib_alloc_ptr = media_malloc(AUD_MODULE_AVC_COMMON, alloc_size);
     icsd_adt_avc_set_infmt((int)(hdl->lib_alloc_ptr), ICSD_AVC_ALGO_TYPE);
 #if !ICSD_AVC_ALGO_TYPE
     memset(hdl->dac_data, 0, 256);
@@ -538,7 +625,12 @@ static int avc_ioc_start(struct avc_hdl *hdl)
     audio_avc_aec_init((void *)hdl);
     if (a2dp_player_runing()) {
         audio_avc_aec_open();
+    } else if (esco_recoder_running()) {
+        audio_avc_esco_aec_open();
     }
+#endif
+#if TCFG_USER_TWS_ENABLE
+    hdl->tws_conn = get_tws_sibling_connect_state();
 #endif
     return 0;
 }
@@ -556,37 +648,41 @@ static int avc_ioc_stop(struct avc_hdl *hdl)
     }
     if (hdl->avc_tool_param) {
         if (hdl->avc_tool_param->table_param.thr_table) {
-            free(hdl->avc_tool_param->table_param.thr_table);
+            media_free(hdl->avc_tool_param->table_param.thr_table);
             hdl->avc_tool_param->table_param.thr_table = NULL;
         }
         if (hdl->avc_tool_param->table_param.vol_table) {
-            free(hdl->avc_tool_param->table_param.vol_table);
+            media_free(hdl->avc_tool_param->table_param.vol_table);
             hdl->avc_tool_param->table_param.vol_table = NULL;
         }
-        free(hdl->avc_tool_param);
+        media_free(hdl->avc_tool_param);
         hdl->avc_tool_param = NULL;
     }
     if (hdl->cur_vol_table) {
-        free(hdl->cur_vol_table);
+        media_free(hdl->cur_vol_table);
         hdl->cur_vol_table = NULL;
     }
     if (hdl->remain_buf) {
-        free(hdl->remain_buf);
+        media_free(hdl->remain_buf);
         hdl->remain_buf = NULL;
     }
 
 #if (AVC_ALGO_RUN_TYPE == ICSD_AVC_ALGO_RUN)
     if (hdl->lib_alloc_ptr) {
-        free(hdl->lib_alloc_ptr);
+        media_free(hdl->lib_alloc_ptr);
         hdl->lib_alloc_ptr = NULL;
     }
 #endif
 
     //模块关闭，恢复音量
-    audio_app_set_vol_offset_dB_fade_process_by_app_core(&fade_hdl, 0.0f, hdl->cur_vol_offset_fade_time);
+    avc_vol_offset_set(&fade_hdl, 0, hdl->cur_vol_offset_fade_time);
 
 #if AVC_USE_AEC
-    audio_avc_aec_close();
+    if (avc_aec_hdl->mode == AVC_AEC_A2DP_MODE) {
+        audio_avc_aec_close();
+    } else if (avc_aec_hdl->mode == AVC_AEC_ESCO_MODE) {
+        audio_avc_esco_aec_close();
+    }
     audio_avc_aec_uninit();
 #endif
 
@@ -658,7 +754,7 @@ int audio_avc_aec_data_fill(s16 *data, u16 len)
         return 0;
     }
     if (len != (256 * (avc_aec_hdl->adc_bit_width ? 4 : 2))) {
-        printf("avc_aec adc_data_len err");
+        avc_log("avc_aec adc_data_len err");
         return 0;
     }
 
@@ -673,7 +769,7 @@ int audio_avc_aec_data_fill(s16 *data, u16 len)
     int dac_read_len = avc_aec_hdl->ref_tmpbuf_len;
     int wlen = audio_dac_read(0, avc_aec_hdl->ref_tmpbuf, dac_read_len, avc_aec_hdl->ref_channel);
     if (wlen != dac_read_len) {
-        printf("avc_aec dac_read err %d, %d\n", wlen, dac_read_len);
+        avc_log("avc_aec dac_read err %d, %d\n", wlen, dac_read_len);
         if (TCFG_AUDIO_SMS_SEL == SMS_TDE) {
             audio_cvp_sms_tde_unlock();
         } else {
@@ -716,31 +812,45 @@ int audio_avc_aec_open()
     if (!avc_aec_hdl) {
         return -1;
     }
+    avc_aec_hdl->mode = AVC_AEC_A2DP_MODE;
+    struct avc_hdl *hdl = avc_aec_hdl->node_hdl;
+    if (!hdl || !hdl->avc_tool_param) {
+        return -1;
+    }
     avc_aec_hdl->adc_bit_width = adc_hdl.bit_width;
     avc_aec_hdl->dac_bit_width = dac_hdl.pd->bit_width;
     //dac回采
     avc_aec_hdl->ref_channel = AUDIO_CH_NUM(TCFG_AUDIO_DAC_CONNECT_MODE);
     avc_aec_hdl->ref_tmpbuf_len = AUDIO_ADC_IRQ_POINTS * (avc_aec_hdl->dac_bit_width ? 4 : 2) *
                                   avc_aec_hdl->ref_channel * (TCFG_AUDIO_GLOBAL_SAMPLE_RATE / AVC_ADC_SAMPLE_RATE);
-    avc_aec_hdl->ref_tmpbuf = zalloc(avc_aec_hdl->ref_tmpbuf_len);
+    avc_aec_hdl->ref_tmpbuf = media_malloc(AUD_MODULE_AVC_AEC, avc_aec_hdl->ref_tmpbuf_len);
     //adc缓存
     avc_aec_hdl->frame_points = AUDIO_ADC_IRQ_POINTS;
     avc_aec_hdl->input_buf_points = avc_aec_hdl->frame_points * 3;
     avc_aec_hdl->buf_cnt = 0;
-    avc_aec_hdl->buf = zalloc(avc_aec_hdl->input_buf_points * (avc_aec_hdl->adc_bit_width ? 4 : 2));
-    printf("avc adc buf len %d\n", avc_aec_hdl->input_buf_points * (avc_aec_hdl->adc_bit_width ? 4 : 2));
+    avc_aec_hdl->buf = media_malloc(AUD_MODULE_AVC_AEC, avc_aec_hdl->input_buf_points * (avc_aec_hdl->adc_bit_width ? 4 : 2));
+    avc_log("avc adc buf len %d\n", avc_aec_hdl->input_buf_points * (avc_aec_hdl->adc_bit_width ? 4 : 2));
 
     struct audio_aec_init_param_t init_param = {
         .sample_rate = AVC_ADC_SAMPLE_RATE,
         .ref_sr = TCFG_AUDIO_GLOBAL_SAMPLE_RATE,
         .ref_channel = 1, //外部传入已做二变一，节省内部buf
     };
+    struct aec_param algo_param = {
+        .aec_dt_aggress = hdl->avc_tool_param->common_param.aec_dt_aggress,
+        .aec_refengthr = hdl->avc_tool_param->common_param.aec_refengthr,
+        .es_aggress_factor = hdl->avc_tool_param->common_param.es_aggress_factor,
+        .es_min_suppress = hdl->avc_tool_param->common_param.es_min_suppress,
+    };
     audio_avc_aec_param_printf(avc_aec_hdl);
-    acoustic_echo_cancel_init(&init_param, (AEC_EN | NLP_EN), audio_avc_aec_output_hdl);
-    struct avc_hdl *hdl = avc_aec_hdl->node_hdl;
-    if (hdl && hdl->avc_tool_param) {
-        audio_avc_aec_param_update(hdl->avc_tool_param);
+    s16 aec_enable_bit = 0;
+    if (hdl->avc_tool_param->common_param.aec_en) {
+        aec_enable_bit |= AEC_EN;
     }
+    if (hdl->avc_tool_param->common_param.nlp_en) {
+        aec_enable_bit |= NLP_EN;
+    }
+    acoustic_echo_cancel_init(&init_param, aec_enable_bit, audio_avc_aec_output_hdl, &algo_param);
     audio_dac_read_reset();
     clock_alloc("avc_aec", AVC_AEC_CLOCK);
     avc_aec_hdl->start = 1;
@@ -754,11 +864,11 @@ int audio_avc_aec_close()
     avc_aec_hdl->start = 0;
     acoustic_echo_cancel_close();
     if (avc_aec_hdl->ref_tmpbuf) {
-        free(avc_aec_hdl->ref_tmpbuf);
+        media_free(avc_aec_hdl->ref_tmpbuf);
         avc_aec_hdl->ref_tmpbuf = NULL;
     }
     if (avc_aec_hdl->buf) {
-        free(avc_aec_hdl->buf);
+        media_free(avc_aec_hdl->buf);
         avc_aec_hdl->buf = NULL;
     }
     clock_free("avc_aec");
@@ -771,7 +881,7 @@ int audio_avc_aec_init(void *hdl)
         avc_log("avc aec already open\n");
         return -1;
     }
-    avc_aec_hdl = zalloc(sizeof(struct avc_aec_hdl_t));
+    avc_aec_hdl = media_malloc(AUD_MODULE_AVC_AEC, sizeof(struct avc_aec_hdl_t));
     ASSERT(avc_aec_hdl);
     avc_aec_hdl->node_hdl = hdl;
     avc_aec_hdl->start = 0;
@@ -782,9 +892,87 @@ int audio_avc_aec_uninit()
 {
     if (avc_aec_hdl) {
         avc_aec_hdl->node_hdl = NULL;
-        free(avc_aec_hdl);
+        media_free(avc_aec_hdl);
         avc_aec_hdl = NULL;
     }
+    return 0;
+}
+
+void audio_avc_esco_aec_run(s16 *data, u16 len)
+{
+#if AVC_ESCO_AEC_PROCESS_TASK
+    cbuf_write(avc_aec_hdl->cbuf, data, len);
+    os_sem_post(avc_aec_hdl->sem);
+#else
+    audio_avc_aec_output_hdl(data, len);
+#endif
+}
+
+#if AVC_ESCO_AEC_PROCESS_TASK
+static void audio_avc_esco_aec_process_task(void *priv)
+{
+    while (1) {
+        os_sem_pend(avc_aec_hdl->sem, 0);
+        if (!avc_aec_hdl->task_state) {
+            continue;
+        }
+        avc_aec_hdl->task_busy = 1;
+        s16 *data = media_malloc(AUD_MODULE_AVC_AEC, ALGO_RUN_FRAME_LEN);
+        cbuf_read(avc_aec_hdl->cbuf, data, ALGO_RUN_FRAME_LEN);
+        audio_avc_aec_output_hdl(data, ALGO_RUN_FRAME_LEN);
+        media_free(data);
+        avc_aec_hdl->task_busy = 0;
+    }
+}
+#endif
+
+static int audio_avc_esco_aec_open()
+{
+    if (!avc_aec_hdl) {
+        return -1;
+    }
+    avc_aec_hdl->mode = AVC_AEC_ESCO_MODE;
+#if AVC_ESCO_AEC_PROCESS_TASK
+    avc_aec_hdl->task_state = 1;
+    avc_aec_hdl->task_busy = 0;
+    avc_aec_hdl->sem = media_malloc(AUD_MODULE_AVC_AEC, sizeof(OS_SEM));
+    os_sem_create(avc_aec_hdl->sem, 0);
+    avc_aec_hdl->cbuf = media_malloc(AUD_MODULE_AVC_AEC, sizeof(cbuffer_t));
+    avc_aec_hdl->cbuf_data = media_malloc(AUD_MODULE_AVC_AEC, ALGO_RUN_FRAME_LEN * AVC_ESCO_AEC_PROCESS_BUF_NUM);
+    cbuf_init(avc_aec_hdl->cbuf, avc_aec_hdl->cbuf_data, ALGO_RUN_FRAME_LEN * AVC_ESCO_AEC_PROCESS_BUF_NUM);
+    int err = task_create(audio_avc_esco_aec_process_task, NULL, AVC_ESCO_AEC_PROCESS_TASK_NAME);
+    if (err != OS_NO_ERR) {
+        ASSERT(0, "audio_avc_esco_aec_process_task create err!!! %x\n", err);
+    }
+#endif
+    return 0;
+}
+
+static int audio_avc_esco_aec_close()
+{
+    if (!avc_aec_hdl) {
+        return -1;
+    }
+#if AVC_ESCO_AEC_PROCESS_TASK
+    avc_aec_hdl->task_state = 0;
+    while (avc_aec_hdl->task_busy) {
+        os_time_dly(1);
+    }
+    task_kill(AVC_ESCO_AEC_PROCESS_TASK_NAME);
+    if (avc_aec_hdl->sem) {
+        os_sem_del(avc_aec_hdl->sem, 0);
+        media_free(avc_aec_hdl->sem);
+        avc_aec_hdl->sem = NULL;
+    }
+    if (avc_aec_hdl->cbuf_data) {
+        media_free(avc_aec_hdl->cbuf_data);
+        avc_aec_hdl->cbuf_data = NULL;
+    }
+    if (avc_aec_hdl->cbuf) {
+        media_free(avc_aec_hdl->cbuf);
+        avc_aec_hdl->cbuf = NULL;
+    }
+#endif
     return 0;
 }
 

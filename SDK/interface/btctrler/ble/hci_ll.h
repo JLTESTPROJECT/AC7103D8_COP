@@ -622,6 +622,20 @@ typedef struct {
     uint8_t         Response_Slot_Spacing;
 } _GNU_PACKED_ le_prd_adv_sync_trans_evt_t;
 
+typedef struct {
+    uint16_t Connection_Handle;
+    uint8_t high_threshold;
+    uint8_t high_hysteresis;
+    uint8_t low_threshold;
+    uint8_t low_hysteresis;
+    uint16_t min_time_spent; //unit ms
+} le_set_path_loss_param_t;
+
+typedef struct {
+    uint16_t Connection_Handle;
+    uint8_t enable;
+} le_set_path_loss_enable_t;
+
 //Adjust Host part API
 void ll_hci_init(void);
 
@@ -740,6 +754,8 @@ void ll_hci_setup_iso_data_path(uint8_t *data, size_t size);
 void ll_hci_read_iso_tx_sync(uint8_t *data, size_t size);
 void ll_hci_terminate_big(uint8_t *data, size_t size);
 int ll_read_iso_tx_sync(u16 handle, u16 *pPsn, u32 *pTime_stamp, u32 *pTime_offset);
+void ll_hci_set_path_loss_param(uint8_t *data, size_t size);
+void ll_hci_set_path_loss_enable(uint8_t *data, size_t size);
 
 int le_controller_set_mac(void *addr);
 void hci_add_event_handler(void *callback_handler);

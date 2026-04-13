@@ -180,6 +180,8 @@ const struct node_name node_name_list[] = {
     { NODE_UUID_VIRTUAL_SURROUND_HP, "virtual_surround_hp" },
     { NODE_UUID_UPMIX_2TO5, "upmix_2to5" },
     { NODE_UUID_AVC, "avc" },
+    { NODE_UUID_BASS_BOOST_COMBO, "bass_boost_combo"},
+    { NODE_UUID_PLATE_REVERB_ECHO_COMBINED, "preverb_echo_combo"},
 };
 
 

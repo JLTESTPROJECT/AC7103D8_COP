@@ -89,7 +89,7 @@ enum {
 };
 
 u8 cig_support_ce = 0; //cis音频加密功能，需要dongle同步开启，1开启、0关闭
-#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_UNICAST_SINK_EN)) && TCFG_USER_TWS_ENABLE)
+#if ((TCFG_LE_AUDIO_APP_CONFIG & (LE_AUDIO_JL_UNICAST_SINK_EN | LE_AUDIO_UNICAST_SINK_EN)) && TCFG_USER_TWS_ENABLE)
 u8 tws_witch_cis_power_check()
 {
     return 1;  //开启jl_unicast tws省功耗策略

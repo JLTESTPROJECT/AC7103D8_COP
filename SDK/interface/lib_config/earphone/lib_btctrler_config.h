@@ -13,7 +13,7 @@ extern const int CONFIG_LMP_CONNECTION_LIMIT_NUM ;
 extern const int CONFIG_DISTURB_SCAN_ENABLE ;
 extern const int CONFIG_TWS_PURE_MONITOR_MODE ;
 extern const int CONFIG_TWS_AUDIO_SHARE_ENABLE  ;
-extern const int CONFIG_TWS_FORWARD_TIMES ;
+extern const int CONFIG_TWS_FORWARD_TIMES_NEW ;
 extern const int CONFIG_TWS_RUN_SLOT_MAX ;
 extern const int CONFIG_TWS_RUN_SLOT_AT_A2DP_FORWARD ;
 extern const int CONFIG_TWS_RUN_SLOT_AT_LOW_LATENCY ;

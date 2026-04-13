@@ -22,6 +22,7 @@
 #include "overlay_code.h"
 #include "adc_file.h"
 #include "cvp_node.h"
+#include "cvp_develop_node.h"
 #include "esco_recoder.h"
 #if TCFG_AUDIO_ANC_ENABLE
 #include "audio_anc.h"
@@ -46,7 +47,7 @@
 extern struct adc_platform_data adc_data;
 extern struct audio_dac_hdl dac_hdl;
 extern struct audio_adc_hdl adc_hdl;
-extern const u16 audio_cvp_uuid_table[10];
+extern const u16 audio_cvp_uuid_table[12];
 extern void clock_refurbish(void);
 
 #define MIC_BUF_NUM        	3
@@ -67,6 +68,9 @@ typedef struct {
     u8 dump_cnt;
     u8 monitor;
     u8 mic_num;	//当前MIC个数
+#if TCFG_AUDIO_CVP_DEVELOP_ENABLE
+    u8 dev_mic_id[CVP_DEV_MAX_MIC_NUM];
+#endif
     u16 mic_id[AUDIO_ENC_MPT_MIC_NUM];
     u16 dut_mic_ch;
     struct audio_adc_output_hdl adc_output;
@@ -77,21 +81,21 @@ typedef struct {
 static audio_cvp_t *cvp_hdl = NULL;
 
 /*	写卡使能控制, 需注意一下几点
-	1、需打开 AUDIO_PCM_DEBUG
+	1、需打开 AUDIO_DATA_EXPORT_VIA_UART
 	2、AEC原本的写卡流程需关闭
 	3、测试流程需包含CVP_OUT测试, 因为写卡只能在线程写
 */
 #define	AUDIO_ENC_MPT_UART_DEBUG_EN		0
 #define AUDIO_ENC_MPT_UART_DEBUG_CH		3						//写卡通道数
-#define AUDIO_ENC_MPT_UART_DEBUG_LEN	MIC_IRQ_POINTS * 2 		//写卡长度
+//写卡长度
+#define AUDIO_ENC_MPT_UART_DEBUG_LEN	(MIC_IRQ_POINTS * 2 + 20) * AUDIO_ENC_MPT_UART_DEBUG_CH
 
-#ifdef AUDIO_PCM_DEBUG
-extern int aec_uart_init();
-extern int aec_uart_open(u8 nch, u16 single_size);
-extern int aec_uart_fill(u8 ch, void *buf, u16 size);
-extern void aec_uart_write(void);
-extern int aec_uart_close(void);
-#endif/*AUDIO_PCM_DEBUG*/
+#if ((defined TCFG_AUDIO_DATA_EXPORT_DEFINE) && (TCFG_AUDIO_DATA_EXPORT_DEFINE == AUDIO_DATA_EXPORT_VIA_UART))
+#include "aec_uart_debug.h"
+#else
+#undef AUDIO_ENC_MPT_UART_DEBUG_EN
+#define AUDIO_ENC_MPT_UART_DEBUG_EN     0
+#endif
 
 static u16 audio_enc_mpt_cvp_uuid_get(void);
 
@@ -133,10 +137,13 @@ static void audio_enc_mpt_fre_pre(u16 mic_ch)
     if (mic_ch & (AUDIO_ENC_MPT_CVP_OUT | AUDIO_ENC_MPT_TALK_MIC)) {
     }
     //测试算法或者TALK 副MIC
-    if (mic_ch & (AUDIO_ENC_MPT_CVP_OUT | AUDIO_ENC_MPT_SLAVE_MIC)) {
+    if (mic_ch & (AUDIO_ENC_MPT_CVP_OUT | AUDIO_ENC_MPT_TALK_FF_MIC)) {
     }
     //测试算法或者TALK FBMIC
     if (mic_ch & (AUDIO_ENC_MPT_CVP_OUT | AUDIO_ENC_MPT_TALK_FB_MIC)) {
+    }
+    //测试算法或者VPU
+    if (mic_ch & (AUDIO_ENC_MPT_CVP_OUT | AUDIO_ENC_MPT_TALK_VPU)) {
     }
     //测试TWS FFMIC or 头戴式LFF MIC
     if (mic_ch & AUDIO_ENC_MPT_FF_MIC) {
@@ -170,6 +177,7 @@ static void mic_output(void *priv, s16 *data, int len)
         return;
     }
 
+    //printf("[%5d],[%5d],[%5d],[%5d]", data[0], data[1], data[2], data[3]);
     mic_data[0] = data;
     //printf("mic_data:%x,%x,%d\n",data,mic1_data_pos,len);
     if (cvp_hdl->mic_num > 1) {
@@ -183,10 +191,83 @@ static void mic_output(void *priv, s16 *data, int len)
         }
     }
 
+
+#if TCFG_AUDIO_CVP_V3_MODE	//CVP_V3算法
+    u32 algo_type = cvp_get_algo_type();
+    audio_cvp_lock();
     for (i = 0; i < cvp_hdl->mic_num; i++) {
-#if AUDIO_ENC_MPT_UART_DEBUG_EN && (defined AUDIO_PCM_DEBUG)
+#if AUDIO_ENC_MPT_UART_DEBUG_EN
         if (cvp_hdl->dut_mic_ch & AUDIO_ENC_MPT_CVP_OUT) {
-            aec_uart_fill(i, mic_data[i], 512);
+            aec_uart_fill_v2(i, mic_data[i], 512);
+        }
+#endif/*AUDIO_ENC_MPT_UART_DEBUG_EN*/
+        audio_enc_mpt_fre_response_inbuf(cvp_hdl->mic_id[i], mic_data[i], len);
+        if (cvp_hdl->dut_mic_ch & AUDIO_ENC_MPT_CVP_OUT) {
+#if CVP_V3_3MIC_ALGO_ENABLE
+            if (algo_type & CVP_V3_3MIC_MASK) {
+                if (cvp_hdl->mic_id[i] & AUDIO_ENC_MPT_TALK_FB_MIC) {
+                    audio_cvp_v3_fb_mic_push(mic_data[i], len);
+                    continue;
+                }
+            }
+#endif
+#if CVP_V3_2MIC_ALGO_ENABLE || CVP_V3_3MIC_ALGO_ENABLE
+            if (algo_type & (CVP_V3_2MIC_MASK | CVP_V3_3MIC_MASK)) {
+                if (cvp_hdl->mic_id[i] & AUDIO_ENC_MPT_TALK_FF_MIC) {
+                    audio_cvp_v3_ff_mic_push(mic_data[i], len);
+                    continue;
+                }
+            }
+#endif
+            if (cvp_hdl->mic_id[i] & AUDIO_ENC_MPT_TALK_MIC) {
+                talk_id_cnt = i;
+                /* audio_aec_inbuf(mic_data[i], len); */
+                continue;
+            }
+        }
+    }
+    //主麦数据输入触发AEC线程，最后处理
+    if (talk_id_cnt != 0xff) {	//表示有算法主麦输入
+        //cvp 参考数据
+        audio_cvp_phase_align();
+
+        audio_cvp_v3_talk_mic_push(mic_data[talk_id_cnt], len);
+    }
+    audio_cvp_unlock();
+
+#elif TCFG_AUDIO_CVP_DEVELOP_ENABLE	/*第三方算法通道映射*/
+    u8 *dev_mic_id = cvp_hdl->dev_mic_id;
+    for (i = 0; i < cvp_hdl->mic_num; i++) {
+#if AUDIO_ENC_MPT_UART_DEBUG_EN
+        if (cvp_hdl->dut_mic_ch & AUDIO_ENC_MPT_CVP_OUT) {
+            aec_uart_fill_v2(i, mic_data[i], 512);
+        }
+#endif/*AUDIO_ENC_MPT_UART_DEBUG_EN*/
+        audio_enc_mpt_fre_response_inbuf(cvp_hdl->mic_id[i], mic_data[i], len);
+    }
+
+    if (cvp_hdl->dut_mic_ch & AUDIO_ENC_MPT_CVP_OUT) {
+        if (dev_mic_id[1] != 0xff) {
+            audio_aec_inbuf_ref(mic_data[dev_mic_id[1]], len);
+        }
+        if (dev_mic_id[2] != 0xff) {
+            audio_aec_inbuf_ref_1(mic_data[dev_mic_id[2]], len);
+        }
+        if (dev_mic_id[3] != 0xff) {
+            audio_aec_inbuf_ref_2(mic_data[dev_mic_id[3]], len);
+        }
+        if (dev_mic_id[0] != 0xff) {
+            audio_cvp_phase_align();
+            audio_aec_inbuf(mic_data[dev_mic_id[0]], len);
+        }
+    }
+
+#else	//普通单/双/三MIC算法
+
+    for (i = 0; i < cvp_hdl->mic_num; i++) {
+#if AUDIO_ENC_MPT_UART_DEBUG_EN
+        if (cvp_hdl->dut_mic_ch & AUDIO_ENC_MPT_CVP_OUT) {
+            aec_uart_fill_v2(i, mic_data[i], 512);
         }
 #endif/*AUDIO_ENC_MPT_UART_DEBUG_EN*/
         audio_enc_mpt_fre_response_inbuf(cvp_hdl->mic_id[i], mic_data[i], len);
@@ -198,7 +279,7 @@ static void mic_output(void *priv, s16 *data, int len)
             }
 #endif/*TCFG_AUDIO_TRIPLE_MIC_ENABLE*/
 #if TCFG_AUDIO_DUAL_MIC_ENABLE || TCFG_AUDIO_TRIPLE_MIC_ENABLE
-            if (cvp_hdl->mic_id[i] & AUDIO_ENC_MPT_SLAVE_MIC) {
+            if (cvp_hdl->mic_id[i] & AUDIO_ENC_MPT_TALK_FF_MIC) {
                 audio_aec_inbuf_ref(mic_data[i], len);
                 continue;
             }
@@ -218,6 +299,7 @@ static void mic_output(void *priv, s16 *data, int len)
 
         audio_aec_inbuf(mic_data[talk_id_cnt], len);
     }
+#endif
 
 #if CVP_MONITOR_SEL != CVP_MONITOR_DIS
     if (cvp_hdl->monitor == CVP_MONITOR_PROBE) {
@@ -268,7 +350,45 @@ static u8 bit_convert_to_num(int bit)
     return num;
 }
 
-static const u16 call_mic_id[2] = {AUDIO_ENC_MPT_TALK_MIC, AUDIO_ENC_MPT_SLAVE_MIC};
+#if TCFG_AUDIO_CVP_DEVELOP_ENABLE
+//第三方通话算法MIC排序, 严格按照TALK / FF / FB / VPU 排序对应MIC，方便中断执行对应inbuf()
+static void cvp_dev_mic_id_sort(u8 *mic_en)
+{
+    int i = 0;
+    u8 mic_cnt = 0;
+    //赋值0xff, 用于检查MIC是否启动
+    memset(cvp_hdl->dev_mic_id, 0xff, sizeof(cvp_hdl->dev_mic_id));
+    if (cvp_hdl->dut_mic_ch & AUDIO_ENC_MPT_CVP_OUT) {
+        for (i = 0; i < cvp_hdl->mic_num; i++) {
+            if (cvp_hdl->mic_id[i] & AUDIO_ENC_MPT_TALK_MIC) {
+                cvp_hdl->dev_mic_id[mic_cnt++] = i;
+            }
+        }
+        for (i = 0; i < cvp_hdl->mic_num; i++) {
+            if (cvp_hdl->mic_id[i] & AUDIO_ENC_MPT_TALK_FF_MIC) {
+                cvp_hdl->dev_mic_id[mic_cnt++] = i;
+                break;
+            }
+        }
+        for (i = 0; i < cvp_hdl->mic_num; i++) {
+            if (cvp_hdl->mic_id[i] & AUDIO_ENC_MPT_TALK_FB_MIC) {
+                cvp_hdl->dev_mic_id[mic_cnt++] = i;
+                break;
+            }
+        }
+        for (i = 0; i < cvp_hdl->mic_num; i++) {
+            if (cvp_hdl->mic_id[i] & AUDIO_ENC_MPT_TALK_VPU) {
+                cvp_hdl->dev_mic_id[mic_cnt++] = i;
+                break;
+            }
+        }
+    }
+    printf("cvp_dev_mic_id_sort %d\n", (int)sizeof(cvp_hdl->dev_mic_id));
+    put_buf(cvp_hdl->dev_mic_id, sizeof(cvp_hdl->dev_mic_id));
+}
+#endif
+
+static const u16 call_mic_id[2] = {AUDIO_ENC_MPT_TALK_MIC, AUDIO_ENC_MPT_TALK_FF_MIC};
 static int mic_open(u8 *mic_gain, int sr)
 {
     int i, j, index;
@@ -288,8 +408,9 @@ static int mic_open(u8 *mic_gain, int sr)
 
     cvp_hdl->dump_cnt = 0;
     //1.测试CVP的输出 or 通话MIC相关 MIC输出
-    if (cvp_hdl->dut_mic_ch & (AUDIO_ENC_MPT_CVP_OUT | AUDIO_ENC_MPT_TALK_MIC | \
-                               AUDIO_ENC_MPT_SLAVE_MIC | AUDIO_ENC_MPT_TALK_FB_MIC)) {
+    if (cvp_hdl->dut_mic_ch & (AUDIO_ENC_MPT_CVP_OUT   | AUDIO_ENC_MPT_TALK_MIC    | \
+                               AUDIO_ENC_MPT_TALK_FF_MIC | AUDIO_ENC_MPT_TALK_FB_MIC | \
+                               AUDIO_ENC_MPT_TALK_VPU)) {
 
         for (index = 0; index < AUDIO_ENC_MPT_MIC_NUM; index++) {
             if (mic_ch & BIT(index)) {
@@ -299,38 +420,61 @@ static int mic_open(u8 *mic_gain, int sr)
         }
 
         //1.1 确定主MIC/副MIC/FB MIC
-#if TCFG_AUDIO_DUAL_MIC_ENABLE	//双麦通道映射
-        cvp_param_cfg_read();
+#if TCFG_AUDIO_CVP_V3_MODE	        /*CVP_V3算法*/
+        u32 algo_type = cvp_get_algo_type();
+        dut_cvp_log("algo_type 0x%x\n", algo_type);
+
+        u8 talk_mic = cvp_v3_get_talk_mic_ch();
+        mic_id_tmp[bit_convert_to_num(talk_mic)] = AUDIO_ENC_MPT_TALK_MIC;
+        dut_cvp_log("talk_mic %d", talk_mic);
+
+        if (algo_type & (CVP_V3_2MIC_MASK | CVP_V3_3MIC_MASK)) {
+            u8 talk_ref_mic = cvp_v3_get_talk_ref_mic_ch();
+            mic_id_tmp[bit_convert_to_num(talk_ref_mic)] = AUDIO_ENC_MPT_TALK_FF_MIC;
+            dut_cvp_log("talk_ref_mic %d", talk_ref_mic);
+        }
+        if (algo_type & CVP_V3_3MIC_MASK) {
+            u8 talk_fb_mic = cvp_v3_get_talk_fb_mic_ch();
+            mic_id_tmp[bit_convert_to_num(talk_fb_mic)] = AUDIO_ENC_MPT_TALK_FB_MIC;
+            dut_cvp_log("talk_fb_mic %d", talk_fb_mic);
+        }
+
+#elif TCFG_AUDIO_DUAL_MIC_ENABLE	/*双麦通道映射*/
         u8 talk_mic = cvp_get_talk_mic_ch();
         u8 talk_ref_mic = cvp_get_talk_ref_mic_ch();
         dut_cvp_log("talk_mic %d, talk_ref_mic %d", talk_mic, talk_ref_mic);
         mic_id_tmp[bit_convert_to_num(talk_mic)] = AUDIO_ENC_MPT_TALK_MIC;
-        mic_id_tmp[bit_convert_to_num(talk_ref_mic)] = AUDIO_ENC_MPT_SLAVE_MIC;
-#elif TCFG_AUDIO_TRIPLE_MIC_ENABLE	//3麦通道映射
-        cvp_param_cfg_read();
+        mic_id_tmp[bit_convert_to_num(talk_ref_mic)] = AUDIO_ENC_MPT_TALK_FF_MIC;
+
+#elif TCFG_AUDIO_TRIPLE_MIC_ENABLE	/*3麦通道映射*/
         u8 talk_mic = cvp_get_talk_mic_ch();
         u8 talk_ref_mic = cvp_get_talk_ref_mic_ch();
         u8 talk_fb_mic = cvp_get_talk_fb_mic_ch();
         dut_cvp_log("talk_mic %d, talk_ref_mic %d, talk_fb_mic %d", talk_mic, talk_ref_mic, talk_fb_mic);
         mic_id_tmp[bit_convert_to_num(talk_mic)] = AUDIO_ENC_MPT_TALK_MIC;
-        mic_id_tmp[bit_convert_to_num(talk_ref_mic)] = AUDIO_ENC_MPT_SLAVE_MIC;
+        mic_id_tmp[bit_convert_to_num(talk_ref_mic)] = AUDIO_ENC_MPT_TALK_FF_MIC;
         mic_id_tmp[bit_convert_to_num(talk_fb_mic)] = AUDIO_ENC_MPT_TALK_FB_MIC;
 
-#elif TCFG_AUDIO_CVP_DEVELOP_ENABLE	//第三方算法通道映射
-        u8 talk_mic = cvp_get_talk_mic_ch();
-        u8 talk_ref_mic = cvp_get_talk_ref_mic_ch();
-        u8 talk_fb_mic = cvp_get_talk_fb_mic_ch();
-        dut_cvp_log("talk_mic %d, talk_ref_mic %d, talk_fb_mic %d", talk_mic, talk_ref_mic, talk_fb_mic);
-        if (talk_mic) {
-            mic_id_tmp[bit_convert_to_num(talk_mic)] = AUDIO_ENC_MPT_TALK_MIC;
+#elif TCFG_AUDIO_CVP_DEVELOP_ENABLE	/*第三方算法通道映射*/
+        struct cvp_dev_cfg_t *cfg = cvp_dev_cfg_get();
+        mic_id_tmp[bit_convert_to_num(cfg->talk_mic)] = AUDIO_ENC_MPT_TALK_MIC;
+        if (audio_adc_file_get_esco_mic_num() != cfg->mic_num) {
+            ASSERT(0, "CVP_develop ESCO MIC num is %d != %d\n", audio_adc_file_get_esco_mic_num(), cfg->mic_num);
         }
-        if (talk_ref_mic) {
-            mic_id_tmp[bit_convert_to_num(talk_ref_mic)] = AUDIO_ENC_MPT_SLAVE_MIC;
+        if (cfg->vpu_en) {
+            ASSERT(CVP_DEV_IS_VPU_ADC_MODE(cfg->vpu_ch_sel), " Self-test only supports ADC mode, %d", cfg->vpu_ch_sel);
+            mic_id_tmp[bit_convert_to_num(cfg->vpu_ch_sel)] = AUDIO_ENC_MPT_TALK_VPU;
         }
-        if (talk_fb_mic) {
-            mic_id_tmp[bit_convert_to_num(talk_fb_mic)] = AUDIO_ENC_MPT_TALK_FB_MIC;
+        if (cfg->mic_type & CVP_DEV_TALK_MIC_CH) {
+            mic_id_tmp[bit_convert_to_num(cfg->talk_mic)] = AUDIO_ENC_MPT_TALK_MIC;
         }
-#else
+        if (cfg->mic_type & CVP_DEV_FF_MIC_CH) {
+            mic_id_tmp[bit_convert_to_num(cfg->talk_ff_mic)] = AUDIO_ENC_MPT_TALK_FF_MIC;
+        }
+        if (cfg->mic_type & CVP_DEV_FB_MIC_CH) {
+            mic_id_tmp[bit_convert_to_num(cfg->talk_fb_mic)] = AUDIO_ENC_MPT_TALK_FB_MIC;
+        }
+#elif TCFG_AUDIO_SINGLE_MIC_ENABLE
         for (i = 0; i < AUDIO_ENC_MPT_MIC_NUM; i++) {
             if ((mic_ch >> i) & 0x01) {
                 mic_id_tmp[i] = AUDIO_ENC_MPT_TALK_MIC;
@@ -409,6 +553,10 @@ static int mic_open(u8 *mic_gain, int sr)
         adc_hdl.buf_fixed = 0;
 #endif
 
+#if TCFG_AUDIO_CVP_DEVELOP_ENABLE
+        cvp_dev_mic_id_sort(mic_en);
+#endif
+
         audio_adc_mic_set_sample_rate(&cvp_hdl->mic_ch, sr);
         audio_adc_mic_set_buffs(&cvp_hdl->mic_ch, cvp_hdl->mic_buf, MIC_IRQ_POINTS * 2, MIC_BUF_NUM);
 
@@ -418,7 +566,7 @@ static int mic_open(u8 *mic_gain, int sr)
     }
     dut_cvp_log("mic_open succ mic_num %d\n", cvp_hdl->mic_num);
     for (i = 0; i < AUDIO_ENC_MPT_MIC_NUM; i++) {
-        dut_cvp_log("mic%d_id 0x%x, en %d, gain %d\n", i, cvp_hdl->mic_id[i], mic_en[i], mic_gain[i]);
+        dut_cvp_log("DIG mic%d_id 0x%3x; ANA mic%d_en %d, gain %d\n", i, cvp_hdl->mic_id[i], i, mic_en[i], mic_gain[i]);
     }
     return 0;
 }
@@ -446,10 +594,10 @@ static int cvp_output_hdl(s16 *data, u16 len)
     /* putchar('o'); */
 
     audio_enc_mpt_fre_response_inbuf(AUDIO_ENC_MPT_CVP_OUT, data, len);
-#if AUDIO_ENC_MPT_UART_DEBUG_EN && (defined AUDIO_PCM_DEBUG)
+#if AUDIO_ENC_MPT_UART_DEBUG_EN
     if (cvp_hdl->dut_mic_ch & AUDIO_ENC_MPT_CVP_OUT) {
-        aec_uart_fill(2, data, 512);
-        aec_uart_write();
+        aec_uart_fill_v2(2, data, 512);
+        aec_uart_write_v2();
     }
 #endif/*AUDIO_ENC_MPT_UART_DEBUG_EN*/
 #if !AUDIO_ENC_MPT_FRERES_ASYNC
@@ -467,9 +615,9 @@ static int cvp_output_hdl(s16 *data, u16 len)
 int audio_enc_mpt_cvp_close(void)
 {
     if (cvp_hdl != NULL) {
-#if AUDIO_ENC_MPT_UART_DEBUG_EN && (defined AUDIO_PCM_DEBUG)
+#if AUDIO_ENC_MPT_UART_DEBUG_EN
         if (cvp_hdl->dut_mic_ch & AUDIO_ENC_MPT_CVP_OUT) {
-            aec_uart_close();
+            aec_uart_close_v2();
         }
 #endif/*AUDIO_ENC_MPT_UART_DEBUG_EN*/
 #if CVP_MONITOR_SEL != CVP_MONITOR_DIS
@@ -478,7 +626,11 @@ int audio_enc_mpt_cvp_close(void)
         }
 #endif/* CVP_MONITOR_SEL != CVP_MONITOR_DIS*/
         if (cvp_hdl->dut_mic_ch & AUDIO_ENC_MPT_CVP_OUT) {
+#if TCFG_AUDIO_CVP_V3_MODE	//CVP_V3算法
+            audio_cvp_v3_close();
+#else
             audio_aec_close();
+#endif
         }
         //先关AEC再关MIC
         mic_close();
@@ -492,16 +644,15 @@ int audio_enc_mpt_cvp_close(void)
 int audio_enc_mpt_cvp_open(u16 mic_ch)
 {
     int ret = 0;
-    u16 uuid = 0;
     u8 mic_gain[AUDIO_ENC_MPT_MIC_NUM];
     if (cvp_hdl) {
         //支持重入
         audio_enc_mpt_cvp_close();
         dut_cvp_log("dut_cvp start again\n");
     }
-#if AUDIO_ENC_MPT_UART_DEBUG_EN && (defined AUDIO_PCM_DEBUG)
+#if AUDIO_ENC_MPT_UART_DEBUG_EN
     if (mic_ch & AUDIO_ENC_MPT_CVP_OUT) {
-        aec_uart_open(AUDIO_ENC_MPT_UART_DEBUG_CH, AUDIO_ENC_MPT_UART_DEBUG_LEN);
+        aec_uart_open_v2(AUDIO_ENC_MPT_UART_DEBUG_CH, AUDIO_ENC_MPT_UART_DEBUG_LEN);
     }
 #endif/*AUDIO_ENC_MPT_UART_DEBUG_EN*/
     dut_cvp_log("cvp_hdl open, mic_ch %x\n", mic_ch);
@@ -521,15 +672,27 @@ int audio_enc_mpt_cvp_open(u16 mic_ch)
         init_param.sample_rate = CVP_MIC_SR;
         init_param.ref_sr = 0;
         //获取ADC(esco_adc)节点后的算法节点UUID
-        uuid = audio_enc_mpt_cvp_uuid_get();
-        if (!uuid) {
+        init_param.node_uuid = audio_enc_mpt_cvp_uuid_get();
+        if (!init_param.node_uuid) {
             ret = -1;
             goto __exit;
         }
-        cvp_node_context_setup(uuid);
+        dut_cvp_log("init_param.node_uuid 0x%x\n", init_param.node_uuid);
+        cvp_node_context_setup(init_param.node_uuid);
+        cvp_param_cfg_read();
 
+#if TCFG_AUDIO_CVP_V3_MODE	//CVP_V3算法
+        audio_cvp_v3_open(&init_param, -1, cvp_output_hdl);
+#elif TCFG_AUDIO_CVP_DEVELOP_ENABLE
+        struct cvp_dev_cfg_t *cfg = cvp_dev_cfg_get();
+        init_param.mic_num = cfg->mic_num;
+        init_param.algo_type = cfg->algo_type;
         audio_aec_open(&init_param, -1, cvp_output_hdl);
-#if 1//TCFG_AUDIO_CVP_NS_MODE == CVP_DNS_MODE
+#else
+        audio_aec_open(&init_param, -1, cvp_output_hdl);
+#endif
+        //以下算法暂不支持此API
+#if !TCFG_CVP_DEVELOP_ENABLE && !TCFG_AUDIO_CVP_V3_MODE
         //默认关闭DNS
         audio_cvp_ioctl(CVP_NS_SWITCH, 0, NULL); //关闭降噪
         audio_cvp_ioctl(CVP_WNC_SWITCH, 0, NULL); //关风噪检测
@@ -543,9 +706,9 @@ int audio_enc_mpt_cvp_open(u16 mic_ch)
     return ret;
 
 __exit:
-#if AUDIO_ENC_MPT_UART_DEBUG_EN && (defined AUDIO_PCM_DEBUG)
+#if AUDIO_ENC_MPT_UART_DEBUG_EN
     if (cvp_hdl->dut_mic_ch & AUDIO_ENC_MPT_CVP_OUT) {
-        aec_uart_close();
+        aec_uart_close_v2();
     }
 #endif
 #if CVP_MONITOR_SEL != CVP_MONITOR_DIS
@@ -604,6 +767,7 @@ REGISTER_LP_TARGET(audio_enc_mpt_lp_target) = {
     .is_idle = audio_cvp_idle_query,
 };
 
+#if AUDIO_ENC_MPT_DEBUG_DEMO
 //测试func
 void audio_enc_mpt_cvp_key_test()
 {
@@ -614,7 +778,11 @@ void audio_enc_mpt_cvp_key_test()
     mem_stats();
     switch (cnt) {
     case 0:
-        mic_ch |= AUDIO_ENC_MPT_CH_TWS_CVP_ENC;
+        mic_ch |= AUDIO_ENC_MPT_CVP_OUT;
+        mic_ch |= AUDIO_ENC_MPT_TALK_MIC;
+        /* mic_ch |= AUDIO_ENC_MPT_TALK_FF_MIC; */
+        /* mic_ch |= AUDIO_ENC_MPT_TALK_FB_MIC; */
+        /* mic_ch |= AUDIO_ENC_MPT_TALK_VPU; */
         /* mic_ch |= AUDIO_ENC_MPT_FF_MIC; */
         /* mic_ch |= AUDIO_ENC_MPT_FB_MIC; */
         /* mic_ch |= AUDIO_ENC_MPT_RFF_MIC; */
@@ -637,5 +805,6 @@ void audio_enc_mpt_cvp_key_test()
         cnt = 0;
     }
 }
+#endif
 
 #endif/*AUDIO_ENC_MPT_SELF_ENABLE*/

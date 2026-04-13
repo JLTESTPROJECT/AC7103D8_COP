@@ -99,3 +99,80 @@ int aud_clock_free(char *name)
     return clock_free(name);
 
 }
+
+u16 audio_ana_vol_dynamic_switch_init(u16 *gain_table, int table_size)
+{
+    if (JL_SYSTEM->CHIP_VER <= 0xA2) {
+        //@BR56 ver.A/B/C
+        return AVOL_SET_LVL;
+    }
+    //@BR56 ver.D
+    if (!gain_table) {
+        return 0;
+    }
+    u16 ana_vol_save = 0;
+    u16 avol_set_lvl = 0;
+    for (u8 i = 1; i <= table_size; i++) {
+        //检索需要切换为模拟音量的档位
+        if (ana_vol_save && (ana_vol_save == gain_table[i])) {
+            avol_set_lvl = i;
+            printf("avol_dinamic_switch_init: avol_set_lvl %d\n", avol_set_lvl);
+            break;
+        }
+        ana_vol_save = gain_table[i];
+    }
+    if (!ana_vol_save) {
+        printf("avol_dinamic_switch_init_fail\n");
+    }
+    return avol_set_lvl;
+}
+
+/*
+ * cur_vol:当前设置的音量
+ * avol_set_lvl:达到该档位时需要切换模拟音量
+ */
+void audio_ana_vol_dynamic_switch_set(u16 cur_vol, u16 avol_set_lvl)
+{
+#if defined(ANA_VOL_DYNAMIC_SWITCH) && ANA_VOL_DYNAMIC_SWITCH
+    if (avol_set_lvl) {
+        float dB_value = DEFAULT_DIGITAL_VOLUME;
+#if ((TCFG_AUDIO_ANC_ENABLE) && (defined ANC_MODE_DIG_VOL_LIMIT))
+        dB_value = (dB_value > ANC_MODE_DIG_VOL_LIMIT) ? ANC_MODE_DIG_VOL_LIMIT : dB_value;
+#endif/*TCFG_AUDIO_ANC_ENABLE*/
+
+        u16 dvol_full_max = dac_dvol_max_query();
+        u16 dvol_max = (u16)(dvol_full_max * dB_Convert_Mag(dB_value));
+
+        //以下为 @BR56 系列模拟/数字增益配置
+        u16 dvol_set = dvol_max;                          //0dB
+        u16 avol_set = 3;                                 //0dB
+        if (cur_vol <= avol_set_lvl) {
+            //需要切换模拟音量
+            dvol_set = dvol_max * dB_Convert_Mag(6.0f);   //+6dB
+            dvol_set = (dvol_set > ((1 << 15) - 1)) ? ((1 << 15) - 1) : dvol_set;  //防止超过寄存器16bit有符号数表达范围
+            if (JL_SYSTEM->CHIP_VER <= 0xA2) {
+                //ver.A/B/C
+                avol_set = 2;                             //-6dB
+            } else {
+                //ver.D
+                avol_set = 1;                             //-9dB
+            }
+        }
+
+        printf("avol_dinamic_sw avol_set %d, dvol_set %d\n", avol_set, dvol_set);
+        if ((dvol_set != audio_dac_ch_digital_gain_get(&dac_hdl, BIT(0))) || \
+            (dvol_set != audio_dac_ch_digital_gain_get(&dac_hdl, BIT(1)))) {
+            //防止重复设置
+            printf("avol_dinamic_sw dvol_set suss\n");
+            audio_dac_set_digital_vol(&dac_hdl, dvol_set);
+            app_audio_volume_dvol_set(dvol_set);//更新app_volume_mixer中保存的值
+        }
+        if ((avol_set != audio_dac_ch_analog_gain_get(BIT(0))) || \
+            (avol_set != audio_dac_ch_analog_gain_get(BIT(1)))) {
+            printf("avol_dinamic_sw avol_set suss\n");
+            audio_dac_set_analog_vol(&dac_hdl, avol_set);
+            app_audio_volume_avol_set(avol_set, avol_set); //更新app_volume_mixer中保存的值
+        }
+    }
+#endif
+}

@@ -42,6 +42,9 @@ struct volume_hdl {
     u16 *vol_table;
     dvol_handle *dvol_hdl;          //音量操作句柄
     struct volume_cfg vol_cfg;
+#if defined(ANA_VOL_DYNAMIC_SWITCH) && ANA_VOL_DYNAMIC_SWITCH
+    u16 avol_set_lvl;               //该音量档位开始切换模拟
+#endif
 };
 
 __NODE_CACHE_CODE(volume)
@@ -139,6 +142,10 @@ static void volume_ioc_start(struct volume_hdl *hdl)
         free(online_vol_cfg);
     }
 
+#if defined(ANA_VOL_DYNAMIC_SWITCH) && ANA_VOL_DYNAMIC_SWITCH
+    hdl->avol_set_lvl = audio_ana_vol_dynamic_switch_init(hdl->vol_table, hdl->vol_cfg.cfg_level_max);
+#endif
+
     switch (hdl->scene) {
 #if TCFG_TONE_NODE_ENABLE
     case STREAM_SCENE_TONE:
@@ -193,6 +200,9 @@ static void volume_ioc_start(struct volume_hdl *hdl)
     }
 
     params.vol        = app_audio_get_volume(hdl->state);
+#if defined(ANA_VOL_DYNAMIC_SWITCH) && ANA_VOL_DYNAMIC_SWITCH
+    audio_ana_vol_dynamic_switch_set(params.vol, hdl->avol_set_lvl);
+#endif
     params.vol_max    = vol_cfg->cfg_level_max;
     params.min_db     = vol_cfg->cfg_vol_min;
     params.max_db     = vol_cfg->cfg_vol_max;
@@ -340,6 +350,9 @@ static int volume_ioc_update_parm(struct volume_hdl *hdl, int parm)
                 }
             }
 #endif
+#if defined(ANA_VOL_DYNAMIC_SWITCH) && ANA_VOL_DYNAMIC_SWITCH
+            audio_ana_vol_dynamic_switch_set(volume, hdl->avol_set_lvl);
+#endif
             audio_digital_vol_set(hdl->dvol_hdl, volume);
             log_debug("SET VOL volume update success : %d\n", volume);
             ret = true;
@@ -373,6 +386,9 @@ static int volume_ioc_update_parm(struct volume_hdl *hdl, int parm)
             audio_digital_vol_db_2_gain(vol_cfg->vol_table, hdl->vol_cfg.cfg_level_max,
                                         hdl->vol_table);
         }
+#endif
+#if defined(ANA_VOL_DYNAMIC_SWITCH) && ANA_VOL_DYNAMIC_SWITCH
+        audio_ana_vol_dynamic_switch_set(vol_cfg->cur_vol, hdl->avol_set_lvl);
 #endif
         audio_digital_vol_set(hdl->dvol_hdl, vol_cfg->cur_vol);
         if ((hdl->scene != STREAM_SCENE_MIC_EFFECT) &&

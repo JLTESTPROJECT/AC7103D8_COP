@@ -37,6 +37,7 @@ static u32 spk_eq_tab_size = 0;
 static struct eq_seg_info *spk_eq_tab = NULL;//按实际声道数做申请,只申请,不做释放
 static u8 spk_eq_read_from_ram = 0;
 static float spk_eq_global_gain[2];
+static char spk_eq_name[][16] = {"spk_eq", "SpeakerEQ1", "SpeakerEQ2", "SpeakerEQ3", "SpeakerEQ4", "SpeakerEQ5"}; //如果存在多个spk_eq节点,需在此添加名字
 
 static void spk_eq_tab_init()
 {
@@ -74,7 +75,14 @@ void spk_eq_seg_update(struct eq_seg_info *seg)
     sparm.type  = UPDATE_SPK_EQ_SEG;
     sparm.left_right = 0;
     memcpy(&sparm.seg, seg, sizeof(struct eq_seg_info));
-    int ret = jlstream_set_node_param(NODE_UUID_SPEAKER_EQ, "spk_eq", &sparm, sizeof(sparm));
+    int ret;
+    for (int i = 0; i < ARRAY_SIZE(spk_eq_name); i++) {
+        ret = jlstream_set_node_param(NODE_UUID_SPEAKER_EQ, spk_eq_name[i], &sparm, sizeof(sparm));
+        if (ret != true) {
+            continue;
+        }
+        break;
+    }
     if (ret <= 0) {
         struct eq_seg_info *tar_seg = (struct eq_seg_info *)spk_eq_tab;
         memcpy(&tar_seg[sparm.seg.index], &sparm.seg, sizeof(struct eq_seg_info));
@@ -101,7 +109,14 @@ void spk_eq_seg_update_R(struct eq_seg_info *seg)
     sparm.type  = UPDATE_SPK_EQ_SEG;
     sparm.left_right = 1;
     memcpy(&sparm.seg, seg, sizeof(struct eq_seg_info));
-    int ret = jlstream_set_node_param(NODE_UUID_SPEAKER_EQ, "spk_eq", &sparm, sizeof(sparm));
+    int ret;
+    for (int i = 0; i < ARRAY_SIZE(spk_eq_name); i++) {
+        ret = jlstream_set_node_param(NODE_UUID_SPEAKER_EQ, spk_eq_name[i], &sparm, sizeof(sparm));
+        if (ret != true) {
+            continue;
+        }
+        break;
+    }
     if (ret <= 0) {
         struct eq_seg_info *tar_seg = (struct eq_seg_info *)&spk_eq_tab[SPK_EQ_NSECTION];
         memcpy(&tar_seg[sparm.seg.index], &sparm.seg, sizeof(struct eq_seg_info));
@@ -117,8 +132,14 @@ void spk_eq_global_gain_udapte(float global_gain)
     gparm.type = UPDATE_SPK_EQ_GLOBAL_GAIN;
     gparm.left_right = 0;
     gparm.global_gain = global_gain;
-    printf("dbug 1\n");
-    int ret = jlstream_set_node_param(NODE_UUID_SPEAKER_EQ, "spk_eq", &gparm, sizeof(gparm));
+    int ret;
+    for (int i = 0; i < ARRAY_SIZE(spk_eq_name); i++) {
+        ret = jlstream_set_node_param(NODE_UUID_SPEAKER_EQ, spk_eq_name[i], &gparm, sizeof(gparm));
+        if (ret != true) {
+            continue;
+        }
+        break;
+    }
     spk_eq_global_gain[gparm.left_right] = gparm.global_gain;
 }
 /*
@@ -131,7 +152,14 @@ void spk_eq_global_gain_udapte_R(float global_gain)
     gparm.type = UPDATE_SPK_EQ_GLOBAL_GAIN;
     gparm.left_right = 1;
     gparm.global_gain = global_gain;
-    int ret = jlstream_set_node_param(NODE_UUID_SPEAKER_EQ, "spk_eq", &gparm, sizeof(gparm));
+    int ret;
+    for (int i = 0; i < ARRAY_SIZE(spk_eq_name); i++) {
+        ret = jlstream_set_node_param(NODE_UUID_SPEAKER_EQ, spk_eq_name[i], &gparm, sizeof(gparm));
+        if (ret != true) {
+            continue;
+        }
+        break;
+    }
     spk_eq_global_gain[gparm.left_right] = gparm.global_gain;
 }
 
@@ -141,7 +169,14 @@ int spk_eq_save_to_vm(void)
     int ret_tmp = 0;
     struct spk_eq_get_seg_tab seg_tab = {0};
     seg_tab.type = GET_SPK_EQ_SEG_TAB;//获取系数表
-    int ret = jlstream_get_node_param(NODE_UUID_SPEAKER_EQ, "spk_eq", (void *)&seg_tab, sizeof(seg_tab));
+    int ret;
+    for (int i = 0; i < ARRAY_SIZE(spk_eq_name); i++) {
+        ret = jlstream_get_node_param(NODE_UUID_SPEAKER_EQ, spk_eq_name[i], (void *)&seg_tab, sizeof(seg_tab));
+        if (ret <= 0) {
+            continue;
+        }
+        break;
+    }
     if (ret <= 0) {
         seg_tab.seg = (struct eq_seg_info *)spk_eq_tab;
         seg_tab.tab_size = spk_eq_tab_size;
@@ -155,7 +190,13 @@ int spk_eq_save_to_vm(void)
 
     struct spk_eq_get_global_gain g_gain = {0};
     g_gain.type = GET_SPK_EQ_GLOBAL_GAIN;//获取总增益
-    ret = jlstream_get_node_param(NODE_UUID_SPEAKER_EQ, "spk_eq", (void *)&g_gain, sizeof(g_gain));
+    for (int i = 0; i < ARRAY_SIZE(spk_eq_name); i++) {
+        ret = jlstream_get_node_param(NODE_UUID_SPEAKER_EQ, spk_eq_name[i], (void *)&g_gain, sizeof(g_gain));
+        if (ret <= 0) {
+            continue;
+        }
+        break;
+    }
     if (ret <= 0) {
         memcpy(g_gain.global_gain, spk_eq_global_gain, sizeof(spk_eq_global_gain));
     }

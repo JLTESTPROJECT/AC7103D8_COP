@@ -27,7 +27,7 @@
 #include "circular_buf.h"
 #include "overlay_code.h"
 #include "audio_config.h"
-#include "cvp_node.h"
+#include "cvp_develop_node.h"
 #include "sdk_config.h"
 
 #if TCFG_AUDIO_CVP_SYNC
@@ -325,20 +325,51 @@ static int audio_aec_run(s16 *in, s16 *inref, s16 *inref1, s16 *inref2, s16 *ref
     //memcpy(out, inref, (points << 1));
     out_size = points << 1;
 
+    s16 *talk_mic[4];
+    struct cvp_dev_cfg_t *cfg = cvp_dev_cfg_get();
+    talk_mic[0] = in;
+    if (cfg->vpu_en) {
+        if (cvp_dev->mic_num == 2) {
+            talk_mic[3] = inref;	//VPU
+        } else if (cvp_dev->mic_num == 3) {
+            talk_mic[1] = inref;	//FF
+            talk_mic[3] = inref1;	//VPU
+        } else if (cvp_dev->mic_num == 4) {
+            talk_mic[1] = inref;	//FF
+            talk_mic[2] = inref1;	//FB
+            talk_mic[3] = inref2;	//VPU
+        }
+    } else {
+        if (cvp_dev->mic_num == 2) {
+            talk_mic[1] = inref;	//VPU
+        } else if (cvp_dev->mic_num == 3) {
+            talk_mic[1] = inref;	//FF
+            talk_mic[2] = inref1;	//VPU
+        } else if (cvp_dev->mic_num == 4) {
+            talk_mic[1] = inref;	//FF
+            talk_mic[2] = inref1;	//FB
+            talk_mic[3] = inref2;	//VPU
+        }
+    }
+
 #if TCFG_AUDIO_DUT_ENABLE
     switch (cvp_dev->output_sel) {
-    case CVP_3MIC_OUTPUT_SEL_MASTER:
-        memcpy(out, in, (points << 1));
+    case CVP_OUTPUT_SEL_TALK_MIC:
+        memcpy(out, talk_mic[0], (points << 1));         //TALK_MIC
         break;
-    case CVP_3MIC_OUTPUT_SEL_SLAVE:
+    case CVP_OUTPUT_SEL_FF_MIC:
         if (cvp_dev->mic_num > 1) {
-            memcpy(out, inref, (points << 1));
+            memcpy(out, talk_mic[1], (points << 1));  //FF_MIC
         }
         break;
-    case CVP_3MIC_OUTPUT_SEL_FBMIC:
+    case CVP_OUTPUT_SEL_FB_MIC:
         if (cvp_dev->mic_num > 2) {
-            memcpy(out, inref1, (points << 1));
+            memcpy(out, talk_mic[2], (points << 1)); //FB_MIC
         }
+        break;
+    case CVP_OUTPUT_SEL_VPU:
+        //默认inref2， 若改动需选择VPU硬件对应数据通道输出
+        memcpy(out, talk_mic[3], (points << 1));     //VPU
         break;
     default:
         break;
@@ -526,7 +557,7 @@ int audio_aec_open(struct audio_aec_init_param_t *init_param, s16 enablebit, int
     cvp_dev->output_fade_in_gain = 0;
 
 #if TCFG_AUDIO_DUT_ENABLE
-    cvp_dev->output_sel = CVP_3MIC_OUTPUT_SEL_DEFAULT;
+    cvp_dev->output_sel = CVP_OUTPUT_SEL_DEFAULT;
 #endif/*TCFG_AUDIO_DUT_ENABLE*/
 
 #if TCFG_AUDIO_CVP_SYNC
@@ -621,6 +652,9 @@ int audio_aec_open(struct audio_aec_init_param_t *init_param, s16 enablebit, int
     }
     cvp_dev->start = 1;
 
+#if TCFG_AUDIO_DUT_ENABLE
+    audio_dut_cvp_control_check();    //产测命令控制检查
+#endif
     mem_stats();
 #if	0
     cvp_dev->free_ram = malloc(1024 * 63);

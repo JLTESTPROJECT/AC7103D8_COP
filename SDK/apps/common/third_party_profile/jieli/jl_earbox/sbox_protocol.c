@@ -528,7 +528,7 @@ static int sbox_tws_connction_status_event_handler(int *msg)
 }
 
 APP_MSG_HANDLER(sbox_tws_msg_handler) = {
-    .owner      = APP_MODE_BT,
+    .owner      = 0xff,
     .from       = MSG_FROM_TWS,
     .handler    = sbox_tws_connction_status_event_handler,
 };

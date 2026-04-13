@@ -653,6 +653,10 @@ bool platform_get_device_name(char *device_name)
     }
     local_name = bt_get_local_name();
     local_name_len = strlen(device_name);
+    if (local_name_len > 31) {
+        local_name_len = 31;
+    }
+    memset(device_name, 0, 32);
     memcpy(device_name, local_name, local_name_len);
     return true;
 }

@@ -39,7 +39,7 @@
 #include "spp_user.h"
 #include "audio_anc_includes.h"
 #if TCFG_AUDIO_DUT_ENABLE
-//#include "audio_dut_control.h"
+#include "audio_dut_control.h"
 #endif/*TCFG_AUDIO_DUT_ENABLE*/
 
 #if !defined(TCFG_CVP_DEVELOP_ENABLE) || (TCFG_CVP_DEVELOP_ENABLE == 0)
@@ -527,7 +527,7 @@ static void audio_aec_param_init(struct tms_attr *p, u16 node_uuid)
 
         p->adc_ref_en = 0;
 
-        p->output_sel = DMS_OUTPUT_SEL_DEFAULT;
+        p->output_sel = CVP_OUTPUT_SEL_DEFAULT;
 
         /*检测时间*/
         p->detect_time = 1.0f;            // in second
@@ -626,9 +626,12 @@ int audio_aec_open(struct audio_aec_init_param_t *init_param, s16 enablebit, int
     aec_param->aec_probe = audio_aec_probe;
     aec_param->aec_post = audio_aec_post;
     aec_param->output_handle = audio_aec_output;
-
     if (ref_sr) {
-        aec_param->ref_sr  = ref_sr;
+        if (aec_param->adc_ref_en) {
+            aec_param->ref_sr  = sample_rate; // 硬回采参考数据采样率ref_sr和ADC采样率sample_rate保持一致
+        } else {
+            aec_param->ref_sr  = ref_sr;	  // 软回采
+        }
     } else {
         aec_param->ref_sr  = usb_mic_is_running();
     }
@@ -714,6 +717,9 @@ int audio_aec_open(struct audio_aec_init_param_t *init_param, s16 enablebit, int
     ASSERT(ret == 0, "cvp-3mic open err %d!!", ret);
 #endif
     cvp_tms->start = 1;
+#if TCFG_AUDIO_DUT_ENABLE
+    audio_dut_cvp_control_check();    //产测命令控制检查
+#endif
     mem_stats();
     printf("audio_tms_open succ\n");
     return 0;
@@ -768,10 +774,10 @@ void audio_aec_reboot(u8 reduce)
 *********************************************************************
 *                  Audio AEC Output Select
 * Description: 输出选择
-* Arguments  : sel = DMS_OUTPUT_SEL_DEFAULT 默认输出算法处理结果
-*				   = DMS_OUTPUT_SEL_MASTER	输出主mic(通话mic)的原始数据
-*				   = DMS_OUTPUT_SEL_SLAVE	输出副mic(降噪mic)的原始数据
-*				   = DMS_OUTPUT_SEL_FBMIC	输出FBmic(降噪mic)的原始数据
+* Arguments  : sel = CVP_OUTPUT_SEL_DEFAULT 默认输出算法处理结果
+*				   = CVP_OUTPUT_SEL_TALK_MIC	输出主mic(通话mic)的原始数据
+*				   = CVP_OUTPUT_SEL_FF_MIC	输出副mic(降噪mic)的原始数据
+*				   = CVP_OUTPUT_SEL_FB_MIC	输出FBmic(降噪mic)的原始数据
 *			   agc 输出数据要不要经过agc自动增益控制模块
 * Return	 : None.
 * Note(s)    : 可以通过选择不同的输出，来测试mic的频响和ENC指标

@@ -359,7 +359,7 @@ void set_dual_conn_config(u8 *addr, u8 dual_conn_en)
 #if TCFG_USER_TWS_ENABLE
     tws_sync_dual_conn_info();
 #endif
-    bt_set_user_ctrl_conn_num((get_bt_dual_config() == DUAL_CONN_CLOSE) ? 1 : 2);
+    bt_set_user_ctrl_conn_num((get_bt_dual_config() == DUAL_CONN_SET_ONE) ? 1 : 2);
     bt_set_auto_conn_device_num((get_bt_dual_config() == DUAL_CONN_SET_TWO) ? 2 : 1);
     syscfg_write(CFG_TWS_DUAL_CONFIG, &(g_bt_hdl.bt_dual_conn_config), 1);
     log_info("set_dual_conn_config=%d\n", g_bt_hdl.bt_dual_conn_config);
@@ -405,7 +405,7 @@ void bt_function_select_init()
     support_set_conn_num = 3;
 #endif
 #else
-    g_bt_hdl.bt_dual_conn_config = DUAL_CONN_CLOSE;
+    g_bt_hdl.bt_dual_conn_config = DUAL_CONN_SET_ONE;
 #endif
     log_info("<<<<<<<<<<<<<<bt_dual_conn_config=%d>>>>>>>>>>\n", g_bt_hdl.bt_dual_conn_config);
     if (g_bt_hdl.bt_dual_conn_config != DUAL_CONN_SET_TWO) {
@@ -423,8 +423,8 @@ void bt_function_select_init()
     log_info("app_auracast en");
     g_bt_hdl.bt_dual_conn_config = DUAL_CONN_SET_ONE;
 #endif
-    bt_set_user_ctrl_conn_num((get_bt_dual_config() == DUAL_CONN_CLOSE) ? 1 : support_set_conn_num);
-    set_lmp_support_dual_con((get_bt_dual_config() == DUAL_CONN_CLOSE) ? 1 : support_set_conn_num);
+    bt_set_user_ctrl_conn_num((get_bt_dual_config() == DUAL_CONN_SET_ONE) ? 1 : support_set_conn_num);
+    set_lmp_support_dual_con((get_bt_dual_config() == DUAL_CONN_SET_ONE) ? 1 : support_set_conn_num);
     bt_set_auto_conn_device_num((get_bt_dual_config() == DUAL_CONN_SET_TWO) ? support_set_conn_num : 1);
 
     bt_set_support_msbc_flag(TCFG_BT_MSBC_EN);

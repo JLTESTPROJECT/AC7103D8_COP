@@ -45,142 +45,12 @@ int cvp_dut_bypass_mic_ch_sel(u8 mic_num);
 int audio_dut_event_deal(u8 *dat)
 {
     u8 last_mode, reset_flag;
+    int ret = AUDIO_DUT_ACK_ERR_UNKNOW;
     if (audio_dut_hdl) {
 __again:
         reset_flag = 0;
         last_mode = audio_dut_hdl->mode;
-        switch (dat[3]) {
-#if TCFG_AUDIO_DUAL_MIC_ENABLE
-//双麦ENC DUT 事件处理
-        case CVP_DUT_DMS_MASTER_MIC:
-            audio_dut_log("OLD_CMD:CVP_DUT_DMS_MASTER_MIC\n");
-            cvp_dut_mode_set(CVP_DUT_MODE_ALGORITHM);
-            audio_aec_output_sel(DMS_OUTPUT_SEL_MASTER, 0);
-            break;
-        case CVP_DUT_DMS_SLAVE_MIC:
-            audio_dut_log("OLD_CMD:CVP_DUT_DMS_SLAVE_MIC\n");
-            cvp_dut_mode_set(CVP_DUT_MODE_ALGORITHM);
-            audio_aec_output_sel(DMS_OUTPUT_SEL_SLAVE, 0);
-            break;
-        case CVP_DUT_DMS_OPEN_ALGORITHM:
-            audio_dut_log("OLD_CMD:CVP_DUT_DMS_OPEN_ALGORITHM\n");
-            cvp_dut_mode_set(CVP_DUT_MODE_ALGORITHM);
-            audio_aec_output_sel(DMS_OUTPUT_SEL_DEFAULT, 1);
-            break;
-#elif TCFG_AUDIO_TRIPLE_MIC_ENABLE
-        case CVP_DUT_3MIC_MASTER_MIC:
-            audio_dut_log("OLD_CMD:CVP_DUT_3MIC_MASTER_MIC\n");
-            cvp_dut_mode_set(CVP_DUT_MODE_ALGORITHM);
-            audio_aec_output_sel(1, 0);
-            break;
-        case CVP_DUT_3MIC_SLAVE_MIC:
-            audio_dut_log("OLD_CMD:CVP_DUT_3MIC_SLAVE_MIC\n");
-            cvp_dut_mode_set(CVP_DUT_MODE_ALGORITHM);
-            audio_aec_output_sel(2, 0);
-            break;
-        case CVP_DUT_3MIC_FB_MIC:
-            audio_dut_log("OLD_CMD:CVP_DUT_3MIC_FB_MIC\n");
-            cvp_dut_mode_set(CVP_DUT_MODE_ALGORITHM);
-            audio_aec_output_sel(3, 0);
-            break;
-        case CVP_DUT_3MIC_OPEN_ALGORITHM:
-            audio_dut_log("OLD_CMD:CVP_DUT_3MIC_OPEN_ALGORITHM\n");
-            cvp_dut_mode_set(CVP_DUT_MODE_ALGORITHM);
-            audio_aec_output_sel(0, 0);
-            break;
-#else
-//单麦SMS/DNS DUT 事件处理
-        case CVP_DUT_DMS_MASTER_MIC:
-            audio_dut_log("OLD_CMD:SMS/CVP_DUT_DMS_MASTER_MIC\n");
-            cvp_dut_mode_set(CVP_DUT_MODE_ALGORITHM);
-            audio_cvp_toggle_set(0);
-            break;
-        case CVP_DUT_DMS_OPEN_ALGORITHM:
-            audio_dut_log("OLD_CMD:SMS/CVP_DUT_DMS_OPEN_ALGORITHM\n");
-            cvp_dut_mode_set(CVP_DUT_MODE_ALGORITHM);
-            audio_cvp_toggle_set(1);
-            break;
-#endif/*TCFG_AUDIO_DUAL_MIC_ENABLE*/
-
-#if TCFG_AUDIO_ANC_ENABLE
-        case CVP_DUT_FF_MIC:	//TWS_FF_MIC测试 或者 头戴式FF_L_MIC测试
-            audio_dut_log("OLD_CMD:CVP_DUT_FF_MIC\n");
-            audio_dut_hdl->mode = CVP_DUT_MODE_BYPASS;
-            if (TCFG_AUDIO_ANC_CH & ANC_L_CH) {
-                cvp_dut_bypass_mic_ch_sel(TCFG_AUDIO_ANCL_FF_MIC);
-            } else {
-                cvp_dut_bypass_mic_ch_sel(TCFG_AUDIO_ANCR_FF_MIC);
-            }
-            reset_flag = 1;
-            break;
-        case CVP_DUT_FB_MIC:	//TWS_FB_MIC测试 或者 头戴式FB_L_MIC测试
-            audio_dut_log("OLD_CMD:CVP_DUT_FB_MIC\n");
-            audio_dut_hdl->mode = CVP_DUT_MODE_BYPASS;
-            if (TCFG_AUDIO_ANC_CH & ANC_L_CH) {
-                cvp_dut_bypass_mic_ch_sel(TCFG_AUDIO_ANCL_FB_MIC);
-            } else {
-                cvp_dut_bypass_mic_ch_sel(TCFG_AUDIO_ANCR_FB_MIC);
-            }
-            reset_flag = 1;
-            break;
-        case CVP_DUT_HEAD_PHONE_R_FF_MIC:	//头戴式FF_R_MIC测试
-            audio_dut_log("OLD_CMD:CVP_DUT_HEAD_PHONE_R_FF_MIC\n");
-            audio_dut_hdl->mode = CVP_DUT_MODE_BYPASS;
-            if (TCFG_AUDIO_ANC_CH == (ANC_L_CH | ANC_R_CH)) {
-                cvp_dut_bypass_mic_ch_sel(TCFG_AUDIO_ANCR_FF_MIC);
-            }
-            reset_flag = 1;
-            break;
-        case CVP_DUT_HEAD_PHONE_R_FB_MIC:	//头戴式FB_R_MIC测试
-            audio_dut_log("OLD_CMD:CVP_DUT_HEAD_PHONE_R_FB_MIC\n");
-            audio_dut_hdl->mode = CVP_DUT_MODE_BYPASS;
-            if (TCFG_AUDIO_ANC_CH == (ANC_L_CH | ANC_R_CH)) {
-                cvp_dut_bypass_mic_ch_sel(TCFG_AUDIO_ANCR_FB_MIC);
-            }
-            reset_flag = 1;
-            break;
-        case CVP_DUT_MODE_ALGORITHM_SET:				//CVP恢复正常模式
-            audio_dut_log("OLD_CMD:CVP_DUT_RESUME\n");
-            cvp_dut_mode_set(CVP_DUT_MODE_ALGORITHM);
-            break;
-#endif/*TCFG_AUDIO_ANC_ENABLE*/
-
-//JL自研算法指令API
-#if !TCFG_CVP_DEVELOP_ENABLE
-        case CVP_DUT_NS_OPEN:
-            audio_dut_log("OLD_CMD:CVP_DUT_NS_OPEN\n");
-            cvp_dut_mode_set(CVP_DUT_MODE_ALGORITHM);
-            audio_cvp_ioctl(CVP_NS_SWITCH, 1, NULL);	//降噪关
-            break;
-        case CVP_DUT_NS_CLOSE:
-            audio_dut_log("OLD_CMD:CVP_DUT_NS_CLOSE\n");
-            cvp_dut_mode_set(CVP_DUT_MODE_ALGORITHM);
-            audio_cvp_ioctl(CVP_NS_SWITCH, 0, NULL); //降噪开
-            break;
-#endif/*TCFG_CVP_DEVELOP_ENABLE*/
-
-        case CVP_DUT_OPEN_ALGORITHM:
-            audio_dut_log("OLD_CMD:CVP_DUT_OPEN_ALGORITHM\n");
-            cvp_dut_mode_set(CVP_DUT_MODE_ALGORITHM);
-            audio_cvp_toggle_set(1);
-            break;
-        case CVP_DUT_CLOSE_ALGORITHM:
-            audio_dut_log("OLD_CMD:CVP_DUT_CLOSE_ALGORITHM\n");
-            cvp_dut_mode_set(CVP_DUT_MODE_ALGORITHM);
-            audio_cvp_toggle_set(0);
-            break;
-        case CVP_DUT_POWEROFF:
-            audio_dut_log("OLD_CMD:CVP_DUT_POWEROFF\n");
-            int msg[3];
-            msg[0] = (int)sys_enter_soft_poweroff;
-            msg[1] = 1;
-            msg[2] = POWEROFF_NORMAL;
-            os_taskq_post_type("app_core", Q_CALLBACK, 3, msg);
-            break;
-        default:
-            audio_dut_log("OLD_CMD:UNKNOW CMD!!!\n");
-            return AUDIO_DUT_ACK_ERR_UNKNOW;
-        }
+        ret = audio_dut_common_event_deal(dat[3], &reset_flag);
         if (last_mode != audio_dut_hdl->mode) {
             reset_flag = 1;		//模式被修改，则复位通话
         }
@@ -193,9 +63,8 @@ __again:
                 goto __again;
             }
         }
-        return AUDIO_DUT_ACK_SUCCESS;
     }
-    return AUDIO_DUT_ACK_ERR_UNKNOW;
+    return ret;
 }
 
 int audio_dut_spp_tx_packet(u8 command)

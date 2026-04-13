@@ -12,10 +12,11 @@
 #define A_MIC0        0x00  // 模拟MIC0 对应IO-0(PA1 PA2)
 #define A_MIC1        0x01  // 模拟MIC1 对应IO-0(PB10 PB9)
 
-#define D_MIC0        0x02  // 数字MIC0(plnk_dat0_pin-上升沿采样)
-#define D_MIC1        0x03  // 数字MIC1(plnk_dat1_pin-上升沿采样)
-#define D_MIC2        0x04  // 数字MIC2(plnk_dat0_pin-下降沿采样)
-#define D_MIC3        0x05  // 数字MIC3(plnk_dat1_pin-下降沿采样)
+//BR56 MIC_SEL 0x02 没有意义
+#define D_MIC0        0x03  // 数字MIC0(plnk_dat0_pin-上升沿采样)
+#define D_MIC1        0x04  // 数字MIC1(plnk_dat1_pin-上升沿采样)
+#define D_MIC2        0x05  // 数字MIC2(plnk_dat0_pin-下降沿采样)
+#define D_MIC3        0x06  // 数字MIC3(plnk_dat1_pin-下降沿采样)
 
 #define MIC_NULL      0xFF  // 没有定义相关的MIC
 

@@ -23,6 +23,7 @@
 #include "audio_cvp_online.h"
 #include "audio_config.h"
 #include "cvp_node.h"
+#include "cvp_develop_node.h"
 #include "sdk_config.h"
 #include "audio_dc_offset_remove.h"
 #include "adc_file.h"
@@ -41,6 +42,10 @@
 #if TCFG_SMART_VOICE_ENABLE
 #include "smart_voice/smart_voice.h"
 #endif
+
+#if TCFG_AUDIO_DUT_ENABLE
+#include "audio_dut_control.h"
+#endif/*TCFG_AUDIO_DUT_ENABLE*/
 
 
 #define LOG_TAG_CONST       AEC_USER
@@ -193,7 +198,7 @@ __attribute__((weak))u32 usb_mic_is_running()
 }
 
 #if !defined(TCFG_CVP_DEVELOP_ENABLE) || (TCFG_CVP_DEVELOP_ENABLE == 0)
-#if (TCFG_AUDIO_DUAL_MIC_ENABLE == 0) && (TCFG_AUDIO_TRIPLE_MIC_ENABLE == 0)
+#if TCFG_AUDIO_SINGLE_MIC_ENABLE
 #include "audio_cvp_debug.c"
 
 extern int esco_player_runing();
@@ -653,6 +658,9 @@ int audio_aec_open(struct audio_aec_init_param_t *init_param, s16 enablebit, int
     ASSERT(ret == 0, "aec_open err %d!!", ret);
 #endif/*CVP_TOGGLE*/
     cvp_sms->start = 1;
+#if TCFG_AUDIO_DUT_ENABLE
+    audio_dut_cvp_control_check();    //产测命令控制检查
+#endif
     mem_stats();
     printf("audio_aec_open succ\n");
     return 0;
@@ -889,6 +897,11 @@ int audio_cvp_toggle_set(u8 toggle)
     return 0;
 }
 
+void audio_aec_output_sel(CVP_OUTPUT_ENUM sel, u8 agc)
+{
+    audio_cvp_toggle_set(sel == CVP_OUTPUT_SEL_DEFAULT ? 1 : 0);
+}
+
 /*是否在重启*/
 u8 get_audio_aec_rebooting()
 {
@@ -935,7 +948,7 @@ void aec_input_clear_enable(u8 enable)
 #endif/*TCFG_AUDIO_DUAL_MIC_ENABLE == 0) && TCFG_AUDIO_TRIPLE_MIC_ENABLE == 0*/
 #endif /*TCFG_CVP_DEVELOP_ENABLE*/
 
-const u16 audio_cvp_uuid_table[10] = {
+const u16 audio_cvp_uuid_table[12] = {
     NODE_UUID_CVP_SMS_ANS,
     NODE_UUID_CVP_SMS_DNS,
     NODE_UUID_CVP_DMS_ANS,
@@ -946,7 +959,10 @@ const u16 audio_cvp_uuid_table[10] = {
     NODE_UUID_CVP_DMS_HYBRID_DNS,
     NODE_UUID_CVP_DMS_AWN_DNS,
     NODE_UUID_CVP_3MIC,
-    NODE_UUID_CVP_V3
+    NODE_UUID_CVP_DEVELOP,
+
+    NODE_UUID_CVP_V3,
+    NODE_UUID_CVP_SMS_VF,
 };
 
 struct cvp_context_setup {
@@ -969,6 +985,7 @@ void cvp_node_context_setup(u16 uuid)
     y_printf("cvp node context setup,node uuid:%x\n", uuid);
     g_cvp_context.active_node_uuid = uuid;
     if (g_cvp_context.active_node_uuid == 0) {
+        memset(&g_cvp_context, 0, sizeof(g_cvp_context));
         printf("cvp_node_uuid clear\n");
         return;
     }
@@ -1051,9 +1068,12 @@ int cvp_param_cfg_read(void)
     return cvp_tms_param_cfg_read();
 #elif TCFG_AUDIO_SINGLE_MIC_ENABLE
     return cvp_sms_param_cfg_read();
-#else
+#elif TCFG_AUDIO_CVP_V3_MODE
     return cvp_v3_param_cfg_read();
+#elif TCFG_AUDIO_CVP_DEVELOP_ENABLE
+    return cvp_dev_param_cfg_read();
 #endif
+    return 0;
 }
 
 u16 get_cvp_node_uuid()

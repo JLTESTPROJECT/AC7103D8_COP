@@ -17,6 +17,7 @@
 #include "pc_spk_player.h"
 #include "app_config.h"
 #include "audio_anc_includes.h"
+#include "cvp_node.h"
 
 #define LOG_TAG_CONST       USB
 #define LOG_TAG             "[pcmic]"
@@ -95,6 +96,8 @@ static void pc_mic_recoder_callback(void *private_data, int event)
 
 int pc_mic_recoder_open(void)
 {
+    struct stream_fmt fmt;
+    struct cvp_param_fmt cvp_fmt;
     /*领夹mic 功能不需要打开recoder 的音频流,由switch节点打开*/
 #if (defined(WIRELESS_MIC_PRODUCT_MODE) && (WIRELESS_MIC_PRODUCT_MODE == ADAPTER_2T1R_MODE || WIRELESS_MIC_PRODUCT_MODE ==WIRELES_MIC_1TNR_MODE))
     return -EFAULT;
@@ -139,6 +142,8 @@ int pc_mic_recoder_open(void)
         goto __exit1;
     }
 
+    jlstream_node_ioctl(recoder->stream, NODE_UUID_SOURCE, NODE_IOC_GET_FMT, (int)&fmt);
+    cvp_fmt.mic_num = fmt.channel_mode >> 4;
     u16 node_uuid = get_cvp_node_uuid();
     //根据回音消除的类型，将配置传递到对应的节点
     if (node_uuid) {
@@ -146,15 +151,17 @@ int pc_mic_recoder_open(void)
         u32 ref_sr = audio_dac_get_sample_rate(&dac_hdl);
         jlstream_node_ioctl(recoder->stream, node_uuid, NODE_IOC_SET_FMT, (int)ref_sr);
 #endif
-        err = jlstream_node_ioctl(recoder->stream, node_uuid, NODE_IOC_SET_PRIV_FMT, source_uuid);
+
+        cvp_fmt.source_uuid = source_uuid;
+        err = jlstream_node_ioctl(recoder->stream, node_uuid, NODE_IOC_SET_PRIV_FMT, (int)&cvp_fmt);
         if (err && (err != -ENOENT)) {	//兼容没有cvp节点的情况
             goto __exit1;
         }
     }
 
-
     jlstream_set_callback(recoder->stream, recoder->stream, pc_mic_recoder_callback);
     jlstream_set_scene(recoder->stream, STREAM_SCENE_PC_MIC);
+
     err = jlstream_start(recoder->stream);
     if (err) {
         goto __exit1;

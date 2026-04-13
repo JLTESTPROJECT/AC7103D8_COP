@@ -225,7 +225,13 @@ int audio_smart_voice_aec_open(void)
         .sample_rate = VOICE_ADC_SAMPLE_RATE,
         .ref_sr = TCFG_AUDIO_GLOBAL_SAMPLE_RATE,
     };
-    acoustic_echo_cancel_init(&init_param, AEC_EN, cvp_output_hdl);
+    struct aec_param algo_param = {
+        .aec_dt_aggress = 4.0f,
+        .aec_refengthr = -70.0f,
+        .es_aggress_factor = -3.0f,
+        .es_min_suppress = 4.0f,
+    };
+    acoustic_echo_cancel_init(&init_param, AEC_EN, cvp_output_hdl, &algo_param);
     audio_dac_read_reset();
     voice_aec_hdl = hdl;
     return 0;

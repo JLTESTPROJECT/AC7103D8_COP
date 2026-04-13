@@ -13,7 +13,7 @@
 #include "audio_dac.h"
 #include "audio_cvp.h"
 #include "esco_player.h"
-
+#include "cvp_node.h"
 
 #if TCFG_AUDIO_DUT_ENABLE
 #include "audio_dut_control.h"
@@ -63,6 +63,9 @@ struct jlstream *esco_recoder_stream_search(u16 *source_uuid)
     if (!stream) {
         stream = jlstream_pipeline_parse(uuid, NODE_UUID_ADC);
     }
+    if (!stream) {
+        stream = jlstream_pipeline_parse_by_node_name(uuid, "le_audio_adc");
+    }
 #else
     stream = jlstream_pipeline_parse(uuid, NODE_UUID_ADC);
 #endif
@@ -86,6 +89,8 @@ int esco_recoder_open_extended(void *bt_addr, int ext_type, void *ext_param)
     int err;
     struct encoder_fmt enc_fmt;
     struct esco_recoder *recoder;
+    struct stream_fmt fmt;
+    struct cvp_param_fmt cvp_fmt;
     u16 source_uuid = 0;
 
     if (g_esco_recoder) {
@@ -115,6 +120,8 @@ int esco_recoder_open_extended(void *bt_addr, int ext_type, void *ext_param)
     }
 
     jlstream_node_ioctl(recoder->stream, NODE_UUID_ESCO_TX, NODE_IOC_SET_BTADDR, (int)bt_addr);
+    jlstream_node_ioctl(recoder->stream, NODE_UUID_SOURCE, NODE_IOC_GET_FMT, (int)&fmt);
+    cvp_fmt.mic_num = fmt.channel_mode >> 4;
     //设置源节点是哪个
     u16 node_uuid = get_cvp_node_uuid();
     u32 ref_sr = audio_dac_get_sample_rate(&dac_hdl);
@@ -124,7 +131,8 @@ int esco_recoder_open_extended(void *bt_addr, int ext_type, void *ext_param)
         jlstream_node_ioctl(recoder->stream, node_uuid, NODE_IOC_SET_FMT, (int)ref_sr);
 #endif
 #endif
-        err = jlstream_node_ioctl(recoder->stream, node_uuid, NODE_IOC_SET_PRIV_FMT, source_uuid);
+        cvp_fmt.source_uuid = source_uuid;
+        err = jlstream_node_ioctl(recoder->stream, node_uuid, NODE_IOC_SET_PRIV_FMT, (int)&cvp_fmt);
         if (err && (err != -ENOENT)) {	//兼容没有cvp节点的情况
             goto __exit1;
         }

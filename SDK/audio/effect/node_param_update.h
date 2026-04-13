@@ -155,4 +155,11 @@ int node_param_update_parm(u16 uuid, u8 mode_index, char *node_name, u8 cfg_inde
 /*SteroMix 参数更新*/
 int stero_mix_update_parm(u8 mode_index, char *node_name, u8 cfg_index);
 
+
+/*plate reverb echo combo 参数更新*/
+int plate_reverb_echo_combo_update_parm(u8 mode_index, char *node_name, u8 cfg_index);
+
+/*bass boost [c]参数更新*/
+int bass_boost_combo_update_parm(u8 mode_index, char *node_name, u8 cfg_index);
+
 #endif

@@ -49,6 +49,7 @@ audio_dut_t *audio_dut_hdl = NULL;
 static int audio_dut_app_online_parse(u8 *packet, u8 size, u8 *ext_data, u16 ext_size);
 int audio_dut_new_rx_packet(u8 *dat, u8 len);
 int audio_dut_spp_rx_packet(u8 *dat, u8 len);
+static int audio_dut_cvp_output_sel(CVP_OUTPUT_ENUM sel);
 
 void audio_dut_new_send_data_handler(void (*handler)(u8 ack, u8 *packet, u8 size))
 {
@@ -90,6 +91,7 @@ void cvp_dut_mode_set(u8 mode)
 {
     if (audio_dut_hdl) {
         if (audio_dut_hdl->reset_flag) {
+            //esco 复位动作不修改模式
             return;
         }
         audio_dut_hdl->mode = mode;
@@ -133,6 +135,105 @@ static int audio_dut_app_online_parse(u8 *packet, u8 size, u8 *ext_data, u16 ext
     return 0;
 }
 
+//audio_dut 公共命令解析
+int audio_dut_common_event_deal(u8 cmd, u8 *reset)
+{
+    int ret = AUDIO_DUT_ACK_SUCCESS;
+    switch (cmd) {
+    case CVP_DUT_TALK_MIC:
+    case CVP_DUT_CLOSE_ALGORITHM:
+        audio_dut_log("CMD:CVP_DUT_TALK_MIC\n");
+        ret = audio_dut_cvp_output_sel(CVP_OUTPUT_SEL_TALK_MIC);
+        break;
+    case CVP_DUT_TALK_FF_MIC:
+        audio_dut_log("CMD:CVP_DUT_TALK_FF_MIC\n");
+        ret = audio_dut_cvp_output_sel(CVP_OUTPUT_SEL_FF_MIC);
+        break;
+    case CVP_DUT_TALK_FB_MIC:
+        audio_dut_log("CMD:CVP_DUT_TALK_FB_MIC\n");
+        ret = audio_dut_cvp_output_sel(CVP_OUTPUT_SEL_FB_MIC);
+        break;
+    case CVP_DUT_TALK_VPU:
+        audio_dut_log("CMD:CVP_DUT_TALK_VPU\n");
+        ret = audio_dut_cvp_output_sel(CVP_OUTPUT_SEL_VPU);
+        break;
+    case CVP_DUT_ALGORITHM_OUTPUT:
+    case CVP_DUT_OPEN_ALGORITHM:
+        audio_dut_log("CMD:CVP_DUT_ALGORITHM_OUTPUT\n");
+        ret = audio_dut_cvp_output_sel(CVP_OUTPUT_SEL_DEFAULT);
+        break;
+#if TCFG_AUDIO_ANC_ENABLE
+    case CVP_DUT_ANC_FF_MIC:	//TWS_FF_MIC测试 或者 头戴式FF_L_MIC测试
+        audio_dut_log("CMD:CVP_DUT_ANC_FF_MIC\n");
+        audio_dut_hdl->mode = CVP_DUT_MODE_BYPASS;
+        if (TCFG_AUDIO_ANC_CH & ANC_L_CH) {
+            cvp_dut_bypass_mic_ch_sel(TCFG_AUDIO_ANCL_FF_MIC);
+        } else {
+            cvp_dut_bypass_mic_ch_sel(TCFG_AUDIO_ANCR_FF_MIC);
+        }
+        *reset = 1;
+        break;
+    case CVP_DUT_ANC_FB_MIC:	//TWS_FB_MIC测试 或者 头戴式FB_L_MIC测试
+        audio_dut_log("CMD:CVP_DUT_ANC_FB_MIC\n");
+        audio_dut_hdl->mode = CVP_DUT_MODE_BYPASS;
+        if (TCFG_AUDIO_ANC_CH & ANC_L_CH) {
+            cvp_dut_bypass_mic_ch_sel(TCFG_AUDIO_ANCL_FB_MIC);
+        } else {
+            cvp_dut_bypass_mic_ch_sel(TCFG_AUDIO_ANCR_FB_MIC);
+        }
+        *reset = 1;
+        break;
+    case CVP_DUT_ANC_R_FF_MIC:	//头戴式FF_R_MIC测试
+        audio_dut_log("CMD:CVP_DUT_ANC_R_FF_MIC\n");
+        audio_dut_hdl->mode = CVP_DUT_MODE_BYPASS;
+        if (TCFG_AUDIO_ANC_CH == (ANC_L_CH | ANC_R_CH)) {
+            cvp_dut_bypass_mic_ch_sel(TCFG_AUDIO_ANCR_FF_MIC);
+        }
+        *reset = 1;
+        break;
+    case CVP_DUT_ANC_R_FB_MIC:	//头戴式FB_R_MIC测试
+        audio_dut_log("CMD:CVP_DUT_ANC_R_FB_MIC\n");
+        audio_dut_hdl->mode = CVP_DUT_MODE_BYPASS;
+        if (TCFG_AUDIO_ANC_CH == (ANC_L_CH | ANC_R_CH)) {
+            cvp_dut_bypass_mic_ch_sel(TCFG_AUDIO_ANCR_FB_MIC);
+        }
+        *reset = 1;
+        break;
+    case CVP_DUT_MODE_ALGORITHM_SET:				//CVP恢复正常模式
+        audio_dut_log("CMD:CVP_DUT_RESUME\n");
+        cvp_dut_mode_set(CVP_DUT_MODE_ALGORITHM);
+        break;
+#endif/*TCFG_AUDIO_ANC_ENABLE*/
+
+//JL自研算法指令API
+#if !TCFG_CVP_DEVELOP_ENABLE && !TCFG_AUDIO_CVP_V3_MODE
+    case CVP_DUT_NS_OPEN:
+        audio_dut_log("CMD:CVP_DUT_NS_OPEN\n");
+        cvp_dut_mode_set(CVP_DUT_MODE_ALGORITHM);
+        audio_cvp_ioctl(CVP_NS_SWITCH, 1, NULL);	//降噪关
+        break;
+    case CVP_DUT_NS_CLOSE:
+        audio_dut_log("CMD:CVP_DUT_NS_CLOSE\n");
+        cvp_dut_mode_set(CVP_DUT_MODE_ALGORITHM);
+        audio_cvp_ioctl(CVP_NS_SWITCH, 0, NULL); //降噪开
+        break;
+#endif/*TCFG_CVP_DEVELOP_ENABLE*/
+
+    case CVP_DUT_POWEROFF:
+        audio_dut_log("CMD:CVP_DUT_POWEROFF\n");
+        int msg[3];
+        msg[0] = (int)sys_enter_soft_poweroff;
+        msg[1] = 1;
+        msg[2] = POWEROFF_NORMAL;
+        os_taskq_post_type("app_core", Q_CALLBACK, 3, msg);
+        break;
+    default:
+        ret = AUDIO_DUT_ACK_ERR_UNKNOW;
+        break;
+    }
+    return ret;
+}
+
 /***************************************************************************
   							CVP SPP产测 NEW STRUCT
 ***************************************************************************/
@@ -164,267 +265,125 @@ int audio_dut_new_event_deal(void *packet)
     put_buf((u8 *)packet, hdl->len + sizeof(struct audio_dut_packet_t));
     u8 last_mode, reset_flag;
     if (audio_dut_hdl) {
-__again:
         reset_flag = 0;
         last_mode = audio_dut_hdl->mode;
-        switch (hdl->cmd) {
-#if TCFG_AUDIO_DUAL_MIC_ENABLE
-//双麦ENC DUT 事件处理
-        case CVP_DUT_DMS_MASTER_MIC:
-            audio_dut_log("CMD:CVP_DUT_DMS_MASTER_MIC\n");
-            cvp_dut_mode_set(CVP_DUT_MODE_ALGORITHM);
-            audio_aec_output_sel(DMS_OUTPUT_SEL_MASTER, 0);
-            break;
-        case CVP_DUT_DMS_SLAVE_MIC:
-            audio_dut_log("CMD:CVP_DUT_DMS_SLAVE_MIC\n");
-            cvp_dut_mode_set(CVP_DUT_MODE_ALGORITHM);
-            audio_aec_output_sel(DMS_OUTPUT_SEL_SLAVE, 0);
-            break;
-        case CVP_DUT_DMS_OPEN_ALGORITHM:
-            audio_dut_log("CMD:CVP_DUT_DMS_OPEN_ALGORITHM\n");
-            cvp_dut_mode_set(CVP_DUT_MODE_ALGORITHM);
-            audio_aec_output_sel(DMS_OUTPUT_SEL_DEFAULT, 1);
-            break;
-#elif TCFG_AUDIO_TRIPLE_MIC_ENABLE
-        case CVP_DUT_3MIC_MASTER_MIC:
-            audio_dut_log("CMD:CVP_DUT_3MIC_MASTER_MIC\n");
-            cvp_dut_mode_set(CVP_DUT_MODE_ALGORITHM);
-            audio_aec_output_sel(1, 0);
-            break;
-        case CVP_DUT_3MIC_SLAVE_MIC:
-            audio_dut_log("CMD:CVP_DUT_3MIC_SLAVE_MIC\n");
-            cvp_dut_mode_set(CVP_DUT_MODE_ALGORITHM);
-            audio_aec_output_sel(2, 0);
-            break;
-        case CVP_DUT_3MIC_FB_MIC:
-            audio_dut_log("CMD:CVP_DUT_3MIC_FB_MIC\n");
-            cvp_dut_mode_set(CVP_DUT_MODE_ALGORITHM);
-            audio_aec_output_sel(3, 0);
-            break;
-        case CVP_DUT_3MIC_OPEN_ALGORITHM:
-            audio_dut_log("CMD:CVP_DUT_3MIC_OPEN_ALGORITHM\n");
-            cvp_dut_mode_set(CVP_DUT_MODE_ALGORITHM);
-            audio_aec_output_sel(0, 0);
-            break;
-#elif TCFG_AUDIO_SINGLE_MIC_ENABLE
-//单麦SMS/DNS DUT 事件处理
-        case CVP_DUT_DMS_MASTER_MIC:
-            audio_dut_log("CMD:SMS/CVP_DUT_DMS_MASTER_MIC\n");
-            cvp_dut_mode_set(CVP_DUT_MODE_ALGORITHM);
-            audio_cvp_toggle_set(0);
-            break;
-        case CVP_DUT_DMS_OPEN_ALGORITHM:
-            audio_dut_log("CMD:SMS/CVP_DUT_DMS_OPEN_ALGORITHM\n");
-            cvp_dut_mode_set(CVP_DUT_MODE_ALGORITHM);
-            audio_cvp_toggle_set(1);
-            break;
-#elif TCFG_AUDIO_CVP_V3_MODE
-        case CVP_DUT_3MIC_MASTER_MIC:
-            audio_dut_log("CMD:CVP_DUT_CVP_V3_MASTER_MIC\n");
-            cvp_dut_mode_set(CVP_DUT_MODE_ALGORITHM);
-            audio_cvp_v3_output_sel(1, 0);
-            break;
-        case CVP_DUT_3MIC_SLAVE_MIC:
-            audio_dut_log("CMD:CVP_DUT_CVP_V3_SLAVE_MIC\n");
-            cvp_dut_mode_set(CVP_DUT_MODE_ALGORITHM);
-            audio_cvp_v3_output_sel(2, 0);
-            break;
-        case CVP_DUT_3MIC_FB_MIC:
-            audio_dut_log("CMD:CVP_DUT_CVP_V3_FB_MIC\n");
-            cvp_dut_mode_set(CVP_DUT_MODE_ALGORITHM);
-            audio_cvp_v3_output_sel(3, 0);
-            break;
-        case CVP_DUT_3MIC_OPEN_ALGORITHM:
-            audio_dut_log("CMD:CVP_DUT_3MIC_OPEN_ALGORITHM\n");
-            cvp_dut_mode_set(CVP_DUT_MODE_ALGORITHM);
-            audio_cvp_v3_output_sel(0, 0);
-            break;
-#endif/*TCFG_AUDIO_DUAL_MIC_ENABLE*/
-
-#if TCFG_AUDIO_ANC_ENABLE
-        case CVP_DUT_FF_MIC:	//TWS_FF_MIC测试 或者 头戴式FF_L_MIC测试
-            audio_dut_log("CMD:CVP_DUT_FF_MIC\n");
-            audio_dut_hdl->mode = CVP_DUT_MODE_BYPASS;
-            if (TCFG_AUDIO_ANC_CH & ANC_L_CH) {
-                cvp_dut_bypass_mic_ch_sel(TCFG_AUDIO_ANCL_FF_MIC);
-            } else {
-                cvp_dut_bypass_mic_ch_sel(TCFG_AUDIO_ANCR_FF_MIC);
-            }
-            reset_flag = 1;
-            break;
-        case CVP_DUT_FB_MIC:	//TWS_FB_MIC测试 或者 头戴式FB_L_MIC测试
-            audio_dut_log("CMD:CVP_DUT_FB_MIC\n");
-            audio_dut_hdl->mode = CVP_DUT_MODE_BYPASS;
-            if (TCFG_AUDIO_ANC_CH & ANC_L_CH) {
-                cvp_dut_bypass_mic_ch_sel(TCFG_AUDIO_ANCL_FB_MIC);
-            } else {
-                cvp_dut_bypass_mic_ch_sel(TCFG_AUDIO_ANCR_FB_MIC);
-            }
-            reset_flag = 1;
-            break;
-        case CVP_DUT_HEAD_PHONE_R_FF_MIC:	//头戴式FF_R_MIC测试
-            audio_dut_log("CMD:CVP_DUT_HEAD_PHONE_R_FF_MIC\n");
-            audio_dut_hdl->mode = CVP_DUT_MODE_BYPASS;
-            if (TCFG_AUDIO_ANC_CH == (ANC_L_CH | ANC_R_CH)) {
-                cvp_dut_bypass_mic_ch_sel(TCFG_AUDIO_ANCR_FF_MIC);
-            }
-            reset_flag = 1;
-            break;
-        case CVP_DUT_HEAD_PHONE_R_FB_MIC:	//头戴式FB_R_MIC测试
-            audio_dut_log("CMD:CVP_DUT_HEAD_PHONE_R_FB_MIC\n");
-            audio_dut_hdl->mode = CVP_DUT_MODE_BYPASS;
-            if (TCFG_AUDIO_ANC_CH == (ANC_L_CH | ANC_R_CH)) {
-                cvp_dut_bypass_mic_ch_sel(TCFG_AUDIO_ANCR_FB_MIC);
-            }
-            reset_flag = 1;
-            break;
-        case CVP_DUT_MODE_ALGORITHM_SET:				//CVP恢复正常模式
-            audio_dut_log("CMD:CVP_DUT_RESUME\n");
-            cvp_dut_mode_set(CVP_DUT_MODE_ALGORITHM);
-            break;
-#endif/*TCFG_AUDIO_ANC_ENABLE*/
-
-//JL自研算法指令API
-#if !TCFG_CVP_DEVELOP_ENABLE
-        case CVP_DUT_NS_OPEN:
-            audio_dut_log("CMD:CVP_DUT_NS_OPEN\n");
-            cvp_dut_mode_set(CVP_DUT_MODE_ALGORITHM);
-            audio_cvp_ioctl(CVP_NS_SWITCH, 1, NULL);	//降噪关
-            break;
-        case CVP_DUT_NS_CLOSE:
-            audio_dut_log("CMD:CVP_DUT_NS_CLOSE\n");
-            cvp_dut_mode_set(CVP_DUT_MODE_ALGORITHM);
-            audio_cvp_ioctl(CVP_NS_SWITCH, 0, NULL); //降噪开
-            break;
-
-        /*通话算法模块开关*/
-        case CVP_DUT_CVP_IOCTL:
-            audio_dut_log("CMD:CVP_DUT_CVP_IOCTL\n");
-            u8 ioctl_cmd = hdl->dat[0];
-            u8 toggle = hdl->dat[1];
-            audio_dut_log(" io ctl cmd %d, toggle %d", ioctl_cmd, toggle);
-            cvp_dut_mode_set(CVP_DUT_MODE_ALGORITHM);
-            audio_cvp_ioctl(ioctl_cmd, toggle, NULL);
-            break;
+        //先筛选公共命令
+        ret = audio_dut_common_event_deal(hdl->cmd, &reset_flag);
+        //再新筛选命令
+        if (ret == AUDIO_DUT_ACK_ERR_UNKNOW) {
+            ret = AUDIO_DUT_ACK_SUCCESS;	//使用新的命令解析之前，更新默认返回值
+            switch (hdl->cmd) {
+                //JL自研算法指令API
+#if !TCFG_CVP_DEVELOP_ENABLE && !TCFG_AUDIO_CVP_V3_MODE
+            /*通话算法模块开关*/
+            case CVP_DUT_CVP_IOCTL:
+                audio_dut_log("CMD:CVP_DUT_CVP_IOCTL\n");
+                u8 ioctl_cmd = hdl->dat[0];
+                u8 toggle = hdl->dat[1];
+                audio_dut_log(" io ctl cmd %d, toggle %d", ioctl_cmd, toggle);
+                cvp_dut_mode_set(CVP_DUT_MODE_ALGORITHM);
+                audio_cvp_ioctl(ioctl_cmd, toggle, NULL);
+                break;
 #endif/*TCFG_CVP_DEVELOP_ENABLE*/
-
-        case CVP_DUT_OPEN_ALGORITHM:
-            audio_dut_log("CMD:CVP_DUT_OPEN_ALGORITHM\n");
-            cvp_dut_mode_set(CVP_DUT_MODE_ALGORITHM);
-            audio_cvp_toggle_set(1);
-            break;
-        case CVP_DUT_CLOSE_ALGORITHM:
-            audio_dut_log("CMD:CVP_DUT_CLOSE_ALGORITHM\n");
-            cvp_dut_mode_set(CVP_DUT_MODE_ALGORITHM);
-            audio_cvp_toggle_set(0);
-            break;
-        case CVP_DUT_POWEROFF:
-            audio_dut_log("CMD:CVP_DUT_POWEROFF\n");
-            int msg[3];
-            msg[0] = (int)sys_enter_soft_poweroff;
-            msg[1] = 1;
-            msg[2] = POWEROFF_NORMAL;
-            os_taskq_post_type("app_core", Q_CALLBACK, 3, msg);
-            break;
-
-            /*enc麦克风校准补偿*/
 #if TCFG_AUDIO_MIC_ARRAY_TRIM_ENABLE
-        case CVP_ENC_MIC_DIFF_CMP_SET://主MIC - 副MIC
-            audio_dut_log("CMD:CVP_ENC_MIC_DIFF_CMP_SET\n");
-            float diff;
-            memcpy((u8 *)&diff, hdl->dat, len);
-            audio_dut_log("diff:");
-            audio_dut_put_float(diff);
-            float dms_mic_diff = log10(app_var.enc_degradation) * 20;
-            app_var.audio_mic_array_diff_cmp = pow(10, (diff + dms_mic_diff) / 20);
-            wlen = syscfg_write(CFG_MIC_ARRAY_DIFF_CMP_VALUE, (u8 *)(&app_var.audio_mic_array_diff_cmp), sizeof(app_var.audio_mic_array_diff_cmp));
-            if (wlen != sizeof(app_var.audio_mic_array_diff_cmp)) {
-                printf("mic array diff cap vm write fail !!!");
-                ret = AUDIO_DUT_ACK_VM_WRITE_ERR;
-            }
-            audio_dut_log("mic_array_diff_cmp:");
-            audio_dut_put_float(app_var.audio_mic_array_diff_cmp);
-            break;
-        case CVP_ENC_MIC_DIFF_CMP_EN:
-            audio_dut_log("CMD:CVP_ENC_MIC_DIFF_CMP_EN\n");
-            u8 en;
-            memcpy(&en, hdl->dat, len);
-            app_var.audio_mic_array_trim_en = en;
-            wlen = syscfg_write(CFG_MIC_ARRAY_TRIM_EN, (u8 *)(&app_var.audio_mic_array_trim_en), sizeof(app_var.audio_mic_array_trim_en));
-            if (wlen != sizeof(app_var.audio_mic_array_trim_en)) {
-                audio_dut_log("mic array trim en vm write fail !!!");
-                ret = AUDIO_DUT_ACK_VM_WRITE_ERR;
-            }
-            audio_dut_log("mic array trim en: %d\n", app_var.audio_mic_array_trim_en);
-            break;
-        case CVP_ENC_MIC_DIFF_CMP_CLEAN:
-            audio_dut_log("CMD:CVP_ENC_MIC_DIFF_CMP_CLEAN\n");
-            app_var.audio_mic_array_diff_cmp = 1.0f;
-            app_var.audio_mic_cmp.talk = 1.0f;
-            app_var.audio_mic_cmp.ff = 1.0f;
-            app_var.audio_mic_cmp.fb = 1.0f;
+            case CVP_ENC_MIC_DIFF_CMP_SET://主MIC - 副MIC
+                audio_dut_log("CMD:CVP_ENC_MIC_DIFF_CMP_SET\n");
+                float diff;
+                memcpy((u8 *)&diff, hdl->dat, len);
+                audio_dut_log("diff:");
+                audio_dut_put_float(diff);
+                float dms_mic_diff = log10(app_var.enc_degradation) * 20;
+                app_var.audio_mic_array_diff_cmp = pow(10, (diff + dms_mic_diff) / 20);
+                wlen = syscfg_write(CFG_MIC_ARRAY_DIFF_CMP_VALUE, (u8 *)(&app_var.audio_mic_array_diff_cmp), sizeof(app_var.audio_mic_array_diff_cmp));
+                if (wlen != sizeof(app_var.audio_mic_array_diff_cmp)) {
+                    printf("mic array diff cap vm write fail !!!");
+                    ret = AUDIO_DUT_ACK_VM_WRITE_ERR;
+                }
+                audio_dut_log("mic_array_diff_cmp:");
+                audio_dut_put_float(app_var.audio_mic_array_diff_cmp);
+                break;
+            case CVP_ENC_MIC_DIFF_CMP_EN:
+                audio_dut_log("CMD:CVP_ENC_MIC_DIFF_CMP_EN\n");
+                u8 en;
+                memcpy(&en, hdl->dat, len);
+                app_var.audio_mic_array_trim_en = en;
+                wlen = syscfg_write(CFG_MIC_ARRAY_TRIM_EN, (u8 *)(&app_var.audio_mic_array_trim_en), sizeof(app_var.audio_mic_array_trim_en));
+                if (wlen != sizeof(app_var.audio_mic_array_trim_en)) {
+                    audio_dut_log("mic array trim en vm write fail !!!");
+                    ret = AUDIO_DUT_ACK_VM_WRITE_ERR;
+                }
+                audio_dut_log("mic array trim en: %d\n", app_var.audio_mic_array_trim_en);
+                break;
+            case CVP_ENC_MIC_DIFF_CMP_CLEAN:
+                audio_dut_log("CMD:CVP_ENC_MIC_DIFF_CMP_CLEAN\n");
+                app_var.audio_mic_array_diff_cmp = 1.0f;
+                app_var.audio_mic_cmp.talk = 1.0f;
+                app_var.audio_mic_cmp.ff = 1.0f;
+                app_var.audio_mic_cmp.fb = 1.0f;
 
-            wlen = syscfg_write(CFG_MIC_ARRAY_DIFF_CMP_VALUE, (u8 *)(&app_var.audio_mic_array_diff_cmp), sizeof(app_var.audio_mic_array_diff_cmp));
-            if (wlen != sizeof(app_var.audio_mic_array_diff_cmp)) {
-                audio_dut_log("mic array diff cap vm write fail !!!");
-                ret = AUDIO_DUT_ACK_VM_WRITE_ERR;
-            }
+                wlen = syscfg_write(CFG_MIC_ARRAY_DIFF_CMP_VALUE, (u8 *)(&app_var.audio_mic_array_diff_cmp), sizeof(app_var.audio_mic_array_diff_cmp));
+                if (wlen != sizeof(app_var.audio_mic_array_diff_cmp)) {
+                    audio_dut_log("mic array diff cap vm write fail !!!");
+                    ret = AUDIO_DUT_ACK_VM_WRITE_ERR;
+                }
 
-            wlen = syscfg_write(CFG_MIC_TARGET_DIFF_CMP, (u8 *)(&app_var.audio_mic_cmp), sizeof(audio_mic_cmp_t));
-            if (wlen != sizeof(audio_mic_cmp_t)) {
-                printf("mic array diff cap vm write fail !!!");
-                ret = AUDIO_DUT_ACK_VM_WRITE_ERR;
-            }
-            audio_dut_log("CMD:CVP_ENC_MIC_DIFF_CMP_CLEAN\n");
-            break;
-        case CVP_ENC_TARGET_MIC_DIFF_SET:
-            audio_dut_log("CMD:CVP_ENC_TARGET_MIC_DIFF_SET\n");
-            float talk_diff, ff_diff, fb_diff;
-            memcpy((u8 *)&talk_diff, hdl->dat, 4);
-            memcpy((u8 *)&ff_diff, hdl->dat + 4, 4);
-            memcpy((u8 *)&fb_diff, hdl->dat + 8, 4);
-            audio_dut_log("talk_diff:");
-            audio_dut_put_float(talk_diff);
-            audio_dut_log("ff_diff:");
-            audio_dut_put_float(ff_diff);
-            audio_dut_log("fb_diff:");
-            audio_dut_put_float(fb_diff);
-            app_var.audio_mic_cmp.talk = pow(10, (talk_diff) / 20);
-            app_var.audio_mic_cmp.ff = pow(10, (ff_diff) / 20);
-            app_var.audio_mic_cmp.fb = pow(10, (fb_diff) / 20);
-            wlen = syscfg_write(CFG_MIC_TARGET_DIFF_CMP, (u8 *)(&app_var.audio_mic_cmp), sizeof(audio_mic_cmp_t));
-            if (wlen != sizeof(audio_mic_cmp_t)) {
-                printf("mic array diff cap vm write fail !!!");
-                ret = AUDIO_DUT_ACK_VM_WRITE_ERR;
-            }
-            break;
+                wlen = syscfg_write(CFG_MIC_TARGET_DIFF_CMP, (u8 *)(&app_var.audio_mic_cmp), sizeof(audio_mic_cmp_t));
+                if (wlen != sizeof(audio_mic_cmp_t)) {
+                    printf("mic array diff cap vm write fail !!!");
+                    ret = AUDIO_DUT_ACK_VM_WRITE_ERR;
+                }
+                audio_dut_log("CMD:CVP_ENC_MIC_DIFF_CMP_CLEAN\n");
+                break;
+            case CVP_ENC_TARGET_MIC_DIFF_SET:
+                audio_dut_log("CMD:CVP_ENC_TARGET_MIC_DIFF_SET\n");
+                float talk_diff, ff_diff, fb_diff;
+                memcpy((u8 *)&talk_diff, hdl->dat, 4);
+                memcpy((u8 *)&ff_diff, hdl->dat + 4, 4);
+                memcpy((u8 *)&fb_diff, hdl->dat + 8, 4);
+                audio_dut_log("talk_diff:");
+                audio_dut_put_float(talk_diff);
+                audio_dut_log("ff_diff:");
+                audio_dut_put_float(ff_diff);
+                audio_dut_log("fb_diff:");
+                audio_dut_put_float(fb_diff);
+                app_var.audio_mic_cmp.talk = pow(10, (talk_diff) / 20);
+                app_var.audio_mic_cmp.ff = pow(10, (ff_diff) / 20);
+                app_var.audio_mic_cmp.fb = pow(10, (fb_diff) / 20);
+                wlen = syscfg_write(CFG_MIC_TARGET_DIFF_CMP, (u8 *)(&app_var.audio_mic_cmp), sizeof(audio_mic_cmp_t));
+                if (wlen != sizeof(audio_mic_cmp_t)) {
+                    printf("mic array diff cap vm write fail !!!");
+                    ret = AUDIO_DUT_ACK_VM_WRITE_ERR;
+                }
+                break;
 
-        case CVP_ENC_TARGET_MIC_DIFF_GET:
-            audio_dut_log("CMD:CVP_ENC_TARGET_MIC_DIFF_GET\n");
-            float mic_diff[3];
-            mic_diff[0] = 20 * log10_float(app_var.audio_mic_cmp.talk);
-            mic_diff[1] = 20 * log10_float(app_var.audio_mic_cmp.ff);
-            mic_diff[2] = 20 * log10_float(app_var.audio_mic_cmp.fb);
-            audio_dut_log("talk_diff:dB");
-            audio_dut_put_float(mic_diff[0]);
-            audio_dut_log("ff_diff:dB");
-            audio_dut_put_float(mic_diff[1]);
-            audio_dut_log("fb_diff:dB");
-            audio_dut_put_float(mic_diff[2]);
+            case CVP_ENC_TARGET_MIC_DIFF_GET:
+                audio_dut_log("CMD:CVP_ENC_TARGET_MIC_DIFF_GET\n");
+                float mic_diff[3];
+                mic_diff[0] = 20 * log10_float(app_var.audio_mic_cmp.talk);
+                mic_diff[1] = 20 * log10_float(app_var.audio_mic_cmp.ff);
+                mic_diff[2] = 20 * log10_float(app_var.audio_mic_cmp.fb);
+                audio_dut_log("talk_diff:dB");
+                audio_dut_put_float(mic_diff[0]);
+                audio_dut_log("ff_diff:dB");
+                audio_dut_put_float(mic_diff[1]);
+                audio_dut_log("fb_diff:dB");
+                audio_dut_put_float(mic_diff[2]);
 
-            audio_dut_new_tx_packet(AUDIO_DUT_ACK_DATA, (u8 *)mic_diff, sizeof(mic_diff));
-            ret = AUDIO_DUT_ACK_DATA;	//此条命令回复指定数据
-            break;
+                audio_dut_new_tx_packet(AUDIO_DUT_ACK_DATA, (u8 *)mic_diff, sizeof(mic_diff));
+                ret = AUDIO_DUT_ACK_DATA;	//此条命令回复指定数据
+                break;
 #endif /*TCFG_AUDIO_MIC_ARRAY_TRIM_ENABLE*/
 
-        case AUDIO_DUT_DEC_DUT_SET:
-            audio_dut_log("AUDIO_DUT_DEC_DUT_SET: %d\n", hdl->dat[0]);
-            audio_dut_hdl->dec_dut_enable = hdl->dat[0];
-            a2dp_player_reset();
-            break;
-        default:
-            audio_dut_log("CMD:UNKNOW CMD!!!\n");
-            ret = AUDIO_DUT_ACK_ERR_UNKNOW;
+            case AUDIO_DUT_DEC_DUT_SET:
+                audio_dut_log("AUDIO_DUT_DEC_DUT_SET: %d\n", hdl->dat[0]);
+                audio_dut_hdl->dec_dut_enable = hdl->dat[0];
+                a2dp_player_reset();
+                break;
+            default:
+                audio_dut_log("CMD:UNKNOW CMD!!!\n");
+                ret = AUDIO_DUT_ACK_ERR_UNKNOW;
+                break;
+            }
         }
         if (last_mode != audio_dut_hdl->mode) {
             reset_flag = 1;		//模式被修改，则复位通话
@@ -433,13 +392,52 @@ __again:
             audio_dut_hdl->reset_flag = 1;
             esco_recoder_reset();
             audio_dut_hdl->reset_flag = 0;
-            //由于算法相关的命令在esco_recoder_reset后会失效，因此需要重新跑一遍
+            //由于算法相关的命令在esco_recoder_reset后会失效，需要存储命令内容，等待CVP启动执行
             if (audio_dut_hdl->mode == CVP_DUT_MODE_ALGORITHM) {
-                goto __again;
+                if (audio_dut_hdl->tmp_packet) {
+                    free(audio_dut_hdl->tmp_packet);
+                }
+                audio_dut_hdl->tmp_packet = zalloc(hdl->len + sizeof(struct audio_dut_packet_t));
+                memcpy(audio_dut_hdl->tmp_packet, packet, hdl->len + sizeof(struct audio_dut_packet_t));
             }
         }
     }
     return ret;
+}
+
+//CVP启动前产测控制检查
+int audio_dut_cvp_control_check(void)
+{
+    if (audio_dut_hdl->tmp_packet) {
+        audio_dut_new_event_deal(audio_dut_hdl->tmp_packet);
+        free(audio_dut_hdl->tmp_packet);
+        audio_dut_hdl->tmp_packet = NULL;
+    }
+    return 0;
+}
+
+static int audio_dut_cvp_output_sel(CVP_OUTPUT_ENUM sel)
+{
+    //通话MIC SEL检查
+#if TCFG_AUDIO_SINGLE_MIC_ENABLE
+    if (sel == CVP_OUTPUT_SEL_FF_MIC || sel == CVP_OUTPUT_SEL_FB_MIC) {
+        return AUDIO_DUT_ACK_ERR_UNKNOW;
+    }
+#elif TCFG_AUDIO_DUAL_MIC_ENABLE
+    if (sel == CVP_OUTPUT_SEL_FB_MIC) {
+        return AUDIO_DUT_ACK_ERR_UNKNOW;
+    }
+#endif
+    u8 agc_en = (sel == CVP_OUTPUT_SEL_DEFAULT ? 1 : 0);
+
+    cvp_dut_mode_set(CVP_DUT_MODE_ALGORITHM);
+
+#if TCFG_AUDIO_CVP_V3_MODE
+    audio_cvp_v3_output_sel(sel, agc_en);
+#else
+    audio_aec_output_sel(sel, agc_en);
+#endif
+    return AUDIO_DUT_ACK_SUCCESS;
 }
 
 //len = 参数数据长度(不包括cmd)

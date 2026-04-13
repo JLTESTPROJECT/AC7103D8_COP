@@ -42,6 +42,10 @@
 #include "smart_voice/smart_voice.h"
 #endif
 
+#if TCFG_AUDIO_DUT_ENABLE
+#include "audio_dut_control.h"
+#endif/*TCFG_AUDIO_DUT_ENABLE*/
+
 
 #define LOG_TAG_CONST       AEC_USER
 #define LOG_TAG             "[AEC_USER]"
@@ -395,7 +399,11 @@ int audio_sms_vf_open(struct audio_aec_init_param_t *init_param, s16 enablebit, 
     aec_param->output_handle = audio_sms_vf_output;
     aec_param->far_noise_gate = 10;
     if (ref_sr) {
-        aec_param->ref_sr  = ref_sr;
+        if (aec_param->adc_ref_en) {
+            aec_param->ref_sr  = sample_rate; // 硬回采参考数据采样率ref_sr和ADC采样率sample_rate保持一致
+        } else {
+            aec_param->ref_sr  = ref_sr;	  // 软回采
+        }
     } else {
         aec_param->ref_sr  = usb_mic_is_running();
     }
@@ -504,6 +512,9 @@ int audio_sms_vf_open(struct audio_aec_init_param_t *init_param, s16 enablebit, 
     ASSERT(ret == 0, "aec_open err %d!!", ret);
 #endif/*CVP_TOGGLE*/
     cvp_sms_vf->start = 1;
+#if TCFG_AUDIO_DUT_ENABLE
+    audio_dut_cvp_control_check();    //产测命令控制检查
+#endif
     mem_stats();
     printf("audio_aec_open succ\n");
     return 0;

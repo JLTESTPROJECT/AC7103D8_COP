@@ -211,4 +211,6 @@
 #define NODE_UUID_HARMONY                  0xAE43//谐波
 #define NODE_UUID_TREMOLO                  0XFB27
 
+#define NODE_UUID_PLATE_REVERB_ECHO_COMBINED 0xC8E6
+#define NODE_UUID_BASS_BOOST_COMBO         0xE9D0
 #endif

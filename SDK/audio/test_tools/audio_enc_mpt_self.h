@@ -12,23 +12,25 @@
 /********************非用户配置****************************/
 
 //MIC频响测试通道ID u16
-#define AUDIO_ENC_MPT_FF_MIC    	0X01	//测试TWS FFMIC or 头戴式LFF MIC
-#define AUDIO_ENC_MPT_FB_MIC    	0X02	//测试TWS FBMIC or 头戴式LFB MIC
-#define AUDIO_ENC_MPT_RFF_MIC   	0X04	//测试头戴式RFF MIC
-#define AUDIO_ENC_MPT_RFB_MIC   	0X08	//测试头戴式RFB MIC
-#define AUDIO_ENC_MPT_CVP_OUT    	0X10	//测试通话算法输出
-#define AUDIO_ENC_MPT_TALK_MIC   	0X20	//测试通话TALK 主MIC
-#define AUDIO_ENC_MPT_SLAVE_MIC  	0X40	//测试通话TALK 副MIC
-#define AUDIO_ENC_MPT_TALK_FB_MIC  	0X80	//测试通话TALK FBMIC
+#define AUDIO_ENC_MPT_FF_MIC        0X01	//测试TWS FFMIC or 头戴式LFF MIC
+#define AUDIO_ENC_MPT_FB_MIC        0X02	//测试TWS FBMIC or 头戴式LFB MIC
+#define AUDIO_ENC_MPT_RFF_MIC       0X04	//测试头戴式RFF MIC
+#define AUDIO_ENC_MPT_RFB_MIC       0X08	//测试头戴式RFB MIC
+#define AUDIO_ENC_MPT_CVP_OUT       0X10	//测试通话算法输出
+#define AUDIO_ENC_MPT_TALK_MIC      0X20	//测试通话TALK 主MIC
+#define AUDIO_ENC_MPT_TALK_FF_MIC   0X40	//测试通话TALK FFMIC
+#define AUDIO_ENC_MPT_TALK_FB_MIC   0X80	//测试通话TALK FBMIC
+#define AUDIO_ENC_MPT_TALK_VPU      0X100	//测试通话TALK VPU
 
 //常见通道组合
 //FF+TALK+算法输出频响测试，默认关闭DNS, 外部喇叭发声
 // #define AUDIO_ENC_MPT_CH_TWS_CVP_ENC  (AUDIO_ENC_MPT_SLAVE_MIC | AUDIO_ENC_MPT_TALK_MIC)
-#define AUDIO_ENC_MPT_CH_TWS_CVP_ENC  (AUDIO_ENC_MPT_SLAVE_MIC | AUDIO_ENC_MPT_TALK_MIC | AUDIO_ENC_MPT_CVP_OUT)
+#define AUDIO_ENC_MPT_CH_TWS_CVP_ENC  (AUDIO_ENC_MPT_TALK_FF_MIC | AUDIO_ENC_MPT_TALK_MIC | AUDIO_ENC_MPT_CVP_OUT)
 
 //FF回声/气密性+FB频响测试，耳机喇叭发声
 #define AUDIO_ENC_MPT_CH_TWS_FF_FB    (AUDIO_ENC_MPT_FF_MIC | AUDIO_ENC_MPT_FB_MIC)
 
+#define AUDIO_ENC_MPT_DEBUG_DEMO	0		//自研ENC产测测试用例
 
 #define AUDIO_ENC_MPT_FRERES_ASYNC	1		//是否异步处理， 异步算不过来要加时钟提醒
 

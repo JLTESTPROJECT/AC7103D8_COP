@@ -309,6 +309,7 @@ static void mic_open(struct cvp_mic_fmt *fmt)
             }
         }
 #else
+        audio_mic_pwr_ctl(MIC_PWR_ON);
         struct mic_open_param mic_param = {0};
         if (fmt->ch & AUDIO_ADC_MIC_0) {
             mic_param.mic_mode      = AUDIO_MIC_CAP_MODE;
@@ -386,6 +387,7 @@ static void mic_close(void)
     if (cvp_demo) {
         audio_adc_mic_close(&cvp_demo->mic_ch);
         audio_adc_del_output_handler(&adc_hdl, &cvp_demo->adc_output);
+        audio_mic_pwr_ctl(MIC_PWR_OFF);
     }
 }
 

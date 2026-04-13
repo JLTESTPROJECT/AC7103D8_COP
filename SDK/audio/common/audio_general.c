@@ -231,10 +231,10 @@ const int config_audio_cvp_ref_ch_recognize_enable = 0;
 #define LLNS_TABLE_SELECT  	NN_TABLE_LLNS_SR48K
 #endif
 
-#if (TCFG_CVP_ALGO_TYPE & NN_TABLE_DEFAULT_GROUP)
-#define CVP_TABLE_SELECT    	NN_TABLE_CVP_DEFAULT
-#elif (TCFG_CVP_ALGO_TYPE & NN_TABLE_2MIC_CLIP_GROUP)
-#define CVP_TABLE_SELECT   		NN_TABLE_CVP_2MIC_CLIP
+#define CVP_TABLE_SELECT   	TCFG_CVP_V3_NN_TABLE_TYPE
+
+#if (CVP_TABLE_SELECT == NN_TABLE_CVP_1MIC_LARGE) && !(CVP_V3_1MIC_ALGO_ENABLE)
+#error "NN_1MIC_LARGE requires CVP_V3_1MIC_ALGO_ENABLE enabled"
 #endif
 
 #if TCFG_AUDIO_CVP_V3_MODE
@@ -352,6 +352,9 @@ const float config_audio_eq_xfade_time = 0;//0.4f;//0：一帧fade完成 非0：
 
 
 const int limiter_run_mode = EFx_PRECISION_PRO
+#if defined(TCFG_AUDIO_EFX_E9D0_RUN_MODE)
+                             | TCFG_AUDIO_EFX_E9D0_RUN_MODE
+#endif
 #if defined(TCFG_AUDIO_EFX_4E5B_RUN_MODE)
                              | TCFG_AUDIO_EFX_4E5B_RUN_MODE
 #endif
@@ -376,11 +379,18 @@ const  int plate_reverb_lite_run_mode    = TCFG_AUDIO_EFX_A48F_RUN_MODE;
 const  int plate_reverb_lite_run_mode    = EFx_BW_16t16 | EFx_BW_32t32;//只有 16进16出， 或者 32进32出
 #endif
 
-#ifdef TCFG_AUDIO_EFX_98A4_RUN_MODE
-const  int echo_run_mode                 = TCFG_AUDIO_EFX_98A4_RUN_MODE;
-#else
-const  int echo_run_mode                 = EFx_BW_16t16 | EFx_BW_32t32;//只有 16进16出， 或者 32进32出
+const  int echo_run_mode                 = 0
+#if defined(TCFG_AUDIO_EFX_C8E6_RUN_MODE) && (TCFG_AUDIO_EFX_C8E6_RUN_MODE & (EFx_BW_16t16 | EFx_BW_16t32))
+        | EFx_BW_16t16
 #endif
+#if defined(TCFG_AUDIO_EFX_C8E6_RUN_MODE) && (TCFG_AUDIO_EFX_C8E6_RUN_MODE & (EFx_BW_32t32))
+        | EFx_BW_32t32
+#endif
+#ifdef TCFG_AUDIO_EFX_98A4_RUN_MODE
+        | TCFG_AUDIO_EFX_98A4_RUN_MODE
+#endif
+        ;
+
 
 const  int voicechanger_run_mode         = 0
 #if defined(TCFG_AUDIO_EFX_7293_RUN_MODE)
@@ -432,11 +442,30 @@ const  int reverb_run_mode               = TCFG_AUDIO_EFX_24AB_RUN_MODE;
 const  int reverb_run_mode               = EFx_BW_16t16 | EFx_BW_32t32;//lib_Reverb.a
 #endif
 
-#ifdef TCFG_AUDIO_EFX_5101_RUN_MODE
-const  int plate_reverb_run_mode         = TCFG_AUDIO_EFX_5101_RUN_MODE;
-#else
-const  int plate_reverb_run_mode         = EFx_BW_16t16 | EFx_BW_32t32;//lib_reverb_cal.a
+const  int plate_reverb_run_mode         = 0
+#if defined(TCFG_AUDIO_EFX_C8E6_RUN_MODE) && (TCFG_AUDIO_EFX_C8E6_RUN_MODE & (EFx_BW_16t16 | EFx_BW_16t32))
+        | EFx_BW_16t16
 #endif
+#if defined(TCFG_AUDIO_EFX_C8E6_RUN_MODE) && (TCFG_AUDIO_EFX_C8E6_RUN_MODE & (EFx_BW_32t32))
+        | EFx_BW_32t32
+#endif
+#ifdef TCFG_AUDIO_EFX_5101_RUN_MODE
+        | TCFG_AUDIO_EFX_5101_RUN_MODE;
+#endif
+;
+
+#ifdef TCFG_PLATE_REVERB_COMBO_ENABLE
+const int plate_reverb_combo_en = TCFG_PLATE_REVERB_COMBO_ENABLE;
+#else
+const int plate_reverb_combo_en = 0;
+#endif
+#ifdef TCFG_ECHO_COMBO_ENABLE
+const int echo_combo_en = TCFG_ECHO_COMBO_ENABLE;
+#else
+const int echo_combo_en = 0;
+#endif
+
+
 #ifdef TCFG_AUDIO_EFX_0753_RUN_MODE
 const  int plate_reverb_adv_run_mode     = TCFG_AUDIO_EFX_0753_RUN_MODE;
 #else
@@ -469,6 +498,9 @@ const  int virtual_bass_run_mode         = EFx_BW_16t16 | EFx_BW_16t32 | EFx_BW_
 #endif
 
 const  int virtual_bass_classic_run_mode = 0
+#if defined(TCFG_AUDIO_EFX_E9D0_RUN_MODE)
+        | TCFG_AUDIO_EFX_E9D0_RUN_MODE
+#endif
 #if defined(TCFG_AUDIO_EFX_55C9_RUN_MODE)
         | TCFG_AUDIO_EFX_55C9_RUN_MODE
 #endif
@@ -481,6 +513,10 @@ const  int virtual_bass_classic_run_mode = 0
         ;
 
 const  int drc_advance_run_mode          = EFx_PRECISION_NOR
+#if defined(TCFG_AUDIO_EFX_E9D0_RUN_MODE)
+        | TCFG_AUDIO_EFX_E9D0_RUN_MODE
+#endif
+
 #if defined(TCFG_AUDIO_EFX_4250_RUN_MODE)
         | TCFG_AUDIO_EFX_4250_RUN_MODE
 #endif
@@ -674,6 +710,9 @@ const int const_audio_howling_ahs_dac_read_points_offset = 0;
  * 0:单核-延时低，资源消耗少。流程仅需要串AHS-NN。
  */
 const int const_audio_howling_ahs_dual_core = 1;
+
+const int audio_bass_boost_combo_fade_time_ms = 400;// 0:xfade, 非0：参数更新fade_out->udpate_param->fade_in, 范围 50~1000, 单位:ms
+
 
 
 // Virtual Surround Headphone 2t4

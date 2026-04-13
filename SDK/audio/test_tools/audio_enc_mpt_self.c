@@ -397,7 +397,7 @@ int audio_enc_mpt_fre_response_file_get(u8 **buf)
     *buf = hdl->file_data;
     /* audio_enc_mpt_inbuf_printf(); */
     /* put_buf(hdl->file_data + 40, hdl->file_len - 40); */
-#if 0//debug
+#if AUDIO_ENC_MPT_DEBUG_DEMO//debug
     enc_freres_bulk *bulk;
     int point = AUDIO_ENC_MPT_FRERES_POINT / 2;
     list_for_each_entry(bulk, &hdl->head, entry) {

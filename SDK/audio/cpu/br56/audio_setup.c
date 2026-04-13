@@ -249,6 +249,8 @@ void audio_dac_initcall(void)
     dac_data.bit_width = audio_general_out_dev_bit_width();
     dac_data.mute_delay_isel = 2;
     dac_data.mute_delay_time = 50;
+    dac_data.ana_vol_delay_isel = 3;
+    dac_data.ana_vol_delay_time = 50;
     dac_data.miller_en = 1;
     if ((JL_SYSTEM->CHIP_VER >= 0xA2) && (JL_SYSTEM->CHIP_VER < 0xAC)) { //C版及C版以后支持工具配置电流档位
         dac_data.pa_isel0 = TCFG_AUDIO_DAC_PA_ISEL0;
@@ -433,6 +435,11 @@ struct dac_platform_data dac_data = {//临时处理
 #else
     // VCM带电容时该配置固定配1，VCM省电容时可改为0降低底噪(功耗增加)
     .dacvcm_sel = 1,
+#endif
+#if defined(ANA_VOL_DYNAMIC_SWITCH) && ANA_VOL_DYNAMIC_SWITCH
+    .fade_en = 1,
+    .fade_points = 15,
+    .fade_volume = 15,
 #endif
 
 };

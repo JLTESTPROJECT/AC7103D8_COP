@@ -91,7 +91,7 @@ static void testbox_bt_classic_update_state_cbk(int type, u32 state, void *priv)
     switch (state) {
     case UPDATE_CH_EXIT:
         if (UPDATE_DUAL_BANK_IS_SUPPORT()) {
-            if ((0 == ret_code->stu) && (0 == ret_code->err_code)) {
+            if ((0 == ret_code->stu) && (0 == ret_code->err_code || UPDATE_RESULT_BT_UPDATE_OVER == ret_code->err_code)) {
                 log_info("bt update succ\n");
                 update_result_set(UPDATA_SUCC);
             } else {
@@ -99,7 +99,7 @@ static void testbox_bt_classic_update_state_cbk(int type, u32 state, void *priv)
                 update_result_set(UPDATA_DEV_ERR);
             }
         } else {
-            if ((0 == ret_code->stu) && (0 == ret_code->err_code)) {
+            if ((0 == ret_code->stu) && (0 == ret_code->err_code || UPDATE_RESULT_BT_UPDATE_OVER == ret_code->err_code)) {
                 //update_mode_api(BT_UPDATA);
                 update_mode_api_v2(BT_UPDATA,
                                    testbox_bt_classic_update_private_param_fill,
@@ -153,7 +153,7 @@ static void testbox_ble_update_state_cbk(int type, u32 state, void *priv)
     switch (state) {
     case UPDATE_CH_EXIT:
         if (UPDATE_DUAL_BANK_IS_SUPPORT()) {
-            if ((0 == ret_code->stu) && (0 == ret_code->err_code)) {
+            if ((0 == ret_code->stu) && (0 == ret_code->err_code || UPDATE_RESULT_BT_UPDATE_OVER == ret_code->err_code)) {
                 log_info("bt update succ\n");
                 update_result_set(UPDATA_SUCC);
             } else {
@@ -161,7 +161,7 @@ static void testbox_ble_update_state_cbk(int type, u32 state, void *priv)
                 update_result_set(UPDATA_DEV_ERR);
             }
         } else {
-            if ((0 == ret_code->stu) && (0 == ret_code->err_code)) {
+            if ((0 == ret_code->stu) && (0 == ret_code->err_code || UPDATE_RESULT_BT_UPDATE_OVER == ret_code->err_code)) {
                 /* #if TCFG_USER_BLE_ENABLE && (TCFG_BLE_DEMO_SELECT != DEF_BLE_DEMO_NULL) \ */
                 /* &&(TCFG_BLE_DEMO_SELECT != DEF_BLE_DEMO_ADV || defined(CONFIG_MESH_CASE_ENABLE))\ */
                 /* && (TCFG_BLE_DEMO_SELECT != DEF_BLE_DEMO_CLIENT) */

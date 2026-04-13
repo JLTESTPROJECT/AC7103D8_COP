@@ -181,8 +181,8 @@ const int config_dlog_putchar_enable = 0;
 //查找关中断时间过久函数功能
 //用于开启查找中断时间过久的函数功能,打印函数的rets和trance:"irq disable overlimit:"
 #if 0
-const int config_irq_time_debug_enable = TCFG_IRQ_TIME_DEBUG_ENABLE;
-const int config_irq_time_debug_time = 10000;  //查找中断时间超过10000us的函数
+const int config_irq_time_debug_enable = 1;
+const int config_irq_time_debug_time = 10000;  //查找中断时间超过10000us的函数,如果是br56需临时关闭timer2电流平衡OPTIMIZATION_CONN_NOISE
 #else
 const int config_irq_time_debug_enable = 0;
 const int config_irq_time_debug_time = 0;
