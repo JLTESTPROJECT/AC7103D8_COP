@@ -2340,7 +2340,7 @@
           "layout": "colFormItem",
           "span": 5,
           "required": false,
-          "defaultValue": "id_1647485267192_73",
+          "defaultValue": "0",
           "regList": [],
           "changeTag": true,
           "searchSource": false,
